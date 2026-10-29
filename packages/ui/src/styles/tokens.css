@@ -1,0 +1,126 @@
+/* Dexa attendance foundation. Provenance and usage: /design.md. */
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('./fonts/open-sans-latin.woff2') format('woff2');
+}
+
+:root {
+  color-scheme: light;
+
+  /* Reference-site values, not an official brand color specification. */
+  --dexa-red: #a52823;
+  --dexa-red-dark: #70271f;
+  --dexa-orange: #ef8a1d;
+  --dexa-white: #ffffff;
+  --dexa-gray-50: #f1f2f2;
+  --dexa-gray-100: #f0f0f0;
+  --dexa-gray-300: #c2c2c2;
+  --dexa-gray-500: #6e6e6e;
+  --dexa-gray-700: #404041;
+
+  /* Product additions. Status colors carry meaning, never decoration. */
+  --dexa-red-soft: #f9eeed;
+  --dexa-control-border: #858585;
+  --dexa-success: #25603d;
+  --dexa-success-soft: #edf5ef;
+  --dexa-warning: #805200;
+  --dexa-warning-soft: #fff4db;
+  --dexa-info: #275b86;
+  --dexa-info-soft: #edf3fa;
+  --dexa-error: #962420;
+  --dexa-error-soft: #fceeed;
+
+  --color-brand: var(--dexa-red);
+  --color-brand-hover: var(--dexa-red-dark);
+  --color-brand-soft: var(--dexa-red-soft);
+  --color-accent: var(--dexa-orange);
+  --color-canvas: var(--dexa-gray-50);
+  --color-surface: var(--dexa-white);
+  --color-surface-muted: var(--dexa-gray-100);
+  --color-text: var(--dexa-gray-700);
+  --color-text-muted: var(--dexa-gray-500);
+  --color-text-on-brand: var(--dexa-white);
+  --color-border: var(--dexa-gray-300);
+  --color-border-control: var(--dexa-control-border);
+  --color-focus: var(--dexa-red);
+  --color-success: var(--dexa-success);
+  --color-success-surface: var(--dexa-success-soft);
+  --color-warning: var(--dexa-warning);
+  --color-warning-surface: var(--dexa-warning-soft);
+  --color-info: var(--dexa-info);
+  --color-info-surface: var(--dexa-info-soft);
+  --color-error: var(--dexa-error);
+  --color-error-surface: var(--dexa-error-soft);
+
+  --font-body: 'Open Sans', Arial, sans-serif;
+  --font-heading: var(--font-body);
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-size-caption: 0.75rem;
+  --font-size-small: 0.875rem;
+  --font-size-body: 1rem;
+  --font-size-lead: 1.125rem;
+  --font-size-h3: 1.25rem;
+  --font-size-h2: 1.5rem;
+  --font-size-h1: 2.25rem;
+  --font-size-display: 3rem;
+  --line-height-heading: 1.25;
+  --line-height-body: 1.5;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-small: 0.25rem;
+  --radius-control: 0.75rem;
+  --radius-card: 1.25rem;
+  --radius-round: 50%;
+  --border-width: 1px;
+  --focus-width: 3px;
+  --focus-offset: 3px;
+  --shadow-overlay: 0 12px 32px rgb(64 64 65 / 16%);
+
+  --control-height: 2.75rem;
+  --control-height-large: 3rem;
+  --table-row-height: 3.5rem;
+  --layout-content-max: 84rem;
+  --layout-reading-max: 42rem;
+  --layout-form-max: 32rem;
+  --layout-sidebar: 15rem;
+  --layout-header-height: 4.75rem;
+  --layout-gutter: 1.5rem;
+  --z-header: 10;
+  --z-popover: 20;
+  --z-dialog: 30;
+  --z-toast: 40;
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (max-width: 767px) {
+  :root {
+    --font-size-h1: 1.5rem;
+    --font-size-display: 2rem;
+    --layout-gutter: 1rem;
+    --layout-header-height: 4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+  }
+}

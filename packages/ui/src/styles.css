@@ -1,0 +1,185 @@
+@import './styles/tokens.css';
+@import 'tailwindcss';
+@source "./**/*.{ts,tsx}";
+
+@theme {
+  --font-sans: var(--font-body);
+}
+
+body {
+  margin: 0;
+  color: var(--color-text);
+  background: var(--color-canvas);
+  font-family: var(--font-sans);
+  line-height: var(--line-height-body);
+}
+
+.dexa-page-shell {
+  width: min(calc(100% - var(--layout-gutter) - var(--layout-gutter)), var(--layout-content-max));
+  margin-inline: auto;
+  padding-block: var(--space-12);
+}
+
+.dexa-page-shell--form {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100svh;
+  align-items: center;
+  padding-block: var(--space-8);
+}
+
+.dexa-page-shell__inner {
+  min-width: 0;
+}
+
+.dexa-page-shell--form .dexa-page-shell__inner {
+  width: 100%;
+  max-width: var(--layout-form-max);
+  margin-inline: auto;
+}
+
+.dexa-page-shell__heading {
+  margin-block-end: var(--space-8);
+}
+
+.dexa-page-shell__heading h1 {
+  max-width: 20ch;
+  min-width: 0;
+  margin: 0;
+  color: var(--color-brand);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  overflow-wrap: anywhere;
+}
+
+.dexa-page-shell__heading p {
+  max-width: var(--layout-reading-max);
+  min-width: 0;
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lead);
+  overflow-wrap: anywhere;
+}
+
+.dexa-page-shell--form form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.dexa-page-shell--form form > .dexa-button {
+  width: 100%;
+}
+
+.dexa-button {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1rem minmax(0, 1fr) 1rem;
+  max-width: 100%;
+  column-gap: var(--space-1);
+  min-width: var(--control-height);
+  min-height: var(--control-height-large);
+  align-items: center;
+  padding: 0.625rem var(--space-2);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-control);
+  font: var(--font-weight-semibold) var(--font-size-small) / var(--line-height-body)
+    var(--font-body);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.dexa-button__indicator {
+  display: flex;
+  width: 1rem;
+  height: 1rem;
+  align-items: center;
+  justify-content: center;
+  grid-row: 1;
+}
+
+.dexa-button__label {
+  min-width: 0;
+  grid-column: 2;
+  grid-row: 1;
+  overflow-wrap: anywhere;
+}
+
+.dexa-button__spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-inline-start-color: transparent;
+  border-radius: var(--radius-round);
+  animation: dexa-button-spin 800ms linear infinite;
+}
+
+.dexa-button--primary {
+  border-color: var(--color-brand);
+  color: var(--color-text-on-brand);
+  background: var(--color-brand);
+}
+
+.dexa-button--primary:hover:not(:disabled) {
+  border-color: var(--color-brand-hover);
+  background: var(--color-brand-hover);
+}
+
+.dexa-button--secondary {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+  background: var(--color-surface);
+}
+
+.dexa-button--secondary:hover:not(:disabled) {
+  border-color: var(--color-brand-hover);
+  color: var(--color-brand-hover);
+  background: var(--color-brand-soft);
+}
+
+.dexa-button:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.dexa-button:disabled {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+  cursor: not-allowed;
+}
+
+.dexa-button--primary[aria-busy='true']:disabled {
+  border-color: var(--color-brand);
+  color: var(--color-text-on-brand);
+  background: var(--color-brand);
+  cursor: progress;
+}
+
+.dexa-button--secondary[aria-busy='true']:disabled {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+  background: var(--color-surface);
+  cursor: progress;
+}
+
+@keyframes dexa-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dexa-button {
+    transition-duration: 0ms;
+  }
+
+  .dexa-button__spinner {
+    animation: none;
+  }
+}

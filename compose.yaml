@@ -1,0 +1,210 @@
+# Local infrastructure. Application containers start with: docker compose --profile apps up --build
+name: dexa-attendance
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?set POSTGRES_ADMIN_PASSWORD in .env}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?set AUTH_DB_PASSWORD in .env}
+      EMPLOYEE_DB_PASSWORD: ${EMPLOYEE_DB_PASSWORD:?set EMPLOYEE_DB_PASSWORD in .env}
+      ATTENDANCE_DB_PASSWORD: ${ATTENDANCE_DB_PASSWORD:?set ATTENDANCE_DB_PASSWORD in .env}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?set NOTIFICATION_DB_PASSWORD in .env}
+      AUDIT_DB_PASSWORD: ${AUDIT_DB_PASSWORD:?set AUDIT_DB_PASSWORD in .env}
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./infra/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:?set RABBITMQ_USERNAME in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}
+    ports:
+      - '127.0.0.1:5672:5672'
+      - '127.0.0.1:15672:15672'
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api-gateway:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+      args:
+        APP: api-gateway
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3000'
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    ports:
+      - '127.0.0.1:3000:3000'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs: [/tmp]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  auth-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+      args:
+        APP: auth-service
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3000'
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      DATABASE_URL: ${AUTH_DATABASE_URL_CONTAINER:-}
+    ports:
+      - '127.0.0.1:3001:3000'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs: [/tmp]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  employee-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+      args:
+        APP: employee-service
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3000'
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      DATABASE_URL: ${EMPLOYEE_DATABASE_URL_CONTAINER:-}
+    ports:
+      - '127.0.0.1:3002:3000'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs: [/tmp]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  attendance-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+      args:
+        APP: attendance-service
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3000'
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      DATABASE_URL: ${ATTENDANCE_DATABASE_URL_CONTAINER:-}
+    ports:
+      - '127.0.0.1:3003:3000'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs: [/tmp]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  notification-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+      args:
+        APP: notification-service
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3000'
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      DATABASE_URL: ${NOTIFICATION_DATABASE_URL_CONTAINER:-}
+    ports:
+      - '127.0.0.1:3004:3000'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs: [/tmp]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  audit-worker:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+      args:
+        APP: audit-worker
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3000'
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      DATABASE_URL: ${AUDIT_DATABASE_URL_CONTAINER:-}
+    ports:
+      - '127.0.0.1:3005:3000'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs: [/tmp]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  employee-web:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: infra/docker/frontend.Dockerfile
+      args:
+        APP: employee-web
+    ports:
+      - '127.0.0.1:8080:8080'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+
+  admin-web:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: infra/docker/frontend.Dockerfile
+      args:
+        APP: admin-web
+    ports:
+      - '127.0.0.1:8081:8080'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+
+volumes:
+  postgres-data:
+  rabbitmq-data:

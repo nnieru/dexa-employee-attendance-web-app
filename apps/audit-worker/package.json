@@ -1,0 +1,39 @@
+{
+  "name": "@dexa/audit-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json && concurrently -k \"tsc -p tsconfig.build.json --watch --preserveWatchOutput\" \"node --env-file-if-exists=../../.env --watch dist/main.js\"",
+    "start": "node --env-file-if-exists=../../.env dist/main.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --experimental-vm-modules --no-warnings ../../node_modules/jest/bin/jest.js --passWithNoTests --testPathIgnorePatterns integration",
+    "test:integration": "node --experimental-vm-modules --no-warnings ../../node_modules/jest/bin/jest.js --passWithNoTests --testPathPatterns integration",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@dexa/common": "0.0.0",
+    "@dexa/contracts": "0.0.0",
+    "@nestjs/common": "12.3.2",
+    "@nestjs/core": "12.3.2",
+    "@nestjs/platform-express": "12.3.2",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "@dexa/db": "0.0.0",
+    "drizzle-orm": "0.45.4"
+  },
+  "devDependencies": {
+    "@swc/core": "1.16.20",
+    "@swc/jest": "0.2.39",
+    "@types/jest": "30.0.0",
+    "jest": "30.5.2",
+    "@nestjs/testing": "12.3.2",
+    "@types/express": "5.0.6",
+    "@types/supertest": "7.2.1",
+    "concurrently": "10.0.6",
+    "supertest": "7.3.1",
+    "drizzle-kit": "0.31.11"
+  }
+}

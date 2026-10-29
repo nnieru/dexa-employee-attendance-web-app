@@ -1,0 +1,25 @@
+{
+  "name": "@dexa/messaging",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --experimental-vm-modules --no-warnings ../../node_modules/jest/bin/jest.js --passWithNoTests --testPathIgnorePatterns integration",
+    "test:integration": "node --experimental-vm-modules --no-warnings ../../node_modules/jest/bin/jest.js --passWithNoTests --testPathPatterns integration"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@swc/core": "1.16.20",
+    "@swc/jest": "0.2.39",
+    "@types/jest": "30.0.0",
+    "jest": "30.5.2"
+  }
+}

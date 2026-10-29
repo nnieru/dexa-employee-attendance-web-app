@@ -1,0 +1,16 @@
+node_modules
+dist
+storybook-static
+coverage
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+
+
+# documents
+/docs
+
+# agents
+.agents/

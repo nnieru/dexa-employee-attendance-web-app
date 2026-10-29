@@ -1,0 +1,44 @@
+{
+  "name": "dexa-employee-attendance-management",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "workspaces": [
+    "apps/*",
+    "libs/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @dexa/contracts && npm run build -w @dexa/common -w @dexa/db -w @dexa/messaging",
+    "build:backend": "npm run build:shared && npm run build -w @dexa/api-gateway -w @dexa/auth-service -w @dexa/employee-service -w @dexa/attendance-service -w @dexa/notification-service -w @dexa/audit-worker",
+    "build:frontend": "npm run build -w @dexa/employee-web -w @dexa/admin-web",
+    "build": "npm run build:backend && npm run build:frontend",
+    "dev": "npm run build:shared && concurrently -k -n gateway,auth,employee,attendance,notification,audit,employee-web,admin-web \"npm run dev -w @dexa/api-gateway\" \"npm run dev -w @dexa/auth-service\" \"npm run dev -w @dexa/employee-service\" \"npm run dev -w @dexa/attendance-service\" \"npm run dev -w @dexa/notification-service\" \"npm run dev -w @dexa/audit-worker\" \"npm run dev -w @dexa/employee-web\" \"npm run dev -w @dexa/admin-web\"",
+    "lint": "eslint . && prettier --check .",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "test": "npm run build:shared && npm run test --workspaces --if-present",
+    "test:integration": "npm run build:shared && npm run test:integration --workspaces --if-present",
+    "storybook": "npm run storybook -w @dexa/ui",
+    "build:storybook": "npm run build:storybook -w @dexa/ui",
+    "infra:up": "docker compose up -d --wait postgres rabbitmq",
+    "infra:down": "docker compose down",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "audit": "npm audit --audit-level=low",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build && npm run build:storybook"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "concurrently": "10.0.6",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.1",
+    "eslint-plugin-react-hooks": "7.1.1"
+  }
+}
