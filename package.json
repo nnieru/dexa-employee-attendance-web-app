@@ -25,6 +25,7 @@
     "build:storybook": "npm run build:storybook -w @dexa/ui",
     "infra:up": "docker compose up -d --wait postgres rabbitmq",
     "infra:down": "docker compose down",
+    "keys:generate": "node scripts/generate-dev-keys.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "audit": "npm audit --audit-level=low",

@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { API_PREFIX } from '@dexa/contracts';
 import helmet from 'helmet';
 import type { BaseConfig } from '../config/base-config.schema.js';
+import { DomainExceptionFilter } from '../errors/domain-exception.filter.js';
 
 /** Shared HTTP configuration, applied identically in production and in integration tests. */
 export function configureApp(
@@ -11,5 +12,6 @@ export function configureApp(
   app.setGlobalPrefix(API_PREFIX);
   app.use(helmet());
   app.enableCors({ origin: config.CORS_ORIGINS });
+  app.useGlobalFilters(new DomainExceptionFilter());
   app.enableShutdownHooks();
 }

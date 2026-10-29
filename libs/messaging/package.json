@@ -15,11 +15,20 @@
     "test": "node --experimental-vm-modules --no-warnings ../../node_modules/jest/bin/jest.js --passWithNoTests --testPathIgnorePatterns integration",
     "test:integration": "node --experimental-vm-modules --no-warnings ../../node_modules/jest/bin/jest.js --passWithNoTests --testPathPatterns integration"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@nestjs/common": "12.3.2",
+    "@nestjs/core": "12.3.2",
+    "@nestjs/microservices": "12.3.2",
+    "amqp-connection-manager": "5.0.1",
+    "amqplib": "2.2.0",
+    "rxjs": "7.8.2"
+  },
   "devDependencies": {
     "@swc/core": "1.16.20",
     "@swc/jest": "0.2.39",
+    "@testcontainers/rabbitmq": "12.2.1",
     "@types/jest": "30.0.0",
-    "jest": "30.5.2"
+    "jest": "30.5.2",
+    "testcontainers": "12.2.1"
   }
 }
