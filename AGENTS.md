@@ -10,7 +10,7 @@ Two React web apps (Employee, Admin HRD) consume NestJS microservices over REST.
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Frontend | React, TypeScript (strict), Vite, Tailwind CSS, zod, React Hook Form, axios, TanStack Query, TanStack Router, TanStack Table, React Context (Zustand only when needed) |
 | Backend  | NestJS on Express, TypeScript (strict), zod validation, Drizzle ORM, `amqplib` wrapper                                                                                 |
-| Infra    | PostgreSQL, RabbitMQ, Docker Compose, pnpm workspaces                                                                                                                  |
+| Infra    | PostgreSQL, RabbitMQ, Docker Compose, npm workspaces                                                                                                                   |
 | Tests    | Jest (backend), Vitest and React Testing Library (frontend), Testcontainers, supertest, MSW                                                                            |
 
 ## 2. Source of truth
@@ -28,19 +28,19 @@ Do not invent business rules. `DATABASE.md` section 9 lists open decisions. If a
 
 ## 3. Commands
 
-Every package exposes the same script names so they can run from the root (`pnpm -r <script>`) or per package (`pnpm --filter <package> <script>`).
+Every package exposes the same script names so they can run from the root (`npm run <script>`) or per workspace (`npm run <script> -w @dexa/<package>`).
 
-| Command                                             | Purpose                                             |
-| --------------------------------------------------- | --------------------------------------------------- |
-| `pnpm install`                                      | Install all workspace dependencies                  |
-| `pnpm lint`                                         | ESLint and Prettier check                           |
-| `pnpm typecheck`                                    | `tsc --noEmit` in every package                     |
-| `pnpm test`                                         | Unit tests                                          |
-| `pnpm test:integration`                             | Integration tests (needs Docker for Testcontainers) |
-| `pnpm --filter <service> dev`                       | Run one service with reload                         |
-| `pnpm --filter <service> db:generate --name <name>` | Generate a Drizzle migration                        |
-| `pnpm --filter <service> db:migrate`                | Apply migrations                                    |
-| `docker compose up`                                 | Run the full stack                                  |
+| Command                                                   | Purpose                                             |
+| --------------------------------------------------------- | --------------------------------------------------- |
+| `npm install`                                             | Install all workspace dependencies                  |
+| `npm run lint`                                            | ESLint and Prettier check                           |
+| `npm run typecheck`                                       | `tsc --noEmit` in every package                     |
+| `npm test`                                                | Unit tests                                          |
+| `npm run test:integration`                                | Integration tests (needs Docker for Testcontainers) |
+| `npm run dev -w @dexa/<service>`                          | Run one service with reload                         |
+| `npm run db:generate -w @dexa/<service> -- --name <name>` | Generate a Drizzle migration                        |
+| `npm run db:migrate -w @dexa/<service>`                   | Apply migrations                                    |
+| `docker compose up`                                       | Run the full stack                                  |
 
 Before you finish any task, run lint, typecheck, and the tests for the packages you touched.
 
@@ -366,7 +366,7 @@ Router files follow TanStack Router's file conventions. Do not create `utils.ts`
 - [ ] No duplicated logic, dead code, magic values, or unused exports.
 - [ ] Inputs are validated with zod and errors are handled and mapped.
 - [ ] Unit and integration tests cover the new behavior and pass.
-- [ ] `pnpm lint`, `pnpm typecheck`, and tests pass for every touched package.
+- [ ] `npm run lint`, `npm run typecheck`, and tests pass for every touched package.
 - [ ] Migrations are additive and reviewed. Schema changes are reflected in `DATABASE.md`.
 - [ ] No secrets, sensitive data in logs, or new warnings.
 - [ ] Documentation is updated where behavior or design changed.
