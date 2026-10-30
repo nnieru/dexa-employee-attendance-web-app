@@ -1,12 +1,9 @@
 import { Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import {
-  authenticatedUserSchema,
-  ForbiddenError,
-  isPublicRoute,
-  UnauthorizedError,
-} from '@dexa/common';
 import { ErrorCode, type Role } from '@dexa/contracts';
+import { ForbiddenError, UnauthorizedError } from '../errors/domain.errors.js';
+import { authenticatedUserSchema } from './authenticated-principal.js';
+import { isPublicRoute } from './public.decorator.js';
 import { ROLES_KEY } from './roles.decorator.js';
 
 const SIGN_IN_MESSAGE = 'Sign in to continue.';
@@ -14,8 +11,9 @@ const ROLE_NOT_PERMITTED_MESSAGE = 'Your role cannot use this action.';
 const ROUTE_ROLES_MISSING_MESSAGE = 'This action is not permitted.';
 
 /**
- * Checks the signed-in user's role against @Roles(). It runs after GatewayJwtAuthGuard, so the user is
+ * Checks the signed-in user's role against @Roles(). It runs after the user token guard, so the user is
  * already verified. A protected route without @Roles() is refused, so forgetting the decorator fails closed.
+ * Every service that serves HR routes registers it, so each one enforces the role itself.
  */
 @Injectable()
 export class RolesGuard implements CanActivate {

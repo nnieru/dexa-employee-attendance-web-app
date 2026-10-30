@@ -28,6 +28,8 @@ export { AuthModule } from './auth/auth.module.js';
 export { CurrentUser } from './auth/current-user.decorator.js';
 export { IS_PUBLIC_KEY, Public, isPublicRoute } from './auth/public.decorator.js';
 export { JwtAuthGuard } from './auth/jwt-auth.guard.js';
+export { Roles } from './auth/roles.decorator.js';
+export { RolesGuard } from './auth/roles.guard.js';
 export { ServiceAuthGuard } from './auth/service-auth.guard.js';
 export { ServiceName } from './auth/service-name.js';
 export {

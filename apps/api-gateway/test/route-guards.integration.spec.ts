@@ -1,13 +1,16 @@
 import { Buffer } from 'node:buffer';
 import { createSign, randomUUID } from 'node:crypto';
-import { configureApp, parseConfig, ServiceName } from '@dexa/common';
-import { loginResponseSchema, Portal, Role } from '@dexa/contracts';
+import { configureApp, parseConfig, Roles, ServiceName } from '@dexa/common';
+import { loginResponseSchema, Portal, Role, type MasterOption } from '@dexa/contracts';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import request from 'supertest';
 import { createAppModule } from '../src/app.module.js';
-import { Roles } from '../src/auth/roles.decorator.js';
+import {
+  EMPLOYEE_SERVICE_CLIENT,
+  type IEmployeeServiceClient,
+} from '../src/employees/employee-service-client.interface.js';
 import { ApiGatewayConfigSchema } from '../src/config/api-gateway-config.schema.js';
 import {
   authEnvironmentFor,
@@ -31,6 +34,8 @@ const LOGIN_PATH = '/api/v1/auth/login';
 const CURRENT_ACCOUNT_PATH = '/api/v1/auth/me';
 const HEALTH_PATH = '/api/v1/health';
 const HR_ROUTE_PATH = '/api/v1/route-guard-tests/hr';
+const POSITIONS_PATH = '/api/v1/positions';
+const EMPLOYEE_STATUSES_PATH = '/api/v1/employee-statuses';
 const SELF_SERVICE_ROUTE_PATH = '/api/v1/route-guard-tests/self-service';
 const SIGNED_TOKEN_LIFETIME_SECONDS = 300;
 
@@ -54,6 +59,27 @@ class StubHrController {
     return { route: 'hr' };
   }
 }
+
+// Stands in for employee-service, so these tests cover the gateway's own checks without starting it.
+// Each call records the token it was given, so a test can show the gateway forwarded the caller's token.
+const POSITIONS: MasterOption[] = [
+  { id: randomUUID(), code: 'DATA_ANALYST', name: 'Data Analyst', isActive: false },
+  { id: randomUUID(), code: 'HR_OFFICER', name: 'HR Officer', isActive: true },
+];
+const EMPLOYEE_STATUSES: MasterOption[] = [
+  { id: randomUUID(), code: 'ACTIVE', name: 'Active', isActive: true },
+];
+const forwardedTokens: string[] = [];
+const employeeServiceFake: IEmployeeServiceClient = {
+  listPositions: (accessToken: string) => {
+    forwardedTokens.push(accessToken);
+    return Promise.resolve(POSITIONS);
+  },
+  listEmployeeStatuses: (accessToken: string) => {
+    forwardedTokens.push(accessToken);
+    return Promise.resolve(EMPLOYEE_STATUSES);
+  },
+};
 
 @Controller('route-guard-tests/self-service')
 class StubSelfServiceController {
@@ -129,11 +155,15 @@ describe('api-gateway route guards through a running auth-service', () => {
       BUSINESS_TIMEZONE: 'Asia/Jakarta',
       ...authEnvironmentFor(keys, ServiceName.API_GATEWAY),
       AUTH_SERVICE_INTERNAL_URL: authService.baseUrl,
+      EMPLOYEE_SERVICE_INTERNAL_URL: 'http://employee-service:3000',
     });
     const moduleRef = await Test.createTestingModule({
       imports: [createAppModule(config)],
       controllers: [StubHrController, StubSelfServiceController],
-    }).compile();
+    })
+      .overrideProvider(EMPLOYEE_SERVICE_CLIENT)
+      .useValue(employeeServiceFake)
+      .compile();
     app = moduleRef.createNestApplication();
     configureApp(app, { CORS_ORIGINS: [] });
     await app.init();
@@ -262,6 +292,62 @@ describe('api-gateway route guards through a running auth-service', () => {
         email: EMPLOYEE_EMAIL,
         role: Role.EMPLOYEE,
       });
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it.each([POSITIONS_PATH, EMPLOYEE_STATUSES_PATH])(
+    'should return 401 UNAUTHORIZED on %s when no bearer token is sent, without calling employee-service',
+    async (path) => {
+      forwardedTokens.length = 0;
+
+      const response = await request(app.getHttpServer()).get(path).expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      expect(forwardedTokens).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it.each([POSITIONS_PATH, EMPLOYEE_STATUSES_PATH])(
+    'should return 403 FORBIDDEN on %s when an employee token is sent, without calling employee-service',
+    async (path) => {
+      forwardedTokens.length = 0;
+
+      const response = await getWithToken(path, employeeToken).expect(403);
+
+      expect(response.body).toEqual({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Your role cannot use this action.',
+      });
+      expect(forwardedTokens).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return the positions and forward the HR token when an HR token calls the positions route',
+    async () => {
+      forwardedTokens.length = 0;
+
+      const response = await getWithToken(POSITIONS_PATH, hrToken).expect(200);
+
+      expect(response.body).toEqual(POSITIONS);
+      expect(forwardedTokens).toEqual([hrToken]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return the employee statuses and forward the HR token when an HR token calls the statuses route',
+    async () => {
+      forwardedTokens.length = 0;
+
+      const response = await getWithToken(EMPLOYEE_STATUSES_PATH, hrToken).expect(200);
+
+      expect(response.body).toEqual(EMPLOYEE_STATUSES);
+      expect(forwardedTokens).toEqual([hrToken]);
     },
     TEST_TIMEOUT_MS,
   );

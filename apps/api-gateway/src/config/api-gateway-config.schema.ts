@@ -23,6 +23,7 @@ export const ApiGatewayConfigSchema = z.intersection(
   BaseConfigSchema.extend({
     SERVICE_NAME: ownServiceNameSchema,
     AUTH_SERVICE_INTERNAL_URL: internalUrlSchema,
+    EMPLOYEE_SERVICE_INTERNAL_URL: internalUrlSchema,
   }),
   AuthConfigSchema,
 );

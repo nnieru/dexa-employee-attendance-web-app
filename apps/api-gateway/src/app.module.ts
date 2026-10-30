@@ -2,6 +2,7 @@ import { AuthModule, HealthModule, InternalHttpModule, ServiceName } from '@dexa
 import { Module, type Type } from '@nestjs/common';
 import type { ApiGatewayConfig } from './config/api-gateway-config.schema.js';
 import { GatewayAuthModule } from './auth/auth.module.js';
+import { GatewayEmployeesModule } from './employees/employees.module.js';
 
 /**
  * Builds the root module from the validated config. AuthModule.forRoot and InternalHttpModule.forRoot take
@@ -13,10 +14,14 @@ export function createAppModule(config: ApiGatewayConfig): Type<unknown> {
     imports: [
       AuthModule.forRoot(config),
       InternalHttpModule.forRoot({
-        serviceBaseUrls: { [ServiceName.AUTH_SERVICE]: config.AUTH_SERVICE_INTERNAL_URL },
+        serviceBaseUrls: {
+          [ServiceName.AUTH_SERVICE]: config.AUTH_SERVICE_INTERNAL_URL,
+          [ServiceName.EMPLOYEE_SERVICE]: config.EMPLOYEE_SERVICE_INTERNAL_URL,
+        },
         authConfig: config,
       }),
       GatewayAuthModule,
+      GatewayEmployeesModule,
       HealthModule,
     ],
   })

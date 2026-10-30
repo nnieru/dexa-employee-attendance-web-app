@@ -53,6 +53,7 @@ services:
       PORT: '3000'
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Asia/Jakarta}
+      EMPLOYEE_SERVICE_INTERNAL_URL: http://employee-service:3000
     ports:
       - '127.0.0.1:3000:3000'
     read_only: true

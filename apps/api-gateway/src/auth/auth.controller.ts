@@ -9,7 +9,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { Public } from '@dexa/common';
+import { Public, Roles } from '@dexa/common';
 import {
   changePasswordRequestSchema,
   loginRequestSchema,
@@ -21,7 +21,6 @@ import {
 } from '@dexa/contracts';
 import { AUTH_SERVICE_CLIENT, type IAuthServiceClient } from './auth-service-client.interface.js';
 import { readBearerToken } from './read-bearer-token.js';
-import { Roles } from './roles.decorator.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 
 // Only login is public. The global guards check the token and role of every other route.

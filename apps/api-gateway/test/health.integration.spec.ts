@@ -15,6 +15,7 @@ describe('api-gateway health', () => {
       BUSINESS_TIMEZONE: 'Asia/Jakarta',
       ...authEnvironmentFor(generateAuthKeySet(), ServiceName.API_GATEWAY),
       AUTH_SERVICE_INTERNAL_URL: 'http://auth-service:3000',
+      EMPLOYEE_SERVICE_INTERNAL_URL: 'http://employee-service:3000',
     });
     const moduleRef = await Test.createTestingModule({
       imports: [createAppModule(config)],

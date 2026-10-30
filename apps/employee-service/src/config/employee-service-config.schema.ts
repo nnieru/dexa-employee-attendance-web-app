@@ -1,4 +1,4 @@
-import { BaseConfigSchema } from '@dexa/common';
+import { AuthConfigSchema, BaseConfigSchema, ServiceName } from '@dexa/common';
 import { z } from 'zod';
 import { resolveMasterDataSetting, type MasterDataDocument } from './master-data-setting.schema.js';
 
@@ -22,13 +22,20 @@ function treatBlankAsUnset(value: unknown): unknown {
   return value === '' ? undefined : value;
 }
 
+// The name that this service signs internal tokens with. The loader supplies it by default. Any other
+// value is refused, because a process that signed as another service would impersonate it.
+const ownServiceNameSchema = z.literal(ServiceName.EMPLOYEE_SERVICE, {
+  error: `must be ${ServiceName.EMPLOYEE_SERVICE}`,
+});
+
 const employeeServiceEnvironmentSchema = BaseConfigSchema.extend({
+  SERVICE_NAME: ownServiceNameSchema,
   EMPLOYEE_DATABASE_URL: postgresUrlSchema,
   EMPLOYEE_MASTER_DATA: z.preprocess(treatBlankAsUnset, z.string().optional()),
 });
 
 // The master data setting depends on NODE_ENV, so it is resolved after the other variables parse.
-export const EmployeeServiceConfigSchema = employeeServiceEnvironmentSchema.transform(
+const masterDataSettingSchema = employeeServiceEnvironmentSchema.transform(
   (environment, context) => {
     const masterData: MasterDataDocument | undefined = resolveMasterDataSetting(
       environment.NODE_ENV,
@@ -37,6 +44,13 @@ export const EmployeeServiceConfigSchema = employeeServiceEnvironmentSchema.tran
     );
     return { ...environment, EMPLOYEE_MASTER_DATA: masterData };
   },
+);
+
+// Token settings are shared with every service (libs/common/src/config/auth-config.schema.ts). The
+// user private key is refused by the loader, so this service only verifies user tokens.
+export const EmployeeServiceConfigSchema = z.intersection(
+  masterDataSettingSchema,
+  AuthConfigSchema,
 );
 
 export type EmployeeServiceConfig = z.infer<typeof EmployeeServiceConfigSchema>;

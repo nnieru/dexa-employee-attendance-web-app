@@ -3,10 +3,15 @@ import { authEnvironmentFor, generateAuthKeySet } from '../../test/auth-key-set.
 import { ApiGatewayConfigSchema } from './api-gateway-config.schema.js';
 
 const AUTH_SERVICE_URL = 'http://auth-service:3000';
+const EMPLOYEE_SERVICE_URL = 'http://employee-service:3000';
 const URL_PROTOCOL_MESSAGE =
   'Invalid configuration: AUTH_SERVICE_INTERNAL_URL: must be an http or https URL';
 const URL_CREDENTIALS_MESSAGE =
   'Invalid configuration: AUTH_SERVICE_INTERNAL_URL: must not contain credentials';
+const EMPLOYEE_URL_PROTOCOL_MESSAGE =
+  'Invalid configuration: EMPLOYEE_SERVICE_INTERNAL_URL: must be an http or https URL';
+const EMPLOYEE_URL_CREDENTIALS_MESSAGE =
+  'Invalid configuration: EMPLOYEE_SERVICE_INTERNAL_URL: must not contain credentials';
 
 // Generated once for the file. The config only needs well-formed keys, which the environment supplies.
 const TEST_KEYS = generateAuthKeySet();
@@ -14,6 +19,7 @@ const BASE_SOURCE = {
   BUSINESS_TIMEZONE: 'Asia/Jakarta',
   ...authEnvironmentFor(TEST_KEYS, ServiceName.API_GATEWAY),
   AUTH_SERVICE_INTERNAL_URL: AUTH_SERVICE_URL,
+  EMPLOYEE_SERVICE_INTERNAL_URL: EMPLOYEE_SERVICE_URL,
 };
 
 describe('ApiGatewayConfigSchema', () => {
@@ -51,6 +57,35 @@ describe('ApiGatewayConfigSchema', () => {
     expect(() =>
       parseConfig(ApiGatewayConfigSchema, { ...BASE_SOURCE, AUTH_SERVICE_INTERNAL_URL: undefined }),
     ).toThrow(/AUTH_SERVICE_INTERNAL_URL: must be an http or https URL/);
+  });
+
+  it('should return the employee-service base URL when it names a single-label host', () => {
+    const config = parseConfig(ApiGatewayConfigSchema, BASE_SOURCE);
+
+    expect(config.EMPLOYEE_SERVICE_INTERNAL_URL).toBe(EMPLOYEE_SERVICE_URL);
+  });
+
+  it.each([
+    {
+      condition: 'the scheme is not http or https',
+      url: 'ftp://employee-service:21',
+      message: EMPLOYEE_URL_PROTOCOL_MESSAGE,
+    },
+    {
+      condition: 'the URL is not a URL',
+      url: 'employee-service',
+      message: EMPLOYEE_URL_PROTOCOL_MESSAGE,
+    },
+    {
+      condition: 'the URL carries credentials',
+      url: 'http://gateway:hunter2-secret@employee-service:3000',
+      message: EMPLOYEE_URL_CREDENTIALS_MESSAGE,
+    },
+  ])('should reject the config when $condition', ({ url, message }) => {
+    // The exact message also proves that a URL with credentials is never echoed into the error.
+    expect(() =>
+      parseConfig(ApiGatewayConfigSchema, { ...BASE_SOURCE, EMPLOYEE_SERVICE_INTERNAL_URL: url }),
+    ).toThrow(new Error(message));
   });
 
   it('should reject the config when SERVICE_NAME is not api-gateway', () => {

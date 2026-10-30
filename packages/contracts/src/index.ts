@@ -46,6 +46,11 @@ export {
   type AccountProvisioningOperation,
   type AccountProvisioningRequest,
 } from './auth/account-provisioning.schema.js';
+export {
+  masterOptionListSchema,
+  masterOptionSchema,
+  type MasterOption,
+} from './employees/master-option.schema.js';
 export { Portal } from './auth/portal.js';
 export {
   PASSWORD_MAX_LENGTH,

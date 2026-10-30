@@ -104,6 +104,7 @@ describe('api-gateway self-service password change through a running auth-servic
       BUSINESS_TIMEZONE: 'Asia/Jakarta',
       ...authEnvironmentFor(keys, ServiceName.API_GATEWAY),
       AUTH_SERVICE_INTERNAL_URL: authService.baseUrl,
+      EMPLOYEE_SERVICE_INTERNAL_URL: 'http://employee-service:3000',
     });
     const moduleRef = await Test.createTestingModule({
       imports: [createAppModule(config)],
