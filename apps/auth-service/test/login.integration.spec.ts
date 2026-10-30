@@ -395,5 +395,31 @@ describe('login and sessions', () => {
       },
       TEST_TIMEOUT_MS,
     );
+
+    it(
+      'should return the same ACCOUNT_DISABLED body as the gateway when the account was deactivated after its token was issued',
+      async () => {
+        const email = `refused.${randomUUID()}@dexa.test`;
+        await insertAccount({ email, password: EMPLOYEE_PASSWORD, roleCode: 'EMPLOYEE' });
+        const session = (await signIn(email, EMPLOYEE_PASSWORD, 'EMPLOYEE').expect(200)).body;
+        await database.db
+          .update(accounts)
+          .set({ isActive: false })
+          .where(eq(accounts.companyEmail, email));
+
+        const response = await request(app.getHttpServer())
+          .get(CURRENT_ACCOUNT_PATH)
+          .set('Authorization', `Bearer ${session.accessToken}`)
+          .expect(401);
+
+        // The shared JwtAuthGuard answers before the service runs, with the message the gateway sends.
+        expect(response.body).toEqual({
+          statusCode: 401,
+          code: 'ACCOUNT_DISABLED',
+          message: 'This account is no longer active.',
+        });
+      },
+      TEST_TIMEOUT_MS,
+    );
   });
 });

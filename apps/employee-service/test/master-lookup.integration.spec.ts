@@ -1,7 +1,17 @@
 import { Buffer } from 'node:buffer';
 import { createSign, randomUUID } from 'node:crypto';
-import { configureApp, parseConfig } from '@dexa/common';
-import { masterOptionListSchema, Role, type MasterOption } from '@dexa/contracts';
+import {
+  ACCOUNT_STATUS_READER,
+  configureApp,
+  parseConfig,
+  type IAccountStatusReader,
+} from '@dexa/common';
+import {
+  masterOptionListSchema,
+  Role,
+  type AccountStatus,
+  type MasterOption,
+} from '@dexa/contracts';
 import type { Database } from '@dexa/db';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -41,6 +51,17 @@ const SEED_DOCUMENT = {
 };
 const INACTIVE_POSITION_CODE = 'DATA_ANALYST';
 const INACTIVE_STATUS_CODE = 'ON_LEAVE';
+const ACCOUNT_DISABLED_BODY = {
+  statusCode: 401,
+  code: 'ACCOUNT_DISABLED',
+  message: 'This account is no longer active.',
+};
+
+// Stands in for auth-service, which owns the accounts. An ID that is not registered has no account.
+const accountStatuses = new Map<string, AccountStatus>();
+const fakeAccountStatusReader: IAccountStatusReader = {
+  findAccountStatus: (accountId) => Promise.resolve(accountStatuses.get(accountId)),
+};
 
 const EXPECTED_POSITIONS = [
   { code: 'DATA_ANALYST', name: 'Data Analyst', isActive: false },
@@ -59,11 +80,16 @@ function encodeJsonSegment(value: object): string {
 
 // Signs a user token with the test user key. Only auth-service holds that key in production, so this
 // helper stands in for it. The claims are the ones the user token verifier checks.
-function signUserToken(keys: AuthKeySet, role: Role, expiresAtSeconds: number): string {
+function signUserToken(
+  keys: AuthKeySet,
+  accountId: string,
+  role: Role,
+  expiresAtSeconds: number,
+): string {
   const signingInput = [
     encodeJsonSegment({ alg: 'RS256', typ: 'JWT' }),
     encodeJsonSegment({
-      sub: randomUUID(),
+      sub: accountId,
       role,
       iss: USER_JWT_ISSUER,
       aud: USER_JWT_AUDIENCE,
@@ -91,6 +117,8 @@ describe('employee-service master lookups', () => {
   let hrToken: string;
   let employeeToken: string;
   let expiredHrToken: string;
+  let deactivatedHrToken: string;
+  let unknownAccountHrToken: string;
 
   // Teardown still stops each resource when setup failed partway through.
   afterAll(async () => {
@@ -109,7 +137,10 @@ describe('employee-service master lookups', () => {
     );
     const moduleRef = await Test.createTestingModule({
       imports: [createAppModule(config)],
-    }).compile();
+    })
+      .overrideProvider(ACCOUNT_STATUS_READER)
+      .useValue(fakeAccountStatusReader)
+      .compile();
     app = moduleRef.createNestApplication();
     configureApp(app, { CORS_ORIGINS: [] });
     await app.init();
@@ -117,10 +148,22 @@ describe('employee-service master lookups', () => {
 
     const keys = employeeServiceAuthKeys();
     const expiresLater = nowInSeconds() + TOKEN_LIFETIME_SECONDS;
-    hrToken = signUserToken(keys, Role.HR, expiresLater);
-    employeeToken = signUserToken(keys, Role.EMPLOYEE, expiresLater);
-    expiredHrToken = signUserToken(keys, Role.HR, nowInSeconds() - 60);
+    const hrAccountId = registerAccount({ isActive: true });
+    const employeeAccountId = registerAccount({ isActive: true });
+    const deactivatedHrAccountId = registerAccount({ isActive: false });
+    hrToken = signUserToken(keys, hrAccountId, Role.HR, expiresLater);
+    employeeToken = signUserToken(keys, employeeAccountId, Role.EMPLOYEE, expiresLater);
+    expiredHrToken = signUserToken(keys, hrAccountId, Role.HR, nowInSeconds() - 60);
+    deactivatedHrToken = signUserToken(keys, deactivatedHrAccountId, Role.HR, expiresLater);
+    // Signed for an ID that auth-service does not know, so the status read finds no account.
+    unknownAccountHrToken = signUserToken(keys, randomUUID(), Role.HR, expiresLater);
   }, CONTAINER_TIMEOUT_MS);
+
+  function registerAccount(status: AccountStatus): string {
+    const accountId = randomUUID();
+    accountStatuses.set(accountId, status);
+    return accountId;
+  }
 
   async function deactivateMasterRows(database: Database): Promise<void> {
     await database.db
@@ -177,6 +220,26 @@ describe('employee-service master lookups', () => {
       const response = await getWithToken(path, employeeToken).expect(403);
 
       expect(response.body).toMatchObject({ statusCode: 403, code: 'FORBIDDEN' });
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it.each([POSITIONS_PATH, EMPLOYEE_STATUSES_PATH])(
+    'should return 401 ACCOUNT_DISABLED on %s when the HR account has been deactivated',
+    async (path) => {
+      const response = await getWithToken(path, deactivatedHrToken).expect(401);
+
+      expect(response.body).toEqual(ACCOUNT_DISABLED_BODY);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it.each([POSITIONS_PATH, EMPLOYEE_STATUSES_PATH])(
+    'should return 401 UNAUTHORIZED on %s when the token names an account that does not exist',
+    async (path) => {
+      const response = await getWithToken(path, unknownAccountHrToken).expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
     },
     TEST_TIMEOUT_MS,
   );

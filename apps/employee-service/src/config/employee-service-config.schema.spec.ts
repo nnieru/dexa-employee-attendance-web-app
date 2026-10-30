@@ -84,6 +84,42 @@ describe('EmployeeServiceConfigSchema EMPLOYEE_DATABASE_URL', () => {
   });
 });
 
+describe('EmployeeServiceConfigSchema AUTH_SERVICE_INTERNAL_URL', () => {
+  it('should return the auth-service base URL when it names a single-label host', () => {
+    const config = parseConfig(
+      EmployeeServiceConfigSchema,
+      employeeServiceEnvironment({ AUTH_SERVICE_INTERNAL_URL: 'http://auth-service:3000' }),
+    );
+
+    expect(config.AUTH_SERVICE_INTERNAL_URL).toBe('http://auth-service:3000');
+  });
+
+  it.each([
+    {
+      condition: 'the variable is unset',
+      url: undefined,
+      message: 'must be an http or https URL',
+    },
+    {
+      condition: 'the scheme is not http or https',
+      url: 'ftp://auth-service:21',
+      message: 'must be an http or https URL',
+    },
+    {
+      condition: 'the URL carries credentials',
+      url: 'http://employee:hunter2-secret@auth-service:3000',
+      message: 'must not contain credentials',
+    },
+  ])('should reject the config when $condition', ({ url, message }) => {
+    expect(() =>
+      parseConfig(
+        EmployeeServiceConfigSchema,
+        employeeServiceEnvironment({ AUTH_SERVICE_INTERNAL_URL: url }),
+      ),
+    ).toThrow(new Error(`Invalid configuration: AUTH_SERVICE_INTERNAL_URL: ${message}`));
+  });
+});
+
 describe('EmployeeServiceConfigSchema EMPLOYEE_MASTER_DATA', () => {
   it.each([
     { condition: 'the variable is unset', setting: undefined },

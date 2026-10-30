@@ -1,4 +1,10 @@
-import { AuthModule, HealthModule, InternalHttpModule, ServiceName } from '@dexa/common';
+import {
+  AccountStatusModule,
+  AuthModule,
+  HealthModule,
+  InternalHttpModule,
+  ServiceName,
+} from '@dexa/common';
 import { Module, type Type } from '@nestjs/common';
 import type { ApiGatewayConfig } from './config/api-gateway-config.schema.js';
 import { GatewayAuthModule } from './auth/auth.module.js';
@@ -20,6 +26,7 @@ export function createAppModule(config: ApiGatewayConfig): Type<unknown> {
         },
         authConfig: config,
       }),
+      AccountStatusModule.forRemote(),
       GatewayAuthModule,
       GatewayEmployeesModule,
       HealthModule,

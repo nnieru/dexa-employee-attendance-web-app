@@ -26,6 +26,6 @@ import { HrBootstrapService } from './hr-bootstrap.service.js';
     HrBootstrapService,
   ],
   controllers: [AccountLookupController, AccountAdministrationController],
-  exports: [ACCOUNT_REPOSITORY],
+  exports: [ACCOUNT_REPOSITORY, ACCOUNT_LOOKUP_READER],
 })
 export class AccountsModule {}

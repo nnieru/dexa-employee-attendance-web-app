@@ -28,6 +28,11 @@ export { AuthModule } from './auth/auth.module.js';
 export { CurrentUser } from './auth/current-user.decorator.js';
 export { IS_PUBLIC_KEY, Public, isPublicRoute } from './auth/public.decorator.js';
 export { JwtAuthGuard } from './auth/jwt-auth.guard.js';
+export {
+  ACCOUNT_STATUS_READER,
+  type IAccountStatusReader,
+} from './auth/account-status-reader.interface.js';
+export { AccountStatusModule } from './auth/account-status.module.js';
 export { Roles } from './auth/roles.decorator.js';
 export { RolesGuard } from './auth/roles.guard.js';
 export { ServiceAuthGuard } from './auth/service-auth.guard.js';
@@ -42,6 +47,7 @@ export {
   type AuthenticatedUser,
 } from './auth/authenticated-principal.js';
 export { InternalHttpModule, type InternalHttpModuleOptions } from './http/internal-http.module.js';
+export { internalBaseUrlSchema } from './http/internal-service-base-urls.schema.js';
 export {
   INTERNAL_HTTP_CLIENT,
   type IInternalHttpClient,

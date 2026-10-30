@@ -1,4 +1,9 @@
-import { AuthConfigSchema, BaseConfigSchema, ServiceName } from '@dexa/common';
+import {
+  AuthConfigSchema,
+  BaseConfigSchema,
+  internalBaseUrlSchema,
+  ServiceName,
+} from '@dexa/common';
 import { z } from 'zod';
 import { resolveMasterDataSetting, type MasterDataDocument } from './master-data-setting.schema.js';
 
@@ -32,6 +37,8 @@ const employeeServiceEnvironmentSchema = BaseConfigSchema.extend({
   SERVICE_NAME: ownServiceNameSchema,
   EMPLOYEE_DATABASE_URL: postgresUrlSchema,
   EMPLOYEE_MASTER_DATA: z.preprocess(treatBlankAsUnset, z.string().optional()),
+  // Every user-token request checks the account with auth-service (JwtAuthGuard), so the URL is required.
+  AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
 });
 
 // The master data setting depends on NODE_ENV, so it is resolved after the other variables parse.

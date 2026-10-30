@@ -6,6 +6,10 @@ import request from 'supertest';
 import type { AuthenticatedUser } from '../src/auth/authenticated-principal.js';
 import { AuthModule } from '../src/auth/auth.module.js';
 import { CurrentUser } from '../src/auth/current-user.decorator.js';
+import {
+  ACCOUNT_STATUS_READER,
+  type IAccountStatusReader,
+} from '../src/auth/account-status-reader.interface.js';
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard.js';
 import { ServiceAuthGuard } from '../src/auth/service-auth.guard.js';
 import { ServiceName } from '../src/auth/service-name.js';
@@ -77,6 +81,12 @@ class AuthTestController {
   }
 }
 
+// The user-token cases here cover signatures and claims. Every account is active, so the status check
+// passes and only the token is under test. Status cases live in jwt-auth.guard.spec.ts.
+const activeAccountStatusReader: IAccountStatusReader = {
+  findAccountStatus: () => Promise.resolve({ isActive: true }),
+};
+
 const jwtService = new JwtService();
 
 // jsonwebtoken refuses to sign with "none", so the unsigned token is assembled by hand.
@@ -128,6 +138,7 @@ describe('auth guards', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AuthModule.forRoot(testConfig)],
       controllers: [AuthTestController],
+      providers: [{ provide: ACCOUNT_STATUS_READER, useValue: activeAccountStatusReader }],
     }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app, { CORS_ORIGINS: [] });
@@ -388,6 +399,21 @@ describe('auth guards', () => {
 
     it.each(rejectedServiceTokens)('should return 401 when $condition', async ({ mintToken }) => {
       await expectUnauthorized(INTERNAL_PATH, await mintToken());
+    });
+  });
+
+  describe('JwtAuthGuard wiring', () => {
+    // A service that forgets to bind the reader must fail at startup. A guard that failed open here would
+    // let a deactivated account through.
+    it('should refuse to compile when no account status reader is bound', async () => {
+      const testConfig = parseConfig(AuthConfigSchema, authEnvironmentFor(keys, EMPLOYEE));
+
+      await expect(
+        Test.createTestingModule({
+          imports: [AuthModule.forRoot(testConfig)],
+          controllers: [AuthTestController],
+        }).compile(),
+      ).rejects.toThrow(/IAccountStatusReader/);
     });
   });
 

@@ -53,6 +53,7 @@ services:
       PORT: '3000'
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Asia/Jakarta}
+      AUTH_SERVICE_INTERNAL_URL: http://auth-service:3000
       EMPLOYEE_SERVICE_INTERNAL_URL: http://employee-service:3000
     ports:
       - '127.0.0.1:3000:3000'
@@ -106,6 +107,7 @@ services:
       BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Asia/Jakarta}
       EMPLOYEE_DATABASE_URL: ${EMPLOYEE_DATABASE_URL_CONTAINER:-}
       EMPLOYEE_MASTER_DATA: ${EMPLOYEE_MASTER_DATA:-}
+      AUTH_SERVICE_INTERNAL_URL: http://auth-service:3000
     ports:
       - '127.0.0.1:3002:3000'
     read_only: true

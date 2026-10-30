@@ -23,6 +23,10 @@ import { z } from 'zod';
 import type { AuthenticatedUser } from '../src/auth/authenticated-principal.js';
 import { AuthModule } from '../src/auth/auth.module.js';
 import { CurrentUser } from '../src/auth/current-user.decorator.js';
+import {
+  ACCOUNT_STATUS_READER,
+  type IAccountStatusReader,
+} from '../src/auth/account-status-reader.interface.js';
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard.js';
 import { ServiceAuthGuard } from '../src/auth/service-auth.guard.js';
 import { ServiceName } from '../src/auth/service-name.js';
@@ -193,6 +197,11 @@ class UserTargetController {
   }
 }
 
+// The target's user route is about forwarded tokens, so every account is active here.
+const activeAccountStatusReader: IAccountStatusReader = {
+  findAccountStatus: () => Promise.resolve({ isActive: true }),
+};
+
 const userEchoResponseSchema = z.object({ accountId: z.string(), role: z.string() });
 
 type RunningTarget = { readonly app: INestApplication; readonly url: string };
@@ -201,7 +210,10 @@ async function startTarget(script: TargetScript): Promise<RunningTarget> {
   const moduleRef = await Test.createTestingModule({
     imports: [AuthModule.forRoot(targetConfig)],
     controllers: [InternalTargetController, UserTargetController],
-    providers: [{ provide: TARGET_SCRIPT, useValue: script }],
+    providers: [
+      { provide: TARGET_SCRIPT, useValue: script },
+      { provide: ACCOUNT_STATUS_READER, useValue: activeAccountStatusReader },
+    ],
   }).compile();
   const app = moduleRef.createNestApplication();
   configureApp(app, { CORS_ORIGINS: [] });

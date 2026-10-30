@@ -5,7 +5,7 @@ import { serviceNameSchema } from '../auth/service-name.js';
 // employee-service, which is how docker compose addresses services, and IP literals.
 // Credentials in the URL would be sent with every call and could reach logs, so they are refused.
 // The pipe runs the credential check only after the URL check passes, so the URL always parses.
-const internalBaseUrlSchema = z
+export const internalBaseUrlSchema = z
   .url({
     protocol: /^https?$/,
     error: 'must be an http or https URL',

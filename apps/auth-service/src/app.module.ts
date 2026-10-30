@@ -2,6 +2,7 @@ import { AuthModule, HealthModule } from '@dexa/common';
 import { MessagingModule, OutboxModule } from '@dexa/messaging';
 import { Module, type Type } from '@nestjs/common';
 import { AccountsModule } from './accounts/accounts.module.js';
+import { LocalAccountStatusModule } from './accounts/local-account-status.module.js';
 import type { AuthServiceConfig } from './config/auth-service-config.schema.js';
 import { ConfigModule } from './config/config.module.js';
 import { CredentialsModule } from './credentials/credentials.module.js';
@@ -28,6 +29,7 @@ export function createAppModule(config: AuthServiceConfig): Type<unknown> {
       OutboxModule.forRoot({ databaseToken: DATABASE }),
       CredentialsModule,
       AccountsModule,
+      LocalAccountStatusModule,
       LoginModule,
       ProvisioningModule,
       PasswordModule,
