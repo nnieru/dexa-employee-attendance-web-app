@@ -9,6 +9,7 @@ import {
   AttendanceAlreadyClockedOutError,
   AttendanceNotClockedInError,
   CheckOutTimeConflictError,
+  ScheduleNotConfiguredError,
 } from './punch.errors.js';
 import {
   PUNCH_REPOSITORY,
@@ -68,6 +69,8 @@ async function recordCheckOut(
   context: CheckOutContext,
 ): Promise<CheckOutRecording> {
   const { accountId, businessDate } = target;
+  // Checked first, before the lock and the not-clocked-in and already-clocked-out checks (D-42).
+  await assertScheduleInEffect(transaction, businessDate);
   // The row lock serializes competing check-outs. A second one waits, and then, in a new statement snapshot, sees the
   // OUT entry that the first one saved.
   const day = await transaction.findDayForUpdate(accountId, businessDate);
@@ -91,6 +94,14 @@ async function recordCheckOut(
     checkoutStatusCode: classification,
   });
   return { recordedAt, classification };
+}
+
+async function assertScheduleInEffect(
+  transaction: IPunchTransaction,
+  businessDate: BusinessDate,
+): Promise<void> {
+  const scheduleVersion = await transaction.findScheduleInEffect(businessDate);
+  if (scheduleVersion === undefined) throw new ScheduleNotConfiguredError();
 }
 
 async function assertCanCheckOut(

@@ -7,8 +7,9 @@ import {
   type ClockInResponse,
   type ClockOutRequest,
   type ClockOutResponse,
+  type TodayAttendanceResponse,
 } from '@dexa/contracts';
-import { Body, Controller, Headers, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Inject, Post } from '@nestjs/common';
 import { readBearerToken } from '../auth/read-bearer-token.js';
 import {
   ATTENDANCE_SERVICE_CLIENT,
@@ -40,5 +41,13 @@ export class AttendanceController {
     @Headers('authorization') authorization: string | undefined,
   ): Promise<ClockOutResponse> {
     return this.attendanceService.clockOut(readBearerToken(authorization));
+  }
+
+  @Roles(Role.EMPLOYEE, Role.HR)
+  @Get('me/today')
+  today(
+    @Headers('authorization') authorization: string | undefined,
+  ): Promise<TodayAttendanceResponse> {
+    return this.attendanceService.getToday(readBearerToken(authorization));
   }
 }

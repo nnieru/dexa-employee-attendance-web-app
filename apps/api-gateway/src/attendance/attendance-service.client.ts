@@ -4,8 +4,10 @@ import {
   clockInResponseSchema,
   clockOutResponseSchema,
   ErrorCode,
+  todayAttendanceResponseSchema,
   type ClockInResponse,
   type ClockOutResponse,
+  type TodayAttendanceResponse,
 } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import type { IAttendanceServiceClient } from './attendance-service-client.interface.js';
@@ -15,6 +17,7 @@ import type { IAttendanceServiceClient } from './attendance-service-client.inter
 const USER_TOKEN_REFUSAL_CODES = [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED];
 const CLOCK_IN_PATH = `/${API_PREFIX}/attendance/clock-in`;
 const CLOCK_OUT_PATH = `/${API_PREFIX}/attendance/clock-out`;
+const TODAY_PATH = `/${API_PREFIX}/attendance/me/today`;
 
 @Injectable()
 export class AttendanceServiceClient implements IAttendanceServiceClient {
@@ -42,6 +45,17 @@ export class AttendanceServiceClient implements IAttendanceServiceClient {
       forwardedUserToken: accessToken,
       refusalCodes: USER_TOKEN_REFUSAL_CODES,
       responseSchema: clockOutResponseSchema,
+    });
+  }
+
+  // A read, so it may be retried, but the gateway does not retry: one forwarded call answers the employee's screen.
+  getToday(accessToken: string): Promise<TodayAttendanceResponse> {
+    return this.httpClient.get({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: TODAY_PATH,
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      responseSchema: todayAttendanceResponseSchema,
     });
   }
 }

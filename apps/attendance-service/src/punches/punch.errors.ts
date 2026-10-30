@@ -2,13 +2,26 @@ import { ConflictError, ValidationError } from '@dexa/common';
 import { ErrorCode } from '@dexa/contracts';
 import type { PunchType } from './punch.repository.interface.js';
 
-/** No schedule version covers the business date, so a punch cannot be classified (ATT-8). */
+/**
+ * No schedule version covers the business date, so a punch cannot be classified (ATT-8, D-42). Raised before any
+ * other check, so nothing is written.
+ */
 export class ScheduleNotConfiguredError extends ConflictError {
   constructor() {
     super(
       ErrorCode.SCHEDULE_NOT_CONFIGURED,
-      'No work schedule is in effect for this date, so the punch was not recorded.',
+      'Work schedule not found. The punch was not recorded.',
     );
+  }
+}
+
+/**
+ * No schedule version covers today, so today's state cannot be shown (D-42). The same code as the punch error, with a
+ * message that does not mention a punch, because this is a read.
+ */
+export class TodayScheduleNotConfiguredError extends ConflictError {
+  constructor() {
+    super(ErrorCode.SCHEDULE_NOT_CONFIGURED, 'Work schedule not found.');
   }
 }
 

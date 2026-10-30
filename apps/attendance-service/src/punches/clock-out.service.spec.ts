@@ -5,6 +5,7 @@ import {
   AttendanceAlreadyClockedOutError,
   AttendanceNotClockedInError,
   CheckOutTimeConflictError,
+  ScheduleNotConfiguredError,
 } from './punch.errors.js';
 import {
   FakePunchRepository,
@@ -131,6 +132,18 @@ describe('ClockOutService.clockOut', () => {
       checkoutStatusCode: 'CHECKOUT_NOT_REQUIRED',
       effectiveCheckoutAt: new Date('2026-11-07T11:00:00Z'),
     });
+  });
+
+  it('should reject the check-out with the schedule error, not the not-clocked-in error, and write nothing when no schedule covers the business date', async () => {
+    const instant = { current: ON_TIME_MONDAY_CHECKOUT_INSTANT };
+    const repository = new FakePunchRepository([]);
+    const services = createServices(repository, instant);
+
+    await expect(services.clockOut.clockOut(ACCOUNT_ID)).rejects.toBeInstanceOf(
+      ScheduleNotConfiguredError,
+    );
+    expect(repository.state.days).toEqual([]);
+    expect(repository.state.entries).toEqual([]);
   });
 
   it('should reject the check-out and write nothing when the employee has no attendance day for the business date', async () => {

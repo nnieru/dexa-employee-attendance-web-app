@@ -70,7 +70,7 @@ function createTransactionScope(runner: PunchRunner): IPunchTransaction {
 
 // A version covers the date when it starts on or before the date and has no end or ends after it (DATABASE §5.2).
 // The exclusion constraint keeps at most one version covering any date.
-async function findScheduleInEffect(
+export async function findScheduleInEffect(
   runner: PunchRunner,
   businessDate: BusinessDate,
 ): Promise<ScheduleVersion | undefined> {
@@ -96,7 +96,7 @@ async function findScheduleInEffect(
   return row;
 }
 
-async function findCalendarException(
+export async function findCalendarException(
   runner: PunchRunner,
   businessDate: BusinessDate,
 ): Promise<CalendarExceptionInput | null> {

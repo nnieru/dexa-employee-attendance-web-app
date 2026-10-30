@@ -116,6 +116,12 @@ export {
   type ClockOutRequest,
   type ClockOutResponse,
 } from './attendance/clock-out.schema.js';
+export {
+  todayAttendanceResponseSchema,
+  todayStateSchema,
+  type TodayAttendanceResponse,
+  type TodayAttendanceState,
+} from './attendance/today-attendance.schema.js';
 export { Portal } from './auth/portal.js';
 export {
   PASSWORD_MAX_LENGTH,

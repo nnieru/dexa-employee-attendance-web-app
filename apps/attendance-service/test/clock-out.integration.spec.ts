@@ -236,6 +236,25 @@ describe('attendance clock out', () => {
   );
 
   it(
+    'should return 409 SCHEDULE_NOT_CONFIGURED and write nothing when no schedule covers the business date, before the not-clocked-in check',
+    async () => {
+      const accountId = registerAccount();
+      // The seeded version starts on Monday, so Sunday has no schedule in effect and no check-in either.
+      mutableClock.current = new Date('2026-11-01T02:00:00Z');
+
+      const response = await postClockOut(tokenFor(accountId)).expect(409);
+
+      expect(response.body).toMatchObject({
+        statusCode: 409,
+        code: 'SCHEDULE_NOT_CONFIGURED',
+        message: 'Work schedule not found. The punch was not recorded.',
+      });
+      expect(await readDays(accountId)).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
     'should return 409 ATTENDANCE_ALREADY_CLOCKED_OUT and keep the first check-out when the employee clocks out again the same day',
     async () => {
       const accountId = registerAccount();
