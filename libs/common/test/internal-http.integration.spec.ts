@@ -1,4 +1,4 @@
-import { ErrorCode } from '@dexa/contracts';
+import { ErrorCode, Role } from '@dexa/contracts';
 import {
   Body,
   Controller,
@@ -14,11 +14,15 @@ import {
   type INestApplication,
   type LoggerService,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { createServer } from 'node:http';
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
+import type { AuthenticatedUser } from '../src/auth/authenticated-principal.js';
 import { AuthModule } from '../src/auth/auth.module.js';
+import { CurrentUser } from '../src/auth/current-user.decorator.js';
+import { JwtAuthGuard } from '../src/auth/jwt-auth.guard.js';
 import { ServiceAuthGuard } from '../src/auth/service-auth.guard.js';
 import { ServiceName } from '../src/auth/service-name.js';
 import { configureApp } from '../src/bootstrap/configure-app.js';
@@ -28,6 +32,7 @@ import {
   ConflictError,
   DependencyUnavailableError,
   NotFoundError,
+  UnauthorizedError,
 } from '../src/errors/domain.errors.js';
 import { CORRELATION_ID_HEADER } from '../src/http/correlation-id-header.js';
 import {
@@ -36,7 +41,12 @@ import {
 } from '../src/http/internal-http-client.interface.js';
 import { InternalHttpModule } from '../src/http/internal-http.module.js';
 import { MAX_GET_RETRIES } from '../src/http/internal-http.rules.js';
-import { authEnvironmentFor, generateAuthKeySet } from './auth-key-set.js';
+import {
+  USER_JWT_AUDIENCE,
+  USER_JWT_ISSUER,
+  authEnvironmentFor,
+  generateAuthKeySet,
+} from './auth-key-set.js';
 
 const LOCALHOST = '127.0.0.1';
 
@@ -53,6 +63,8 @@ const SLOW_PATH = '/api/v1/test-internal/slow';
 const ACCOUNTS_PATH = '/api/v1/test-internal/accounts';
 const CONFLICT_PATH = '/api/v1/test-internal/conflict';
 const NOT_FOUND_WITHOUT_ERROR_BODY_PATH = '/api/v1/test-internal/not-found-without-error-body';
+const SESSION_PATH = '/api/v1/test-internal/session';
+const USER_ECHO_PATH = '/api/v1/test-internal/user-echo';
 
 const ACCOUNT_ID = '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13';
 const FLAKY_ACCOUNT_ID = 'flaky-account';
@@ -62,6 +74,11 @@ const SHORT_TIMEOUT_MILLISECONDS = 50;
 const SLOW_RESPONSE_MILLISECONDS = 400;
 // Stands for "every attempt fails", without a magic number.
 const ALWAYS_FAILING = Number.POSITIVE_INFINITY;
+// 2100-01-01T00:00:00Z, so a token minted for these tests does not expire while they run.
+const FAR_FUTURE_EXPIRY_SECONDS = 4_102_444_800;
+const EXPIRED_EXPIRY_SECONDS = 1;
+const INVALID_CREDENTIALS_CODE = 'INVALID_CREDENTIALS';
+const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password.';
 
 const TARGET_SCRIPT = Symbol('TargetScript');
 
@@ -69,11 +86,13 @@ const TARGET_SCRIPT = Symbol('TargetScript');
 // configuration and the caller signs them with its own private key.
 let targetConfig: AuthConfig;
 let callerConfig: AuthConfig;
+let userPrivateKeyPem: string;
 
 beforeAll(() => {
   const keys = generateAuthKeySet();
   targetConfig = parseConfig(AuthConfigSchema, authEnvironmentFor(keys, TARGET_SERVICE));
   callerConfig = parseConfig(AuthConfigSchema, authEnvironmentFor(keys, ServiceName.API_GATEWAY));
+  userPrivateKeyPem = keys.user.privateKeyPem;
 });
 
 const echoResponseSchema = z.object({
@@ -145,14 +164,33 @@ class InternalTargetController {
   notFoundWithoutErrorBody(): { detail: string } {
     return { detail: 'No employee matches this request.' };
   }
+
+  // Answers the way auth-service answers refused credentials.
+  @Post('session')
+  session(): never {
+    throw new UnauthorizedError(INVALID_CREDENTIALS_CODE, INVALID_CREDENTIALS_MESSAGE);
+  }
 }
+
+// Kept apart from InternalTargetController, whose class-level guard admits only service tokens. This
+// route admits only user tokens, so a service token sent here is refused.
+@Controller('test-internal')
+class UserTargetController {
+  @Get('user-echo')
+  @UseGuards(JwtAuthGuard)
+  userEcho(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
+    return user;
+  }
+}
+
+const userEchoResponseSchema = z.object({ accountId: z.string(), role: z.string() });
 
 type RunningTarget = { readonly app: INestApplication; readonly url: string };
 
 async function startTarget(script: TargetScript): Promise<RunningTarget> {
   const moduleRef = await Test.createTestingModule({
     imports: [AuthModule.forRoot(targetConfig)],
-    controllers: [InternalTargetController],
+    controllers: [InternalTargetController, UserTargetController],
     providers: [{ provide: TARGET_SCRIPT, useValue: script }],
   }).compile();
   const app = moduleRef.createNestApplication();
@@ -438,7 +476,145 @@ describe('InternalHttpClient against a running target', () => {
       expect(harness.script.calls.accounts).toBe(1);
     });
   });
+
+  describe('forwardedUserToken', () => {
+    it('should return the identity of the user when the user token is forwarded', async () => {
+      const token = await signUserToken(Role.HR, FAR_FUTURE_EXPIRY_SECONDS);
+
+      const response = await harness.client.get({
+        target: TARGET_SERVICE,
+        path: USER_ECHO_PATH,
+        forwardedUserToken: token,
+        responseSchema: userEchoResponseSchema,
+      });
+
+      expect(response).toEqual({ accountId: ACCOUNT_ID, role: Role.HR });
+    });
+
+    it('should throw UnauthorizedError with the remote code when the forwarded token is refused and its 401 code is listed', async () => {
+      const token = await signUserToken(Role.HR, EXPIRED_EXPIRY_SECONDS);
+
+      const error = await captureRejection(() =>
+        harness.client.get({
+          target: TARGET_SERVICE,
+          path: USER_ECHO_PATH,
+          forwardedUserToken: token,
+          refusalCodes: [ErrorCode.UNAUTHORIZED],
+          responseSchema: userEchoResponseSchema,
+        }),
+      );
+
+      expect(error).toBeInstanceOf(UnauthorizedError);
+      expect(error).toMatchObject({ code: ErrorCode.UNAUTHORIZED, message: 'Unauthorized' });
+    });
+
+    it('should throw DependencyUnavailableError when the forwarded token is refused and no refusal code is listed', async () => {
+      const token = await signUserToken(Role.HR, EXPIRED_EXPIRY_SECONDS);
+
+      const error = await captureRejection(() =>
+        harness.client.get({
+          target: TARGET_SERVICE,
+          path: USER_ECHO_PATH,
+          forwardedUserToken: token,
+          responseSchema: userEchoResponseSchema,
+        }),
+      );
+
+      expect(error).toBeInstanceOf(DependencyUnavailableError);
+    });
+
+    it('should not log the forwarded token when the target refuses it', async () => {
+      const token = await signUserToken(Role.HR, EXPIRED_EXPIRY_SECONDS);
+
+      await captureRejection(() =>
+        harness.client.get({
+          target: TARGET_SERVICE,
+          path: USER_ECHO_PATH,
+          forwardedUserToken: token,
+          responseSchema: userEchoResponseSchema,
+        }),
+      );
+
+      expect(harness.logs.join('\n')).not.toContain(token);
+    });
+  });
+
+  describe('refusalCodes', () => {
+    it('should throw UnauthorizedError with the remote code and message when the target refuses the presented credentials', async () => {
+      const error = await captureRejection(() =>
+        harness.client.post({
+          target: TARGET_SERVICE,
+          path: SESSION_PATH,
+          body: {},
+          refusalCodes: [INVALID_CREDENTIALS_CODE],
+          responseSchema: echoResponseSchema,
+        }),
+      );
+
+      expect(error).toBeInstanceOf(UnauthorizedError);
+      expect(error).toMatchObject({
+        code: INVALID_CREDENTIALS_CODE,
+        message: INVALID_CREDENTIALS_MESSAGE,
+      });
+    });
+
+    it('should throw DependencyUnavailableError when the 401 code is not listed', async () => {
+      const error = await captureRejection(() =>
+        harness.client.post({
+          target: TARGET_SERVICE,
+          path: SESSION_PATH,
+          body: {},
+          refusalCodes: [ErrorCode.ACCOUNT_DISABLED],
+          responseSchema: echoResponseSchema,
+        }),
+      );
+
+      expect(error).toBeInstanceOf(DependencyUnavailableError);
+    });
+
+    it('should throw DependencyUnavailableError when this service token is refused, even if a refusal code is listed', async () => {
+      // The target refuses this service's token with UNAUTHORIZED, which is not a listed refusal code.
+      const error = await captureRejection(() =>
+        harness.client.get({
+          target: OTHER_SERVICE,
+          path: ECHO_PATH,
+          refusalCodes: [INVALID_CREDENTIALS_CODE],
+          responseSchema: echoResponseSchema,
+        }),
+      );
+
+      expect(error).toBeInstanceOf(DependencyUnavailableError);
+    });
+
+    it('should not log the request body when the target refuses the call without a listed code', async () => {
+      await captureRejection(() =>
+        harness.client.post({
+          target: TARGET_SERVICE,
+          path: SESSION_PATH,
+          body: { password: PERSONAL_DATA_MARKER },
+          responseSchema: echoResponseSchema,
+        }),
+      );
+
+      const logged = harness.logs.join('\n');
+      expect(logged).toContain(SESSION_PATH);
+      expect(logged).not.toContain(PERSONAL_DATA_MARKER);
+    });
+  });
 });
+
+async function signUserToken(role: Role, expirySeconds: number): Promise<string> {
+  return new JwtService().signAsync(
+    { role, exp: expirySeconds },
+    {
+      privateKey: userPrivateKeyPem,
+      algorithm: 'RS256',
+      issuer: USER_JWT_ISSUER,
+      audience: USER_JWT_AUDIENCE,
+      subject: ACCOUNT_ID,
+    },
+  );
+}
 
 describe('InternalHttpModule.forRoot', () => {
   it('should name the field without echoing the URL when a base URL is not http or https', () => {

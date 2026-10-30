@@ -8,3 +8,11 @@ export {
   type EventQueueSettings,
 } from './event-consumer.options.js';
 export { RmqAckInterceptor } from './rmq-ack.interceptor.js';
+export { OutboxModule } from './outbox/outbox.module.js';
+export type { OutboxModuleOptions } from './outbox/outbox-settings.js';
+export { outboxEvents } from './outbox/outbox-events.table.js';
+export {
+  OUTBOX_WRITER,
+  type IOutboxWriter,
+  type OutboxTransaction,
+} from './outbox/outbox-writer.interface.js';

@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { bootstrapService } from '@dexa/common';
-import { AppModule } from './app.module.js';
+import { createAppModule } from './app.module.js';
+import { loadAuthServiceConfig } from './config/load-auth-service-config.js';
 
-await bootstrapService({ module: AppModule, defaultPort: 3001 });
+await bootstrapService({ module: createAppModule(loadAuthServiceConfig()), defaultPort: 3001 });

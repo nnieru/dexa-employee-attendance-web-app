@@ -1,5 +1,5 @@
+import { roleSchema } from '@dexa/contracts';
 import { z } from 'zod';
-import { roleSchema } from './authenticated-principal.js';
 
 // passport-jwt has already checked the signature, algorithm, issuer, audience, and expiry when this
 // schema runs. exp is still required here: jsonwebtoken skips the expiry check for a token that

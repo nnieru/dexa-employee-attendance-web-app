@@ -16,16 +16,20 @@
     "test:integration": "node --experimental-vm-modules --no-warnings ../../node_modules/jest/bin/jest.js --passWithNoTests --testPathPatterns integration"
   },
   "dependencies": {
+    "@dexa/common": "0.0.0",
+    "@dexa/db": "0.0.0",
     "@nestjs/common": "12.3.2",
     "@nestjs/core": "12.3.2",
     "@nestjs/microservices": "12.3.2",
     "amqp-connection-manager": "5.0.1",
     "amqplib": "2.2.0",
+    "drizzle-orm": "0.45.4",
     "rxjs": "7.8.2"
   },
   "devDependencies": {
     "@swc/core": "1.16.20",
     "@swc/jest": "0.2.39",
+    "@testcontainers/postgresql": "12.2.1",
     "@testcontainers/rabbitmq": "12.2.1",
     "@types/jest": "30.0.0",
     "jest": "30.5.2",

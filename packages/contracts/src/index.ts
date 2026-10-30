@@ -1,6 +1,39 @@
 // Single public entry point. Zod schemas, inferred types, event names and error codes live here.
 export { API_PREFIX } from './api-prefix.js';
-export { Role } from './auth/role.js';
+export { currentAccountSchema, type CurrentAccount } from './auth/current-account.schema.js';
+export {
+  ACCOUNT_LOOKUP_MAX_IDS,
+  ACCOUNT_SEARCH_MAX_IDS,
+  accountEmailQuerySchema,
+  accountIdPageSchema,
+  accountIdSchema,
+  accountLookupItemSchema,
+  accountLookupRequestSchema,
+  accountLookupResponseSchema,
+  accountReferenceSchema,
+  accountSearchResponseSchema,
+  accountStatusSchema,
+  type AccountEmailQuery,
+  type AccountIdPage,
+  type AccountLookupItem,
+  type AccountLookupRequest,
+  type AccountReference,
+  type AccountSearchResponse,
+  type AccountStatus,
+} from './auth/account-lookup.schema.js';
+export {
+  loginRequestSchema,
+  loginResponseSchema,
+  type LoginRequest,
+  type LoginResponse,
+} from './auth/login.schema.js';
+export { Portal } from './auth/portal.js';
+export {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  passwordSchema,
+} from './auth/password.schema.js';
+export { Role, roleSchema } from './auth/role.js';
 export { ErrorCode } from './errors/error-code.js';
 export { errorResponseSchema, type ErrorResponse } from './errors/error-response.schema.js';
 export {

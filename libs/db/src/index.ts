@@ -1,2 +1,2 @@
-export { createDatabase, type Database } from './create-database.js';
+export { createDatabase, type Database, type DatabaseOptions } from './create-database.js';
 export { runMigrations } from './run-migrations.js';

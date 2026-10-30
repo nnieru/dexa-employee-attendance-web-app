@@ -5,6 +5,7 @@ import {
   DependencyUnavailableError,
   ForbiddenError,
   NotFoundError,
+  UnauthorizedError,
   ValidationError,
   type DomainError,
 } from '../errors/domain.errors.js';
@@ -39,8 +40,8 @@ type ClientErrorMapping = {
 
 // Only these statuses have a client-facing error. Any other 4xx means this service's request does
 // not match the dependency's contract, so it is reported as unavailable rather than blamed on the
-// caller. 401 is left out on purpose: it means this service's own token was refused, which is a
-// misconfiguration, and mapping it to UnauthorizedError would log the end user out.
+// caller. 401 is handled by toRefusalError: it is not mapped here, because by default it means this
+// service's own token was refused, which is a misconfiguration.
 const CLIENT_ERROR_MAPPING: Readonly<Partial<Record<number, ClientErrorMapping>>> = {
   [HttpStatus.BAD_REQUEST]: {
     errorClass: ValidationError,
@@ -93,14 +94,39 @@ export function createDependencyUnavailableError(cause?: unknown): DependencyUna
   );
 }
 
-/** The error that callers receive for a failed attempt. The cause stays internal, never sent. */
-export function toFailureError(failure: AttemptFailure, cause: unknown): DomainError {
+/**
+ * The error that callers receive for a failed attempt. The cause stays internal, never sent.
+ * @param refusalCodes the codes that make a 401 answer a refusal of the call's own credentials.
+ */
+export function toFailureError(
+  failure: AttemptFailure,
+  cause: unknown,
+  refusalCodes: ReadonlyArray<string> = [],
+): DomainError {
   if (failure.kind !== 'client_error') return createDependencyUnavailableError(cause);
+  if (failure.status === HttpStatus.UNAUTHORIZED) {
+    return toRefusalError(failure.remoteBody, refusalCodes, cause);
+  }
   return toClientError(failure.status, failure.remoteBody, cause);
 }
 
 export function describeFailure(failure: AttemptFailure): string {
   return failure.kind === 'no_response' ? 'no response' : `HTTP ${failure.status}`;
+}
+
+// A 401 is a refusal of the caller's credentials only when the call names the code in the answer.
+// Otherwise it is this service's own token being refused, which must not reach the client as a session
+// problem.
+function toRefusalError(
+  remoteBody: unknown,
+  refusalCodes: ReadonlyArray<string>,
+  cause: unknown,
+): DomainError {
+  const remoteError = errorResponseSchema.safeParse(remoteBody);
+  if (!remoteError.success || !refusalCodes.includes(remoteError.data.code)) {
+    return createDependencyUnavailableError(cause);
+  }
+  return new UnauthorizedError(remoteError.data.code, remoteError.data.message, { cause });
 }
 
 function toClientError(status: number, remoteBody: unknown, cause: unknown): DomainError {

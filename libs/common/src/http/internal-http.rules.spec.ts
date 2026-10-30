@@ -5,6 +5,7 @@ import {
   DependencyUnavailableError,
   ForbiddenError,
   NotFoundError,
+  UnauthorizedError,
   ValidationError,
   type DomainError,
 } from '../errors/domain.errors.js';
@@ -274,4 +275,48 @@ describe('toFailureError', () => {
       expect(error.cause).toBe(CAUSE);
     },
   );
+});
+
+describe('toFailureError with refusal codes', () => {
+  const REFUSAL_CODE = 'INVALID_CREDENTIALS';
+  const REFUSAL_MESSAGE = 'Invalid email or password.';
+  const refusedBody = { statusCode: 401, code: REFUSAL_CODE, message: REFUSAL_MESSAGE };
+
+  it('should return UnauthorizedError with the remote code and message when the 401 code is a refusal code', () => {
+    const error = toFailureError(clientFailure(HttpStatus.UNAUTHORIZED, refusedBody), CAUSE, [
+      REFUSAL_CODE,
+    ]);
+
+    expect(error).toBeInstanceOf(UnauthorizedError);
+    expect(error).toMatchObject({ code: REFUSAL_CODE, message: REFUSAL_MESSAGE });
+    expect(error.cause).toBe(CAUSE);
+  });
+
+  it('should return DependencyUnavailableError when the 401 code is not one of the refusal codes', () => {
+    const error = toFailureError(
+      clientFailure(HttpStatus.UNAUTHORIZED, {
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
+        message: 'Unauthorized',
+      }),
+      CAUSE,
+      [REFUSAL_CODE],
+    );
+
+    expect(error).toBeInstanceOf(DependencyUnavailableError);
+  });
+
+  it('should return DependencyUnavailableError when the 401 body is not an error response', () => {
+    const error = toFailureError(clientFailure(HttpStatus.UNAUTHORIZED, 'Unauthorized'), CAUSE, [
+      REFUSAL_CODE,
+    ]);
+
+    expect(error).toBeInstanceOf(DependencyUnavailableError);
+  });
+
+  it('should return DependencyUnavailableError when no refusal codes are given', () => {
+    const error = toFailureError(clientFailure(HttpStatus.UNAUTHORIZED, refusedBody), CAUSE);
+
+    expect(error).toBeInstanceOf(DependencyUnavailableError);
+  });
 });

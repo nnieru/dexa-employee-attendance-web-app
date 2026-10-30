@@ -43,9 +43,15 @@ type InternalCall<TResponse> = {
   readonly body?: unknown;
   readonly correlationId?: string;
   readonly timeoutMilliseconds?: number;
+  readonly forwardedUserToken?: string;
+  readonly refusalCodes?: ReadonlyArray<string>;
 };
 
-type CallIdentity = Pick<InternalCall<unknown>, 'method' | 'path' | 'target' | 'correlationId'>;
+// What logs and error mapping need to know about a call. It never includes the body, query, or token.
+type CallSummary = Pick<
+  InternalCall<unknown>,
+  'method' | 'path' | 'target' | 'correlationId' | 'refusalCodes'
+>;
 
 /**
  * The helper that every I*Client composes with. It signs each attempt for the target, bounds every
@@ -106,8 +112,8 @@ export class InternalHttpClient implements IInternalHttpClient {
     throw createDependencyUnavailableError();
   }
 
-  private toCallError(call: CallIdentity, failure: AttemptFailure, cause: unknown): DomainError {
-    const error = toFailureError(failure, cause);
+  private toCallError(call: CallSummary, failure: AttemptFailure, cause: unknown): DomainError {
+    const error = toFailureError(failure, cause, call.refusalCodes);
     if (error.kind === 'dependency_unavailable') {
       this.logger.error(`${describeCall(call)} failed: ${describeFailure(failure)}.`);
     }
@@ -120,7 +126,9 @@ export class InternalHttpClient implements IInternalHttpClient {
     call: InternalCall<TResponse>,
   ): Promise<AxiosRequestConfig> {
     const baseUrl = this.resolveBaseUrl(call.target);
-    const token = await this.tokenSigner.signFor(call.target);
+    // A forwarded user token replaces the service token, so the target authorizes the user and this
+    // service signs nothing for the call.
+    const credential = call.forwardedUserToken ?? (await this.tokenSigner.signFor(call.target));
     const timeout = call.timeoutMilliseconds ?? DEFAULT_TIMEOUT_MILLISECONDS;
     return {
       method: call.method,
@@ -128,7 +136,7 @@ export class InternalHttpClient implements IInternalHttpClient {
       url: call.path,
       params: call.query,
       data: call.body,
-      headers: buildHeaders(token, call.correlationId),
+      headers: buildHeaders(credential, call.correlationId),
       timeout,
       // axios's timeout covers only the connection and socket idle time, so a slow body could
       // outlast it. The signal bounds the whole attempt.
@@ -152,8 +160,11 @@ export class InternalHttpClient implements IInternalHttpClient {
   }
 }
 
-function buildHeaders(token: string, correlationId: string | undefined): Record<string, string> {
-  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+function buildHeaders(
+  credential: string,
+  correlationId: string | undefined,
+): Record<string, string> {
+  const headers: Record<string, string> = { Authorization: `Bearer ${credential}` };
   if (correlationId !== undefined) headers[CORRELATION_ID_HEADER] = correlationId;
   return headers;
 }
@@ -166,7 +177,7 @@ function describeAxiosFailure(error: AxiosError): AttemptFailure {
 }
 
 // Logs carry the method, path, and target, never the query, the body, or the token.
-function describeCall(call: CallIdentity): string {
+function describeCall(call: CallSummary): string {
   const correlation =
     call.correlationId === undefined ? '' : ` (correlationId=${call.correlationId})`;
   return `${call.method} ${call.path} on ${call.target}${correlation}`;

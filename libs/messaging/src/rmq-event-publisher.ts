@@ -10,6 +10,7 @@ import {
 } from '@nestjs/microservices';
 import { catchError, lastValueFrom, throwError, timeout } from 'rxjs';
 import type { EventMessage } from './event-message.js';
+import { EventPublisherClosedError } from './event-publisher.errors.js';
 import type { IEventPublisher } from './event-publisher.interface.js';
 import { EVENTS_EXCHANGE } from './event-topology.js';
 
@@ -49,7 +50,7 @@ export class RmqEventPublisher implements IEventPublisher, OnModuleDestroy {
 
   async publish(message: EventMessage): Promise<void> {
     if (this.isClosed) {
-      throw new Error('Event publisher is closed');
+      throw new EventPublisherClosedError();
     }
     try {
       await lastValueFrom(
