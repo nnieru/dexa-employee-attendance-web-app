@@ -15,3 +15,5 @@ coverage
 # agents
 .agents/
 .claude/
+
+/Claude outputs

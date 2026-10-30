@@ -1,0 +1,5 @@
+CREATE INDEX "employees_position_id_idx" ON "employees" USING btree ("position_id");--> statement-breakpoint
+CREATE INDEX "employees_employee_status_id_idx" ON "employees" USING btree ("employee_status_id");--> statement-breakpoint
+CREATE INDEX "employees_name_lower_idx" ON "employees" USING btree (lower("name"));--> statement-breakpoint
+ALTER TABLE "employees" ADD CONSTRAINT "employees_phone_number_ck" CHECK ("employees"."phone_number" is null or "employees"."phone_number" ~ '^\+?[0-9]{8,15}$');--> statement-breakpoint
+ALTER TABLE "employees" ADD CONSTRAINT "employees_profile_status_completion_ck" CHECK (("employees"."profile_status" = 'COMPLETE') = ("employees"."phone_number" is not null and btrim("employees"."phone_number") <> '' and "employees"."photo_key" is not null and btrim("employees"."photo_key") <> ''));

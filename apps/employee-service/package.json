@@ -22,7 +22,8 @@
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "@dexa/db": "0.0.0",
-    "drizzle-orm": "0.45.4"
+    "drizzle-orm": "0.45.4",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@swc/core": "1.16.20",
@@ -30,6 +31,7 @@
     "@types/jest": "30.0.0",
     "jest": "30.5.2",
     "@nestjs/testing": "12.3.2",
+    "@testcontainers/postgresql": "12.2.1",
     "@types/express": "5.0.6",
     "@types/supertest": "7.2.1",
     "concurrently": "10.0.6",

@@ -1,0 +1,344 @@
+{
+  "id": "e602ecae-7bd1-4fef-b377-d4a0a207cb51",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.employee_provisioning_operations": {
+      "name": "employee_provisioning_operations",
+      "schema": "",
+      "columns": {
+        "operation_id": {
+          "name": "operation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_account_id": {
+          "name": "actor_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_fingerprint_sha256": {
+          "name": "request_fingerprint_sha256",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "employee_provisioning_operations_operation_id_pk": {
+          "name": "employee_provisioning_operations_operation_id_pk",
+          "columns": ["operation_id"]
+        }
+      },
+      "uniqueConstraints": {
+        "employee_provisioning_operations_account_id_uq": {
+          "name": "employee_provisioning_operations_account_id_uq",
+          "nullsNotDistinct": false,
+          "columns": ["account_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "employee_provisioning_operations_request_fingerprint_sha256_ck": {
+          "name": "employee_provisioning_operations_request_fingerprint_sha256_ck",
+          "value": "\"employee_provisioning_operations\".\"request_fingerprint_sha256\" ~ '^[0-9a-f]{64}$'"
+        },
+        "employee_provisioning_operations_state_ck": {
+          "name": "employee_provisioning_operations_state_ck",
+          "value": "\"employee_provisioning_operations\".\"state\" in ('RESERVED', 'PROFILE_SAVED', 'ACTIVE')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.employees": {
+      "name": "employees",
+      "schema": "",
+      "columns": {
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position_id": {
+          "name": "position_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_status_id": {
+          "name": "employee_status_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "profile_status": {
+          "name": "profile_status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone_number": {
+          "name": "phone_number",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "photo_key": {
+          "name": "photo_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "employees_position_id_fk": {
+          "name": "employees_position_id_fk",
+          "tableFrom": "employees",
+          "tableTo": "master_positions",
+          "columnsFrom": ["position_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "employees_employee_status_id_fk": {
+          "name": "employees_employee_status_id_fk",
+          "tableFrom": "employees",
+          "tableTo": "master_employee_statuses",
+          "columnsFrom": ["employee_status_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "employees_account_id_pk": {
+          "name": "employees_account_id_pk",
+          "columns": ["account_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "employees_name_ck": {
+          "name": "employees_name_ck",
+          "value": "btrim(\"employees\".\"name\") <> ''"
+        },
+        "employees_profile_status_ck": {
+          "name": "employees_profile_status_ck",
+          "value": "\"employees\".\"profile_status\" in ('INCOMPLETE', 'COMPLETE')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.master_employee_statuses": {
+      "name": "master_employee_statuses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "master_employee_statuses_id_pk": {
+          "name": "master_employee_statuses_id_pk",
+          "columns": ["id"]
+        }
+      },
+      "uniqueConstraints": {
+        "master_employee_statuses_code_uq": {
+          "name": "master_employee_statuses_code_uq",
+          "nullsNotDistinct": false,
+          "columns": ["code"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "master_employee_statuses_code_ck": {
+          "name": "master_employee_statuses_code_ck",
+          "value": "\"master_employee_statuses\".\"code\" ~ '^[A-Z0-9_]+$'"
+        },
+        "master_employee_statuses_name_ck": {
+          "name": "master_employee_statuses_name_ck",
+          "value": "btrim(\"master_employee_statuses\".\"name\") <> ''"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.master_positions": {
+      "name": "master_positions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "master_positions_id_pk": {
+          "name": "master_positions_id_pk",
+          "columns": ["id"]
+        }
+      },
+      "uniqueConstraints": {
+        "master_positions_code_uq": {
+          "name": "master_positions_code_uq",
+          "nullsNotDistinct": false,
+          "columns": ["code"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "master_positions_code_ck": {
+          "name": "master_positions_code_ck",
+          "value": "\"master_positions\".\"code\" ~ '^[A-Z0-9_]+$'"
+        },
+        "master_positions_name_ck": {
+          "name": "master_positions_name_ck",
+          "value": "btrim(\"master_positions\".\"name\") <> ''"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
