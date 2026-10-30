@@ -108,6 +108,14 @@ export {
   type ClockInRequest,
   type ClockInResponse,
 } from './attendance/clock-in.schema.js';
+export {
+  checkOutClassificationSchema,
+  clockOutRequestSchema,
+  clockOutResponseSchema,
+  type CheckOutClassification,
+  type ClockOutRequest,
+  type ClockOutResponse,
+} from './attendance/clock-out.schema.js';
 export { Portal } from './auth/portal.js';
 export {
   PASSWORD_MAX_LENGTH,

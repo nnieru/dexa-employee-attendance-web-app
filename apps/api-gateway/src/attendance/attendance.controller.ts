@@ -1,9 +1,12 @@
 import { Roles } from '@dexa/common';
 import {
   clockInRequestSchema,
+  clockOutRequestSchema,
   Role,
   type ClockInRequest,
   type ClockInResponse,
+  type ClockOutRequest,
+  type ClockOutResponse,
 } from '@dexa/contracts';
 import { Body, Controller, Headers, Inject, Post } from '@nestjs/common';
 import { readBearerToken } from '../auth/read-bearer-token.js';
@@ -28,5 +31,14 @@ export class AttendanceController {
     @Headers('authorization') authorization: string | undefined,
   ): Promise<ClockInResponse> {
     return this.attendanceService.clockIn(readBearerToken(authorization));
+  }
+
+  @Roles(Role.EMPLOYEE, Role.HR)
+  @Post('clock-out')
+  clockOut(
+    @Body(new ZodValidationPipe(clockOutRequestSchema)) _request: ClockOutRequest,
+    @Headers('authorization') authorization: string | undefined,
+  ): Promise<ClockOutResponse> {
+    return this.attendanceService.clockOut(readBearerToken(authorization));
   }
 }

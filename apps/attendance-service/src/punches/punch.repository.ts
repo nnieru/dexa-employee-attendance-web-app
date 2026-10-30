@@ -15,15 +15,17 @@ import {
   workCalendarDates,
   workSchedules,
 } from '../infrastructure/db/schema.js';
-import { AttendanceAlreadyClockedInError } from './punch.errors.js';
+import { duplicatePunchError } from './punch.errors.js';
 import type {
   AttendanceStatusCode,
   DayCheckInUpdate,
+  DayCheckOutUpdate,
   IPunchRepository,
   IPunchTransaction,
   LockedAttendanceDay,
   NewAttendanceDay,
   NewAttendanceEntry,
+  PunchType,
   ScheduleVersion,
 } from './punch.repository.interface.js';
 
@@ -59,8 +61,10 @@ function createTransactionScope(runner: PunchRunner): IPunchTransaction {
     insertDayIfMissing: (day) => insertDayIfMissing(runner, day),
     findDayForUpdate: (accountId, businessDate) =>
       findDayForUpdate(runner, accountId, businessDate),
+    hasEntry: (attendanceDayId, type) => hasEntry(runner, attendanceDayId, type),
     insertEntry: (entry) => insertEntry(runner, entry),
     updateDayCheckIn: (update) => updateDayCheckIn(runner, update),
+    updateDayCheckOut: (update) => updateDayCheckOut(runner, update),
   };
 }
 
@@ -140,6 +144,7 @@ async function findDayForUpdate(
       isWorkingDay: attendanceDays.isWorkingDay,
       scheduledStartAt: attendanceDays.scheduledStartAt,
       scheduledEndAt: attendanceDays.scheduledEndAt,
+      effectiveCheckinAt: attendanceDays.effectiveCheckinAt,
       lateCheckinGraceMinutes: workSchedules.lateCheckinGraceMinutes,
       earlyCheckoutGraceMinutes: workSchedules.earlyCheckoutGraceMinutes,
       lateCheckoutGraceMinutes: workSchedules.lateCheckoutGraceMinutes,
@@ -152,7 +157,11 @@ async function findDayForUpdate(
     .limit(1)
     .for('update', { of: attendanceDays });
   if (row === undefined) return undefined;
-  return { dayId: row.dayId, daySchedule: toDaySchedule(row) };
+  return {
+    dayId: row.dayId,
+    daySchedule: toDaySchedule(row),
+    effectiveCheckinAt: row.effectiveCheckinAt,
+  };
 }
 
 // The database checks make a working day always carry both instants (attendance_days_working_day_schedule_ck),
@@ -188,6 +197,21 @@ function toDaySchedule(row: {
   };
 }
 
+async function hasEntry(
+  runner: PunchRunner,
+  attendanceDayId: string,
+  type: PunchType,
+): Promise<boolean> {
+  const [row] = await runner
+    .select({ id: attendanceEntries.id })
+    .from(attendanceEntries)
+    .where(
+      and(eq(attendanceEntries.attendanceDayId, attendanceDayId), eq(attendanceEntries.type, type)),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
 async function insertEntry(runner: PunchRunner, entry: NewAttendanceEntry): Promise<void> {
   try {
     await runner.insert(attendanceEntries).values({
@@ -197,7 +221,7 @@ async function insertEntry(runner: PunchRunner, entry: NewAttendanceEntry): Prom
     });
   } catch (error: unknown) {
     if (readUniqueViolationConstraint(error) === ENTRY_DAY_TYPE_CONSTRAINT) {
-      throw new AttendanceAlreadyClockedInError();
+      throw duplicatePunchError(entry.type);
     }
     throw error;
   }
@@ -211,6 +235,19 @@ async function updateDayCheckIn(runner: PunchRunner, update: DayCheckInUpdate): 
     .set({
       effectiveCheckinAt: update.effectiveCheckinAt,
       checkinStatusId,
+      revision: sql`${attendanceDays.revision} + 1`,
+    })
+    .where(eq(attendanceDays.id, update.dayId));
+}
+
+// The day status stays PRESENT: a check-out does not change presence (DATABASE §5.4), so only the check-out columns move.
+async function updateDayCheckOut(runner: PunchRunner, update: DayCheckOutUpdate): Promise<void> {
+  const checkoutStatusId = await findStatusId(runner, update.checkoutStatusCode);
+  await runner
+    .update(attendanceDays)
+    .set({
+      effectiveCheckoutAt: update.effectiveCheckoutAt,
+      checkoutStatusId,
       revision: sql`${attendanceDays.revision} + 1`,
     })
     .where(eq(attendanceDays.id, update.dayId));

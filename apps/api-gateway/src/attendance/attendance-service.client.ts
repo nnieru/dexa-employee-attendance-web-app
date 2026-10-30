@@ -2,8 +2,10 @@ import { INTERNAL_HTTP_CLIENT, ServiceName, type IInternalHttpClient } from '@de
 import {
   API_PREFIX,
   clockInResponseSchema,
+  clockOutResponseSchema,
   ErrorCode,
   type ClockInResponse,
+  type ClockOutResponse,
 } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import type { IAttendanceServiceClient } from './attendance-service-client.interface.js';
@@ -12,6 +14,7 @@ import type { IAttendanceServiceClient } from './attendance-service-client.inter
 // own status check already ran before this call.
 const USER_TOKEN_REFUSAL_CODES = [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED];
 const CLOCK_IN_PATH = `/${API_PREFIX}/attendance/clock-in`;
+const CLOCK_OUT_PATH = `/${API_PREFIX}/attendance/clock-out`;
 
 @Injectable()
 export class AttendanceServiceClient implements IAttendanceServiceClient {
@@ -27,6 +30,18 @@ export class AttendanceServiceClient implements IAttendanceServiceClient {
       forwardedUserToken: accessToken,
       refusalCodes: USER_TOKEN_REFUSAL_CODES,
       responseSchema: clockInResponseSchema,
+    });
+  }
+
+  // Same rule as clockIn: no retry, because a retry of a saved check-out only answers 409 ATTENDANCE_ALREADY_CLOCKED_OUT.
+  clockOut(accessToken: string): Promise<ClockOutResponse> {
+    return this.httpClient.post({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: CLOCK_OUT_PATH,
+      body: {},
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      responseSchema: clockOutResponseSchema,
     });
   }
 }
