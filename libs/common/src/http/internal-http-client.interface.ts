@@ -8,6 +8,7 @@ import type { ServiceName } from '../auth/service-name.js';
 export interface IInternalHttpClient {
   get<TResponse>(request: InternalGetRequest<TResponse>): Promise<TResponse>;
   post<TResponse>(request: InternalPostRequest<TResponse>): Promise<TResponse>;
+  patch<TResponse>(request: InternalPatchRequest<TResponse>): Promise<TResponse>;
 }
 
 export const INTERNAL_HTTP_CLIENT = Symbol('IInternalHttpClient');
@@ -36,5 +37,11 @@ export type InternalGetRequest<TResponse> = InternalRequest<TResponse> & {
 };
 
 export type InternalPostRequest<TResponse> = InternalRequest<TResponse> & {
+  readonly body: unknown;
+};
+
+// A PATCH is never retried, like a POST: the target may have applied the change when the answer was lost.
+// A 204 answer has no body, so its response schema accepts undefined (z.void()).
+export type InternalPatchRequest<TResponse> = InternalRequest<TResponse> & {
   readonly body: unknown;
 };

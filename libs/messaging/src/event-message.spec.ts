@@ -22,6 +22,15 @@ describe('parseEventMessage', () => {
       condition: 'the occurredAt is a number',
       value: { ...VALID_ENVELOPE, occurredAt: 1793243700 },
     },
+    { condition: 'the eventId is not a UUID', value: { ...VALID_ENVELOPE, eventId: 'evt-1' } },
+    {
+      condition: 'the occurredAt is not an ISO datetime',
+      value: { ...VALID_ENVELOPE, occurredAt: 'soon' },
+    },
+    {
+      condition: 'the message has a top-level key that the envelope does not define',
+      value: { ...VALID_ENVELOPE, routingKey: 'employee.profile.updated' },
+    },
     {
       condition: 'the payload key is missing',
       value: {

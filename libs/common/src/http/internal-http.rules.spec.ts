@@ -85,6 +85,20 @@ describe('shouldRetry', () => {
       expected: false,
     },
     {
+      condition: 'a PATCH got no response',
+      method: 'PATCH',
+      failure: { kind: 'no_response' },
+      attempt: 1,
+      expected: false,
+    },
+    {
+      condition: 'a PATCH got 503',
+      method: 'PATCH',
+      failure: { kind: 'server_error', status: HttpStatus.SERVICE_UNAVAILABLE },
+      attempt: 1,
+      expected: false,
+    },
+    {
       condition: 'a GET got a 4xx answer',
       method: 'GET',
       failure: clientFailure(HttpStatus.NOT_FOUND, undefined),

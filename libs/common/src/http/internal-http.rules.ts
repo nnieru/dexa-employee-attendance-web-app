@@ -10,7 +10,7 @@ import {
   type DomainError,
 } from '../errors/domain.errors.js';
 
-export type InternalHttpMethod = 'GET' | 'POST';
+export type InternalHttpMethod = 'GET' | 'POST' | 'PATCH';
 
 /**
  * Why one attempt produced no usable answer. A timeout and a refused connection are both

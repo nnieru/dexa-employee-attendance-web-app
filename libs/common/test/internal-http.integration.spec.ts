@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  Patch,
   Post,
   Query,
   ServiceUnavailableException,
@@ -62,6 +63,7 @@ const FLAKY_PATH = '/api/v1/test-internal/flaky';
 const SLOW_PATH = '/api/v1/test-internal/slow';
 const ACCOUNTS_PATH = '/api/v1/test-internal/accounts';
 const CONFLICT_PATH = '/api/v1/test-internal/conflict';
+const PASSWORD_PATH = '/api/v1/test-internal/password';
 const NOT_FOUND_WITHOUT_ERROR_BODY_PATH = '/api/v1/test-internal/not-found-without-error-body';
 const SESSION_PATH = '/api/v1/test-internal/session';
 const USER_ECHO_PATH = '/api/v1/test-internal/user-echo';
@@ -108,7 +110,7 @@ type TargetScript = {
   flakyFailures: number;
   slowDelayMilliseconds: number;
   refuseWrites: boolean;
-  calls: { flaky: number; slow: number; accounts: number };
+  calls: { flaky: number; slow: number; accounts: number; password: number };
 };
 
 // A fake employee-service. The real ServiceAuthGuard checks every call, so a request succeeds only
@@ -152,6 +154,14 @@ class InternalTargetController {
     this.script.calls.accounts += 1;
     if (this.script.refuseWrites) throw new ServiceUnavailableException();
     return { received: body };
+  }
+
+  // Answers with no body, the way a password change does.
+  @Patch('password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  changePassword(): void {
+    this.script.calls.password += 1;
+    if (this.script.refuseWrites) throw new ServiceUnavailableException();
   }
 
   @Get('conflict')
@@ -242,7 +252,7 @@ async function startHarness(): Promise<Harness> {
     flakyFailures: 0,
     slowDelayMilliseconds: 0,
     refuseWrites: false,
-    calls: { flaky: 0, slow: 0, accounts: 0 },
+    calls: { flaky: 0, slow: 0, accounts: 0, password: 0 },
   };
   const target = await startTarget(script);
   const unreachableUrl = await reserveClosedUrl();
@@ -474,6 +484,35 @@ describe('InternalHttpClient against a running target', () => {
 
       expect(error).toBeInstanceOf(DependencyUnavailableError);
       expect(harness.script.calls.accounts).toBe(1);
+    });
+  });
+
+  describe('patch', () => {
+    it('should resolve with no body when the target answers 204', async () => {
+      const response = await harness.client.patch({
+        target: TARGET_SERVICE,
+        path: PASSWORD_PATH,
+        body: { currentPassword: 'old-password-1', newPassword: 'new-password-2' },
+        responseSchema: z.void(),
+      });
+
+      expect(response).toBeUndefined();
+    });
+
+    it('should throw DependencyUnavailableError without retrying when the target answers 503', async () => {
+      harness.script.refuseWrites = true;
+
+      const error = await captureRejection(() =>
+        harness.client.patch({
+          target: TARGET_SERVICE,
+          path: PASSWORD_PATH,
+          body: {},
+          responseSchema: z.void(),
+        }),
+      );
+
+      expect(error).toBeInstanceOf(DependencyUnavailableError);
+      expect(harness.script.calls.password).toBe(1);
     });
   });
 

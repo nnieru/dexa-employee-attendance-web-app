@@ -1,8 +1,20 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { Public } from '@dexa/common';
 import {
+  changePasswordRequestSchema,
   loginRequestSchema,
   Role,
+  type ChangePasswordRequest,
   type CurrentAccount,
   type LoginRequest,
   type LoginResponse,
@@ -32,5 +44,15 @@ export class AuthController {
     @Headers('authorization') authorization: string | undefined,
   ): Promise<CurrentAccount> {
     return this.authService.findCurrentAccount(readBearerToken(authorization));
+  }
+
+  @Roles(Role.EMPLOYEE, Role.HR)
+  @Patch('me/password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  changePassword(
+    @Headers('authorization') authorization: string | undefined,
+    @Body(new ZodValidationPipe(changePasswordRequestSchema)) request: ChangePasswordRequest,
+  ): Promise<void> {
+    return this.authService.changePassword(readBearerToken(authorization), request);
   }
 }

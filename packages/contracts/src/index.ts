@@ -22,6 +22,10 @@ export {
   type AccountStatus,
 } from './auth/account-lookup.schema.js';
 export {
+  changePasswordRequestSchema,
+  type ChangePasswordRequest,
+} from './auth/change-password.schema.js';
+export {
   loginRequestSchema,
   loginResponseSchema,
   type LoginRequest,
@@ -45,6 +49,20 @@ export {
 export { Role, roleSchema } from './auth/role.js';
 export { ErrorCode } from './errors/error-code.js';
 export { errorResponseSchema, type ErrorResponse } from './errors/error-response.schema.js';
+export { EventName } from './events/event-name.js';
+export { eventEnvelopeSchema, type EventEnvelope } from './events/event-envelope.schema.js';
+export {
+  accountPasswordChangedPayloadSchema,
+  ACCOUNT_PASSWORD_CHANGED_FIELD,
+  type AccountPasswordChangedPayload,
+} from './events/account-password-changed.schema.js';
+export {
+  employeeProfileUpdatedPayloadSchema,
+  PROFILE_FIELDS,
+  profileFieldSchema,
+  type EmployeeProfileUpdatedPayload,
+  type ProfileField,
+} from './events/employee-profile-updated.schema.js';
 export {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,

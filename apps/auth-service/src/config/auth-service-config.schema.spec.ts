@@ -78,6 +78,32 @@ describe('AuthServiceConfigSchema AUTH_DATABASE_URL', () => {
   });
 });
 
+describe('AuthServiceConfigSchema RABBITMQ_URL', () => {
+  it.each([
+    'amqp://auth-service:placeholder@rabbitmq:5672',
+    'amqps://auth-service:placeholder@rabbitmq.internal:5671/%2f',
+  ])('should accept %s when it is an AMQP connection URL', (brokerUrl) => {
+    const config = parseConfig(AuthServiceConfigSchema, sourceWith({ RABBITMQ_URL: brokerUrl }));
+
+    expect(config.RABBITMQ_URL).toBe(brokerUrl);
+  });
+
+  it.each([
+    { condition: 'the variable is unset', brokerUrl: undefined },
+    { condition: 'the value is empty', brokerUrl: '' },
+    { condition: 'the scheme is not AMQP', brokerUrl: 'http://rabbitmq:5672' },
+  ])('should reject the config when $condition', ({ brokerUrl }) => {
+    // The exact message shows that the URL, which carries the broker password, is not echoed back.
+    expect(() =>
+      parseConfig(AuthServiceConfigSchema, sourceWith({ RABBITMQ_URL: brokerUrl })),
+    ).toThrow(
+      new Error(
+        'Invalid configuration: RABBITMQ_URL: must be an amqp:// or amqps:// connection URL',
+      ),
+    );
+  });
+});
+
 describe('AuthServiceConfigSchema token settings', () => {
   it('should return the user private key when auth-service has one', () => {
     const config = parseConfig(AuthServiceConfigSchema, sourceWith({}));

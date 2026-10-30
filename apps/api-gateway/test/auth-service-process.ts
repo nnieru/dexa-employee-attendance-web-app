@@ -11,6 +11,9 @@ const AUTH_SERVICE_ENTRY_POINT = fileURLToPath(
   new URL('../../auth-service/dist/main.js', import.meta.url),
 );
 const LOCALHOST = '127.0.0.1';
+// The publisher connects on its first publish, so a URL that refuses connections satisfies the configuration.
+// A case that asserts broker delivery would need a real broker instead.
+export const UNREACHABLE_BROKER_URL = 'amqp://auth-service:unused-password@127.0.0.1:1';
 const HEALTH_PATH = '/api/v1/health';
 const READY_TIMEOUT_MILLISECONDS = 60_000;
 const READY_POLL_MILLISECONDS = 200;

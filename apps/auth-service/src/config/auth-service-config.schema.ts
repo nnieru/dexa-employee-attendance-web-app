@@ -17,6 +17,12 @@ function hasHostAndDatabase(value: string): boolean {
   return url.hostname !== '' && databaseName !== '';
 }
 
+// The broker URL carries credentials. A failure names the field only, never the URL.
+const rabbitMqUrlSchema = z.url({
+  protocol: /^amqps?$/,
+  error: 'must be an amqp:// or amqps:// connection URL',
+});
+
 // Matches accounts.company_email, varchar(254) in DATABASE §3.
 const COMPANY_EMAIL_MAX_LENGTH = 254;
 
@@ -43,6 +49,8 @@ const ownServiceNameSchema = z.literal(ServiceName.AUTH_SERVICE, {
 const serviceEnvironmentSchema = BaseConfigSchema.extend({
   SERVICE_NAME: ownServiceNameSchema,
   AUTH_DATABASE_URL: postgresUrlSchema,
+  // The outbox relay publishes account events to this broker (DATABASE §2.2, D-35).
+  RABBITMQ_URL: rabbitMqUrlSchema,
   AUTH_BOOTSTRAP_HR_EMAIL: z.preprocess(treatBlankAsUnset, bootstrapHrEmailSchema.optional()),
   AUTH_BOOTSTRAP_HR_PASSWORD: z.preprocess(treatBlankAsUnset, passwordSchema.optional()),
 }).superRefine(requireBootstrapHrPair);

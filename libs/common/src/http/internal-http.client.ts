@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { isAxiosError, type AxiosError, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { setTimeout as delay } from 'node:timers/promises';
 import { firstValueFrom } from 'rxjs';
@@ -14,6 +14,7 @@ import { CORRELATION_ID_HEADER } from './correlation-id-header.js';
 import type {
   IInternalHttpClient,
   InternalGetRequest,
+  InternalPatchRequest,
   InternalPostRequest,
 } from './internal-http-client.interface.js';
 import {
@@ -76,9 +77,15 @@ export class InternalHttpClient implements IInternalHttpClient {
     return this.send({ ...request, method: 'POST' });
   }
 
+  patch<TResponse>(request: InternalPatchRequest<TResponse>): Promise<TResponse> {
+    return this.send({ ...request, method: 'PATCH' });
+  }
+
   private async send<TResponse>(call: InternalCall<TResponse>): Promise<TResponse> {
     const response = await this.sendAttempt(call, 1);
-    return this.parseBody(response.data, call);
+    // axios reports a 204 body as an empty string, which is not the empty answer the call means.
+    const body = response.status === HttpStatus.NO_CONTENT ? undefined : response.data;
+    return this.parseBody(body, call);
   }
 
   // attempt counts the attempts made so far, starting at 1.

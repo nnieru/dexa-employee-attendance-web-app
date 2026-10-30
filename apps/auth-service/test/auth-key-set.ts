@@ -87,9 +87,13 @@ export function authEnvironmentFor(
   return environment;
 }
 
+// The publisher connects on its first publish, so a URL that refuses connections is enough for a test that
+// asserts only the outbox row. A test that asserts delivery starts a real broker and passes its URL instead.
+export const UNREACHABLE_BROKER_URL = 'amqp://auth-service:unused-password@127.0.0.1:1';
+
 /**
  * The environment that auth-service starts with: the auth settings, the user private key that only this
- * service holds, and the timezone. Tests add the database URL and any bootstrap variables.
+ * service holds, the timezone, and the broker URL. Tests add the database URL and any bootstrap variables.
  */
 export function authServiceEnvironment(
   keys: AuthKeySet,
@@ -99,6 +103,7 @@ export function authServiceEnvironment(
     BUSINESS_TIMEZONE: 'Asia/Jakarta',
     ...authEnvironmentFor(keys, ServiceName.AUTH_SERVICE),
     USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(keys.user.privateKeyPem),
+    RABBITMQ_URL: UNREACHABLE_BROKER_URL,
     ...overrides,
   };
 }

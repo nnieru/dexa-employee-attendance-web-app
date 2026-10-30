@@ -11,7 +11,11 @@ import {
   generateAuthKeySet,
   type AuthKeySet,
 } from './auth-key-set.js';
-import { startAuthServiceProcess, type RunningAuthService } from './auth-service-process.js';
+import {
+  startAuthServiceProcess,
+  UNREACHABLE_BROKER_URL,
+  type RunningAuthService,
+} from './auth-service-process.js';
 
 // Starting the container and the auth-service process takes several seconds on a cold machine.
 const SETUP_TIMEOUT_MS = 180_000;
@@ -50,6 +54,7 @@ function authServiceProcessEnvironment(
     BUSINESS_TIMEZONE: 'Asia/Jakarta',
     ...authEnvironmentFor(keys, ServiceName.AUTH_SERVICE),
     USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(keys.user.privateKeyPem),
+    RABBITMQ_URL: UNREACHABLE_BROKER_URL,
     AUTH_DATABASE_URL: databaseUrl,
     AUTH_BOOTSTRAP_HR_EMAIL: HR_EMAIL,
     AUTH_BOOTSTRAP_HR_PASSWORD: HR_PASSWORD,
