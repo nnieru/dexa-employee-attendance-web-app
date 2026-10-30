@@ -86,6 +86,14 @@ class FakeAuthAccountClient implements IAuthAccountClient {
     return Promise.reject(new Error('The HR profile bootstrap looks up accounts by email only.'));
   }
 
+  lookupAccounts(): Promise<AccountLookupItem[]> {
+    return Promise.reject(new Error('The HR profile bootstrap looks up accounts by email only.'));
+  }
+
+  searchAccountIdsByEmail(): Promise<string[]> {
+    return Promise.reject(new Error('The HR profile bootstrap looks up accounts by email only.'));
+  }
+
   findAccountReferenceByEmail(email: string): Promise<AccountReference | undefined> {
     this.lookedUpEmails.push(email);
     this.waiters = this.waiters.filter((waiter) => {

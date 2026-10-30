@@ -1,11 +1,15 @@
 import { Roles } from '@dexa/common';
 import {
+  accountIdSchema,
   createEmployeeRequestSchema,
+  employeeListQuerySchema,
   PHOTO_CONTENT_TYPE,
   Role,
   updateOwnProfileRequestSchema,
   type CreateEmployeeRequest,
   type EmployeeDetail,
+  type EmployeeListPage,
+  type EmployeeListQuery,
   type OwnProfile,
   type UpdateOwnProfileRequest,
 } from '@dexa/contracts';
@@ -18,9 +22,11 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  Param,
   Patch,
   Post,
   Put,
+  Query,
   StreamableFile,
   UploadedFile,
   UseInterceptors,
@@ -45,6 +51,16 @@ export class EmployeesController {
   @Get('me')
   getOwnProfile(@Headers('authorization') authorization: string | undefined): Promise<OwnProfile> {
     return this.employeeService.getOwnProfile(readBearerToken(authorization));
+  }
+
+  // HR's roster (ADM-3). The query is validated here and again by employee-service. HR accounts are listed too (D-14).
+  @Roles(Role.HR)
+  @Get()
+  listEmployees(
+    @Headers('authorization') authorization: string | undefined,
+    @Query(new ZodValidationPipe(employeeListQuerySchema)) query: EmployeeListQuery,
+  ): Promise<EmployeeListPage> {
+    return this.employeeService.listEmployees(readBearerToken(authorization), query);
   }
 
   // HR creates an employee (ADM-1). The body is validated strictly here and again by employee-service. The body holds
@@ -89,6 +105,23 @@ export class EmployeesController {
     @Headers('authorization') authorization: string | undefined,
   ): Promise<StreamableFile> {
     const photo = await this.employeeService.getOwnPhoto(readBearerToken(authorization));
+    return new StreamableFile(photo.body, { type: PHOTO_CONTENT_TYPE });
+  }
+
+  // HR's view of an employee photo for the list thumbnails (ADM-3). This route is declared after `me/photo`, so the
+  // static segment is matched first and `me` never reaches the UUID check.
+  @Roles(Role.HR)
+  @Get(':accountId/photo')
+  @Header('Cache-Control', 'private, no-store')
+  @Header('X-Content-Type-Options', 'nosniff')
+  async getEmployeePhoto(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('accountId', new ZodValidationPipe(accountIdSchema)) accountId: string,
+  ): Promise<StreamableFile> {
+    const photo = await this.employeeService.getEmployeePhoto(
+      readBearerToken(authorization),
+      accountId,
+    );
     return new StreamableFile(photo.body, { type: PHOTO_CONTENT_TYPE });
   }
 }

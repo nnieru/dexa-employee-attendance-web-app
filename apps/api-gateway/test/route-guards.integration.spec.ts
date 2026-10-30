@@ -17,6 +17,8 @@ import {
   Role,
   type CreateEmployeeRequest,
   type EmployeeDetail,
+  type EmployeeListPage,
+  type EmployeeListQuery,
   type EmployeeProvisioningIncompleteDetails,
   type MasterOption,
   type OwnProfile,
@@ -59,6 +61,8 @@ const EMPLOYEE_STATUSES_PATH = '/api/v1/employee-statuses';
 const CREATE_EMPLOYEE_PATH = '/api/v1/employees';
 const OWN_PROFILE_PATH = '/api/v1/employees/me';
 const OWN_PHOTO_PATH = '/api/v1/employees/me/photo';
+const EMPLOYEE_LIST_PATH = '/api/v1/employees';
+const EMPLOYEE_PHOTO_PATH = (accountId: string) => `/api/v1/employees/${accountId}/photo`;
 const PHOTO_MULTIPART_OVERHEAD_BYTES = 64 * 1024;
 const STORED_PHOTO_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
 const SELF_SERVICE_ROUTE_PATH = '/api/v1/route-guard-tests/self-service';
@@ -138,6 +142,33 @@ const OWN_PHOTO_FILE: InternalBinaryResponse = {
   contentType: PHOTO_CONTENT_TYPE,
   body: STORED_PHOTO_BYTES,
 };
+const LISTED_EMPLOYEE_ACCOUNT_ID = randomUUID();
+const EMPLOYEE_LIST_PAGE: EmployeeListPage = {
+  items: [
+    {
+      accountId: LISTED_EMPLOYEE_ACCOUNT_ID,
+      name: 'Gita 100% Kusuma',
+      email: 'gita.kusuma@dexa.test',
+      role: Role.EMPLOYEE,
+      position: { id: randomUUID(), code: 'HR_OFFICER', name: 'HR Officer' },
+      employeeStatus: { id: randomUUID(), code: 'ACTIVE', name: 'Active' },
+      phoneNumber: null,
+      profileStatus: 'INCOMPLETE',
+      photoUrl: `/api/v1/employees/${LISTED_EMPLOYEE_ACCOUNT_ID}/photo`,
+    },
+  ],
+  page: 2,
+  pageSize: 5,
+  totalItems: 6,
+  totalPages: 2,
+};
+const LISTED_EMPLOYEE_PHOTO_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x48, 0x52]);
+const EMPLOYEE_PHOTO_FILE: InternalBinaryResponse = {
+  contentType: PHOTO_CONTENT_TYPE,
+  body: LISTED_EMPLOYEE_PHOTO_BYTES,
+};
+const listQueries: EmployeeListQuery[] = [];
+const requestedPhotoAccountIds: string[] = [];
 const employeeServiceFake: IEmployeeServiceClient = {
   updateOwnPhoto: (accessToken: string, photo: Buffer) => {
     forwardedTokens.push(accessToken);
@@ -169,6 +200,16 @@ const employeeServiceFake: IEmployeeServiceClient = {
     forwardedTokens.push(accessToken);
     createRequests.push(request);
     return createEmployeeOutcome();
+  },
+  listEmployees: (accessToken: string, query: EmployeeListQuery) => {
+    forwardedTokens.push(accessToken);
+    listQueries.push(query);
+    return Promise.resolve(EMPLOYEE_LIST_PAGE);
+  },
+  getEmployeePhoto: (accessToken: string, accountId: string) => {
+    forwardedTokens.push(accessToken);
+    requestedPhotoAccountIds.push(accountId);
+    return Promise.resolve(EMPLOYEE_PHOTO_FILE);
   },
 };
 
@@ -333,9 +374,9 @@ describe('api-gateway route guards through a running auth-service', () => {
   }
 
   // The photo answer is bytes, so the body is collected rather than parsed.
-  function getPhotoWithToken(accessToken: string) {
+  function getPhotoWithToken(accessToken: string, photoPath: string = OWN_PHOTO_PATH) {
     return request(app.getHttpServer())
-      .get(OWN_PHOTO_PATH)
+      .get(photoPath)
       .set('Authorization', `Bearer ${accessToken}`)
       .buffer(true)
       .parse((response, callback) => {
@@ -811,6 +852,130 @@ describe('api-gateway route guards through a running auth-service', () => {
         code: 'UNAUTHORIZED',
         message: 'Sign in to continue.',
       });
+    },
+    TEST_TIMEOUT_MS,
+  );
+  it(
+    'should return the page and forward the query and the HR token when HR lists employees',
+    async () => {
+      forwardedTokens.length = 0;
+      listQueries.length = 0;
+
+      const response = await getWithToken(
+        `${EMPLOYEE_LIST_PATH}?page=2&pageSize=5&q=%20%20Kusuma%20`,
+        hrToken,
+      ).expect(200);
+
+      expect(response.body).toEqual(EMPLOYEE_LIST_PAGE);
+      expect(forwardedTokens).toEqual([hrToken]);
+      expect(listQueries).toEqual([{ page: 2, pageSize: 5, q: 'Kusuma' }]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 without calling employee-service when an employee token lists employees',
+    async () => {
+      forwardedTokens.length = 0;
+      listQueries.length = 0;
+
+      const response = await getWithToken(EMPLOYEE_LIST_PATH, employeeToken).expect(403);
+
+      expect(response.body).toEqual({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Your role cannot use this action.',
+      });
+      expect(forwardedTokens).toEqual([]);
+      expect(listQueries).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 400 without calling employee-service when the list query has an unknown key',
+    async () => {
+      forwardedTokens.length = 0;
+      listQueries.length = 0;
+
+      const response = await getWithToken(`${EMPLOYEE_LIST_PATH}?sort=name`, hrToken).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(listQueries).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return the HR photo bytes with the private photo headers and forward the HR token',
+    async () => {
+      forwardedTokens.length = 0;
+      requestedPhotoAccountIds.length = 0;
+
+      const response = await getPhotoWithToken(
+        hrToken,
+        EMPLOYEE_PHOTO_PATH(LISTED_EMPLOYEE_ACCOUNT_ID),
+      ).expect(200);
+
+      expect(response.headers['content-type']).toBe(PHOTO_CONTENT_TYPE);
+      expect(response.headers['cache-control']).toBe('private, no-store');
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      const body: unknown = response.body;
+      expect(Buffer.isBuffer(body) && body.equals(LISTED_EMPLOYEE_PHOTO_BYTES)).toBe(true);
+      expect(forwardedTokens).toEqual([hrToken]);
+      expect(requestedPhotoAccountIds).toEqual([LISTED_EMPLOYEE_ACCOUNT_ID]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 without calling employee-service when an employee asks for another employee photo',
+    async () => {
+      forwardedTokens.length = 0;
+      requestedPhotoAccountIds.length = 0;
+
+      const response = await getWithToken(
+        EMPLOYEE_PHOTO_PATH(LISTED_EMPLOYEE_ACCOUNT_ID),
+        employeeToken,
+      ).expect(403);
+
+      expect(response.body).toMatchObject({ statusCode: 403, code: 'FORBIDDEN' });
+      expect(forwardedTokens).toEqual([]);
+      expect(requestedPhotoAccountIds).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 400 without calling employee-service when the photo account ID is not a UUID',
+    async () => {
+      forwardedTokens.length = 0;
+      requestedPhotoAccountIds.length = 0;
+
+      const response = await getWithToken(EMPLOYEE_PHOTO_PATH('not-a-uuid'), hrToken).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(requestedPhotoAccountIds).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should keep the static me routes on their own handlers when HR calls them',
+    async () => {
+      forwardedTokens.length = 0;
+      requestedPhotoAccountIds.length = 0;
+
+      const profile = await getWithToken(OWN_PROFILE_PATH, hrToken).expect(200);
+      const photo = await getPhotoWithToken(hrToken).expect(200);
+
+      expect(profile.body).toEqual(OWN_PROFILE);
+      const body: unknown = photo.body;
+      expect(Buffer.isBuffer(body) && body.equals(STORED_PHOTO_BYTES)).toBe(true);
+      expect(requestedPhotoAccountIds).toEqual([]);
+      expect(forwardedTokens).toEqual([hrToken, hrToken]);
     },
     TEST_TIMEOUT_MS,
   );

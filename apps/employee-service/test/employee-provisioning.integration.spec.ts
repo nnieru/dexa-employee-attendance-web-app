@@ -187,6 +187,18 @@ class FakeAuth implements IAuthProvisioningClient, IAuthAccountClient {
     });
   }
 
+  // Answers the same as findAccountById, one account at a time, so the batched lookup never disagrees with it.
+  async lookupAccounts(accountIds: ReadonlyArray<string>): Promise<AccountLookupItem[]> {
+    const accounts = await Promise.all(
+      accountIds.map((accountId) => this.findAccountById(accountId)),
+    );
+    return accounts.filter((account): account is AccountLookupItem => account !== undefined);
+  }
+
+  searchAccountIdsByEmail(): Promise<string[]> {
+    return Promise.reject(new Error('The provisioning specs do not search accounts.'));
+  }
+
   findAccountReferenceByEmail(email: string): Promise<AccountReference | undefined> {
     return answering(() => {
       const operation = this.findByEmail(email);

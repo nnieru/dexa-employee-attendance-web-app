@@ -11,9 +11,9 @@ import {
   type IEmployeeProfileWriter,
 } from '../profile/employee-profile.writer.interface.js';
 import { profileNotFoundError } from '../profile/profile.errors.js';
-import { photoNotFoundError } from './photo.errors.js';
 import { PHOTO_PROCESSOR, type IPhotoProcessor } from './photo-processor.interface.js';
 import { PHOTO_STORAGE, type IPhotoStorage } from './photo-storage.interface.js';
+import { openStoredPhoto } from './open-stored-photo.js';
 import { planOwnPhotoChange } from './own-photo.rules.js';
 import type { IOwnPhotoService, OwnPhotoChangeSet } from './own-photo.service.interface.js';
 
@@ -56,10 +56,7 @@ export class OwnPhotoService implements IOwnPhotoService {
   async getOwnPhoto(accountId: string): Promise<Readable> {
     const profile = await this.profiles.findProfileByAccountId(accountId);
     if (profile === undefined) throw profileNotFoundError();
-    if (profile.photoKey === null) throw photoNotFoundError();
-    const photo = await this.storage.open(profile.photoKey);
-    if (photo === undefined) throw photoNotFoundError();
-    return photo;
+    return openStoredPhoto(this.storage, profile.photoKey);
   }
 
   // A failed commit may have happened after the database made it durable, so the new file is kept. Its key is

@@ -97,6 +97,9 @@ const fakeAccountStatusReader: IAccountStatusReader = {
 const accountDirectory = new Map<string, AccountLookupItem>();
 const fakeAuthAccountClient: IAuthAccountClient = {
   findAccountById: (accountId) => Promise.resolve(accountDirectory.get(accountId)),
+  lookupAccounts: (accountIds) =>
+    Promise.resolve(accountIds.flatMap((accountId) => accountDirectory.get(accountId) ?? [])),
+  searchAccountIdsByEmail: () => Promise.reject(new Error('These specs do not search accounts.')),
   // These specs do not run the HR profile bootstrap, so no email lookup is expected.
   findAccountReferenceByEmail: () => Promise.resolve(undefined),
 };

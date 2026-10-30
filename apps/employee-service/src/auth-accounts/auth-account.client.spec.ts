@@ -127,3 +127,67 @@ describe('AuthAccountClient.findAccountReferenceByEmail', () => {
     await expect(client.findAccountReferenceByEmail(ACCOUNT_EMAIL)).rejects.toBe(outage);
   });
 });
+
+describe('AuthAccountClient.lookupAccounts', () => {
+  it('should post every account ID in one lookup with this service token and no user token', async () => {
+    const recorded: InternalPostRequest<unknown>[] = [];
+    const client = new AuthAccountClient(recordingHttpClient(recorded, [ACCOUNT]));
+
+    await client.lookupAccounts([ACCOUNT_ID, OTHER_ACCOUNT_ID]);
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.AUTH_SERVICE,
+      path: '/api/v1/internal/accounts/lookup',
+      body: { ids: [ACCOUNT_ID, OTHER_ACCOUNT_ID] },
+    });
+    expect(recorded[0]?.forwardedUserToken).toBeUndefined();
+  });
+
+  it('should return every account that Auth answers with, and omit the rest', async () => {
+    const other = { id: OTHER_ACCOUNT_ID, email: 'bima.saputra@dexa.test', role: 'HR' };
+    const client = new AuthAccountClient(recordingHttpClient([], [ACCOUNT, other]));
+
+    await expect(client.lookupAccounts([ACCOUNT_ID, OTHER_ACCOUNT_ID])).resolves.toEqual([
+      ACCOUNT,
+      other,
+    ]);
+  });
+});
+
+describe('AuthAccountClient.searchAccountIdsByEmail', () => {
+  it('should get the search with the term as the email query and this service token and no user token', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const client = new AuthAccountClient(
+      recordingGetClient(recorded, () => Promise.resolve({ ids: [ACCOUNT_ID] })),
+    );
+
+    await client.searchAccountIdsByEmail('rahma');
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.AUTH_SERVICE,
+      path: '/api/v1/internal/accounts/search',
+      query: { email: 'rahma' },
+    });
+    expect(recorded[0]?.forwardedUserToken).toBeUndefined();
+  });
+
+  it('should return the matching account IDs when Auth answers with them', async () => {
+    const client = new AuthAccountClient(
+      recordingGetClient([], () => Promise.resolve({ ids: [ACCOUNT_ID, OTHER_ACCOUNT_ID] })),
+    );
+
+    await expect(client.searchAccountIdsByEmail('rahma')).resolves.toEqual([
+      ACCOUNT_ID,
+      OTHER_ACCOUNT_ID,
+    ]);
+  });
+
+  it('should reject when Auth is unavailable so that an outage never reads as no match', async () => {
+    const outage = new DependencyUnavailableError(ErrorCode.DEPENDENCY_UNAVAILABLE, 'Unavailable.');
+    const client = new AuthAccountClient(recordingGetClient([], () => Promise.reject(outage)));
+
+    await expect(client.searchAccountIdsByEmail('rahma')).rejects.toBe(outage);
+  });
+});

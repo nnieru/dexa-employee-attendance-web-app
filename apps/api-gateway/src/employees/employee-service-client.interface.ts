@@ -2,6 +2,8 @@ import type { InternalBinaryResponse } from '@dexa/common';
 import type {
   CreateEmployeeRequest,
   EmployeeDetail,
+  EmployeeListPage,
+  EmployeeListQuery,
   MasterOption,
   OwnProfile,
   UpdateOwnProfileRequest,
@@ -16,6 +18,8 @@ export interface IEmployeeServiceClient {
   updateOwnProfile(accessToken: string, request: UpdateOwnProfileRequest): Promise<OwnProfile>;
   updateOwnPhoto(accessToken: string, photo: Buffer): Promise<OwnProfile>;
   getOwnPhoto(accessToken: string): Promise<InternalBinaryResponse>;
+  listEmployees(accessToken: string, query: EmployeeListQuery): Promise<EmployeeListPage>;
+  getEmployeePhoto(accessToken: string, accountId: string): Promise<InternalBinaryResponse>;
 }
 
 export const EMPLOYEE_SERVICE_CLIENT = Symbol('IEmployeeServiceClient');

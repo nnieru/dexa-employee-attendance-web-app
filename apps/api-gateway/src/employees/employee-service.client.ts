@@ -7,12 +7,15 @@ import {
 import {
   API_PREFIX,
   employeeDetailSchema,
+  employeeListPageSchema,
   ErrorCode,
   masterOptionListSchema,
   ownProfileSchema,
   PHOTO_FIELD_NAME,
   type CreateEmployeeRequest,
   type EmployeeDetail,
+  type EmployeeListPage,
+  type EmployeeListQuery,
   type MasterOption,
   type OwnProfile,
   type UpdateOwnProfileRequest,
@@ -114,4 +117,36 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
       timeoutMilliseconds: PHOTO_TIMEOUT_MILLISECONDS,
     });
   }
+
+  // The query is forwarded as the caller sent it, after the gateway's own validation, so employee-service applies the
+  // same paging and search. The caller's token is forwarded, so employee-service still decides whether HR may list.
+  listEmployees(accessToken: string, query: EmployeeListQuery): Promise<EmployeeListPage> {
+    return this.httpClient.get({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: EMPLOYEES_PATH,
+      query: toListQueryParameters(query),
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      responseSchema: employeeListPageSchema,
+    });
+  }
+
+  getEmployeePhoto(accessToken: string, accountId: string): Promise<InternalBinaryResponse> {
+    return this.httpClient.getBinary({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: `${EMPLOYEES_PATH}/${encodeURIComponent(accountId)}/photo`,
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      timeoutMilliseconds: PHOTO_TIMEOUT_MILLISECONDS,
+    });
+  }
+}
+
+// An absent search term is omitted, not sent empty, so employee-service sees the same query the caller sent.
+function toListQueryParameters(query: EmployeeListQuery): Record<string, string> {
+  const parameters: Record<string, string> = {
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+  };
+  return query.q === undefined ? parameters : { ...parameters, q: query.q };
 }

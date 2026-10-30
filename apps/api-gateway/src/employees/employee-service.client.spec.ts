@@ -185,3 +185,61 @@ function rejectingHttpClient(): IInternalHttpClient {
     put: () => Promise.reject(new Error('The client never puts here.')),
   };
 }
+
+describe('EmployeeServiceClient.listEmployees', () => {
+  it.each([
+    {
+      condition: 'a search term is given',
+      query: { page: 2, pageSize: 5, q: 'kusuma' },
+      expectedParameters: { page: '2', pageSize: '5', q: 'kusuma' },
+    },
+    {
+      condition: 'no search term is given',
+      query: { page: 1, pageSize: 20 },
+      expectedParameters: { page: '1', pageSize: '20' },
+    },
+  ])(
+    'should get the list on employee-service with the query and the user token when $condition',
+    async ({ query, expectedParameters }) => {
+      const recorded: InternalGetRequest<unknown>[] = [];
+      const client = new EmployeeServiceClient(recordingHttpClient(recorded));
+
+      await client.listEmployees(USER_TOKEN, query).catch(() => undefined);
+
+      expect(recorded).toHaveLength(1);
+      expect(recorded[0]).toMatchObject({
+        target: ServiceName.EMPLOYEE_SERVICE,
+        path: '/api/v1/employees',
+        forwardedUserToken: USER_TOKEN,
+        refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      });
+      expect(recorded[0]?.query).toEqual(expectedParameters);
+    },
+  );
+});
+
+describe('EmployeeServiceClient.getEmployeePhoto', () => {
+  it('should fetch the employee photo bytes with the account ID encoded and the user token forwarded', async () => {
+    const recorded: InternalBinaryGetRequest[] = [];
+    const httpClient: IInternalHttpClient = {
+      ...rejectingHttpClient(),
+      getBinary: (binaryRequest) => {
+        recorded.push(binaryRequest);
+        return Promise.reject(new Error('The recording client does not answer.'));
+      },
+    };
+    const client = new EmployeeServiceClient(httpClient);
+
+    await client
+      .getEmployeePhoto(USER_TOKEN, '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13')
+      .catch(() => undefined);
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: '/api/v1/employees/5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13/photo',
+      forwardedUserToken: USER_TOKEN,
+      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+    });
+  });
+});
