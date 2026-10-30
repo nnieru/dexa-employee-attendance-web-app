@@ -1,5 +1,5 @@
 import type { AccountLookupItem, EmployeeDetail } from '@dexa/contracts';
-import type { EmployeeDetailRecord } from './employee-provisioning.repository.interface.js';
+import type { EmployeeDetailRecord } from './employee-detail.reader.interface.js';
 
 /**
  * Builds the HR view of one employee. The email and role come from Auth, which owns them, and everything else

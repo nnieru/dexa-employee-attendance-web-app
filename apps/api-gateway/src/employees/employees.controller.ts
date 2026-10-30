@@ -5,12 +5,14 @@ import {
   employeeListQuerySchema,
   PHOTO_CONTENT_TYPE,
   Role,
+  updateEmployeeRequestSchema,
   updateOwnProfileRequestSchema,
   type CreateEmployeeRequest,
   type EmployeeDetail,
   type EmployeeListPage,
   type EmployeeListQuery,
   type OwnProfile,
+  type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
 } from '@dexa/contracts';
 import {
@@ -76,6 +78,7 @@ export class EmployeesController {
   }
 
   // The body is strict, so only the phone number can change here. Name, email, position, and status stay read only.
+  // This route is declared before the HR route below, so the static `me` segment is matched first.
   @Roles(Role.EMPLOYEE, Role.HR)
   @Patch('me')
   updateOwnProfile(
@@ -83,6 +86,18 @@ export class EmployeesController {
     @Body(new ZodValidationPipe(updateOwnProfileRequestSchema)) request: UpdateOwnProfileRequest,
   ): Promise<OwnProfile> {
     return this.employeeService.updateOwnProfile(readBearerToken(authorization), request);
+  }
+
+  // HR updates an employee (ADM-2). The body is strict and validated here and again by employee-service. It can carry a
+  // new password, so it is never logged. A partial failure answers 503 with the steps that saved, and it is not retried.
+  @Roles(Role.HR)
+  @Patch(':accountId')
+  updateEmployee(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('accountId', new ZodValidationPipe(accountIdSchema)) accountId: string,
+    @Body(new ZodValidationPipe(updateEmployeeRequestSchema)) request: UpdateEmployeeRequest,
+  ): Promise<EmployeeDetail> {
+    return this.employeeService.updateEmployee(readBearerToken(authorization), accountId, request);
   }
 
   // The interceptor refuses an oversized upload before the body is buffered, so the file here is within the limit.

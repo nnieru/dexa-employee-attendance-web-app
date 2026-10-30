@@ -28,6 +28,7 @@ function recordingHttpClient(
       return Promise.resolve(request.responseSchema.parse(answer));
     },
     patch: () => Promise.reject(new Error('The client never patches.')),
+    putJson: () => Promise.reject(new Error('The client never puts JSON.')),
     put: () => Promise.reject(new Error('The client never puts.')),
   };
 }
@@ -46,6 +47,7 @@ function recordingGetClient(
     getBinary: () => Promise.reject(new Error('The client never fetches bytes.')),
     post: () => Promise.reject(new Error('The client never posts.')),
     patch: () => Promise.reject(new Error('The client never patches.')),
+    putJson: () => Promise.reject(new Error('The client never puts JSON.')),
     put: () => Promise.reject(new Error('The client never puts.')),
   };
 }

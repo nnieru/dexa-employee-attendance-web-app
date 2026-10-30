@@ -6,6 +6,7 @@ import type {
   EmployeeListQuery,
   MasterOption,
   OwnProfile,
+  UpdateEmployeeRequest,
   UpdateOwnProfileRequest,
 } from '@dexa/contracts';
 
@@ -14,6 +15,11 @@ export interface IEmployeeServiceClient {
   listPositions(accessToken: string): Promise<MasterOption[]>;
   listEmployeeStatuses(accessToken: string): Promise<MasterOption[]>;
   createEmployee(accessToken: string, request: CreateEmployeeRequest): Promise<EmployeeDetail>;
+  updateEmployee(
+    accessToken: string,
+    accountId: string,
+    request: UpdateEmployeeRequest,
+  ): Promise<EmployeeDetail>;
   getOwnProfile(accessToken: string): Promise<OwnProfile>;
   updateOwnProfile(accessToken: string, request: UpdateOwnProfileRequest): Promise<OwnProfile>;
   updateOwnPhoto(accessToken: string, photo: Buffer): Promise<OwnProfile>;

@@ -22,12 +22,14 @@ import {
   type EmployeeProvisioningIncompleteDetails,
   type MasterOption,
   type OwnProfile,
+  type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
 } from '@dexa/contracts';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import request from 'supertest';
+import { z } from 'zod';
 import { createAppModule } from '../src/app.module.js';
 import {
   EMPLOYEE_SERVICE_CLIENT,
@@ -38,6 +40,7 @@ import {
   authEnvironmentFor,
   encodeKeyForEnvironment,
   generateAuthKeySet,
+  servicePair,
   USER_JWT_AUDIENCE,
   USER_JWT_ISSUER,
   type AuthKeySet,
@@ -73,6 +76,10 @@ const HR_PASSWORD = 'hr-admin-pass-1';
 const EMPLOYEE_EMAIL = 'employee.one@dexa.test';
 const EMPLOYEE_ACCOUNT_ID = randomUUID();
 const DEACTIVATED_EMAIL = 'employee.two@dexa.test';
+const ADMIN_DEACTIVATED_EMAIL = 'employee.three@dexa.test';
+const SERVICE_TOKEN_LIFETIME_SECONDS_FOR_CALLS = 60;
+const ACCOUNT_STATUS_PATH = (accountId: string) =>
+  `/api/v1/internal/accounts/${accountId}/active-status`;
 
 const ACCOUNT_DISABLED_BODY = {
   statusCode: 401,
@@ -169,6 +176,29 @@ const EMPLOYEE_PHOTO_FILE: InternalBinaryResponse = {
 };
 const listQueries: EmployeeListQuery[] = [];
 const requestedPhotoAccountIds: string[] = [];
+const updateRequests: { readonly accountId: string; readonly request: UpdateEmployeeRequest }[] =
+  [];
+const UPDATED_EMPLOYEE: EmployeeDetail = {
+  accountId: EMPLOYEE_ACCOUNT_ID,
+  name: 'Bima Saputra',
+  email: EMPLOYEE_EMAIL,
+  role: Role.EMPLOYEE,
+  position: { id: randomUUID(), code: 'HR_OFFICER', name: 'HR Officer' },
+  employeeStatus: { id: randomUUID(), code: 'ACTIVE', name: 'Active' },
+  phoneNumber: null,
+  profileStatus: 'INCOMPLETE',
+};
+const UPDATE_INCOMPLETE_MESSAGE =
+  'The employee update did not finish. Check the employee before saving the update again.';
+const UPDATE_INCOMPLETE_DETAILS = {
+  accountId: EMPLOYEE_ACCOUNT_ID,
+  profileSaved: true,
+  accountStatusSaved: null,
+  passwordReset: null,
+};
+const DEFAULT_UPDATE_OUTCOME = (): Promise<EmployeeDetail> => Promise.resolve(UPDATED_EMPLOYEE);
+// A test that needs another answer from employee-service replaces this, and the afterEach hook restores it.
+let updateEmployeeOutcome: () => Promise<EmployeeDetail> = DEFAULT_UPDATE_OUTCOME;
 const employeeServiceFake: IEmployeeServiceClient = {
   updateOwnPhoto: (accessToken: string, photo: Buffer) => {
     forwardedTokens.push(accessToken);
@@ -201,6 +231,11 @@ const employeeServiceFake: IEmployeeServiceClient = {
     createRequests.push(request);
     return createEmployeeOutcome();
   },
+  updateEmployee: (accessToken: string, accountId: string, request: UpdateEmployeeRequest) => {
+    forwardedTokens.push(accessToken);
+    updateRequests.push({ accountId, request });
+    return updateEmployeeOutcome();
+  },
   listEmployees: (accessToken: string, query: EmployeeListQuery) => {
     forwardedTokens.push(accessToken);
     listQueries.push(query);
@@ -224,6 +259,31 @@ class StubSelfServiceController {
 
 function encodeJsonSegment(value: object): string {
   return Buffer.from(JSON.stringify(value)).toString('base64url');
+}
+
+// Signs a service token the way a calling service does (ES256, kid = caller, iss = sub = caller, aud = target).
+function signServiceToken(keys: AuthKeySet, caller: ServiceName, target: ServiceName): string {
+  const signingInput = [
+    encodeJsonSegment({ alg: 'ES256', typ: 'JWT', kid: caller }),
+    encodeJsonSegment({
+      iss: caller,
+      sub: caller,
+      aud: target,
+      exp: Math.floor(Date.now() / 1000) + SERVICE_TOKEN_LIFETIME_SECONDS_FOR_CALLS,
+    }),
+  ].join('.');
+  const signature = createSign('SHA256')
+    .update(signingInput)
+    .sign({ key: servicePair(keys, caller).privateKeyPem, dsaEncoding: 'ieee-p1363' }, 'base64url');
+  return `${signingInput}.${signature}`;
+}
+
+// The account ID is the token subject. The test reads it only to name the HR actor in an administration call.
+function accountIdOf(accessToken: string): string {
+  const payload = z
+    .object({ sub: z.uuid() })
+    .parse(JSON.parse(Buffer.from(accessToken.split('.')[1] ?? '', 'base64url').toString('utf8')));
+  return payload.sub;
 }
 
 // Signs a user token with the test user key, which only auth-service holds in production. The gateway
@@ -279,6 +339,7 @@ describe('api-gateway route guards through a running auth-service', () => {
 
   afterEach(() => {
     createEmployeeOutcome = DEFAULT_CREATE_OUTCOME;
+    updateEmployeeOutcome = DEFAULT_UPDATE_OUTCOME;
   });
 
   beforeAll(async () => {
@@ -801,6 +862,170 @@ describe('api-gateway route guards through a running auth-service', () => {
         details: INCOMPLETE_DETAILS,
       });
       expect(forwardedTokens).toEqual([hrToken]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 200 with the employee and forward the HR token when HR updates an employee',
+    async () => {
+      forwardedTokens.length = 0;
+      updateRequests.length = 0;
+
+      const response = await patchWithToken(`/api/v1/employees/${EMPLOYEE_ACCOUNT_ID}`, hrToken, {
+        name: 'Bima Saputra',
+      }).expect(200);
+
+      expect(response.body).toEqual(UPDATED_EMPLOYEE);
+      expect(forwardedTokens).toEqual([hrToken]);
+      expect(updateRequests).toEqual([
+        { accountId: EMPLOYEE_ACCOUNT_ID, request: { name: 'Bima Saputra' } },
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 without calling employee-service when an employee token updates an employee',
+    async () => {
+      forwardedTokens.length = 0;
+      updateRequests.length = 0;
+
+      const response = await patchWithToken(
+        `/api/v1/employees/${EMPLOYEE_ACCOUNT_ID}`,
+        employeeToken,
+        {
+          name: 'Bima Saputra',
+        },
+      ).expect(403);
+
+      expect(response.body).toEqual({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Your role cannot use this action.',
+      });
+      expect(forwardedTokens).toEqual([]);
+      expect(updateRequests).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 401 without calling employee-service when no bearer token is sent to the update route',
+    async () => {
+      forwardedTokens.length = 0;
+
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/employees/${EMPLOYEE_ACCOUNT_ID}`)
+        .send({ name: 'Bima Saputra' })
+        .expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      expect(forwardedTokens).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it.each([
+    {
+      condition: 'the account ID is not a UUID',
+      path: '/api/v1/employees/not-a-uuid',
+      body: { name: 'Bima' },
+    },
+    {
+      condition: 'the body is empty',
+      path: `/api/v1/employees/${EMPLOYEE_ACCOUNT_ID}`,
+      body: {},
+    },
+    {
+      condition: 'the body carries an extra field',
+      path: `/api/v1/employees/${EMPLOYEE_ACCOUNT_ID}`,
+      body: { name: 'Bima', profileStatus: 'COMPLETE' },
+    },
+  ])(
+    'should return 400 without calling employee-service when $condition',
+    async ({ path, body }) => {
+      forwardedTokens.length = 0;
+      updateRequests.length = 0;
+
+      const response = await patchWithToken(path, hrToken, body).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(updateRequests).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 503 with the code, message, and details unchanged when employee-service stops the update after a save',
+    async () => {
+      forwardedTokens.length = 0;
+      updateEmployeeOutcome = () =>
+        Promise.reject(
+          new DependencyUnavailableError(
+            ErrorCode.EMPLOYEE_UPDATE_INCOMPLETE,
+            UPDATE_INCOMPLETE_MESSAGE,
+            { details: UPDATE_INCOMPLETE_DETAILS },
+          ),
+        );
+
+      const response = await patchWithToken(`/api/v1/employees/${EMPLOYEE_ACCOUNT_ID}`, hrToken, {
+        name: 'Bima Saputra',
+      }).expect(503);
+
+      expect(response.body).toEqual({
+        statusCode: 503,
+        code: ErrorCode.EMPLOYEE_UPDATE_INCOMPLETE,
+        message: UPDATE_INCOMPLETE_MESSAGE,
+        details: UPDATE_INCOMPLETE_DETAILS,
+      });
+      expect(forwardedTokens).toEqual([hrToken]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should still route PATCH employees/me to the self-service phone update when an HR token calls it',
+    async () => {
+      forwardedTokens.length = 0;
+      profileUpdates.length = 0;
+      updateRequests.length = 0;
+
+      await patchWithToken(OWN_PROFILE_PATH, hrToken, { phoneNumber: '+6281234567890' }).expect(
+        200,
+      );
+
+      expect(profileUpdates).toEqual([{ phoneNumber: '+6281234567890' }]);
+      expect(updateRequests).toEqual([]);
+      expect(forwardedTokens).toEqual([hrToken]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 401 ACCOUNT_DISABLED on the next request after HR deactivates the account through the administration route',
+    async () => {
+      const accountId = randomUUID();
+      await insertEmployeeAccount(accountId, ADMIN_DEACTIVATED_EMAIL);
+      const token = await signIn(ADMIN_DEACTIVATED_EMAIL, HR_PASSWORD, Portal.EMPLOYEE);
+      await getWithToken(SELF_SERVICE_ROUTE_PATH, token).expect(200);
+
+      // employee-service makes this call when HR sets the status to INACTIVE. The token is the service's own.
+      const serviceToken = signServiceToken(
+        keys,
+        ServiceName.EMPLOYEE_SERVICE,
+        ServiceName.AUTH_SERVICE,
+      );
+      const answer = await request(authService.baseUrl)
+        .put(ACCOUNT_STATUS_PATH(accountId))
+        .set('Authorization', `Bearer ${serviceToken}`)
+        .send({ actorAccountId: accountIdOf(hrToken), isActive: false })
+        .expect(200);
+      expect(answer.body).toEqual({ isActive: false });
+
+      const response = await getWithToken(SELF_SERVICE_ROUTE_PATH, token).expect(401);
+      expect(response.body).toEqual(ACCOUNT_DISABLED_BODY);
     },
     TEST_TIMEOUT_MS,
   );

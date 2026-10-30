@@ -16,6 +16,7 @@ import type {
   InternalBinaryGetRequest,
   InternalBinaryResponse,
   InternalGetRequest,
+  InternalJsonPutRequest,
   InternalMultipartFile,
   InternalMultipartPutRequest,
   InternalPatchRequest,
@@ -106,6 +107,10 @@ export class InternalHttpClient implements IInternalHttpClient {
 
   patch<TResponse>(request: InternalPatchRequest<TResponse>): Promise<TResponse> {
     return this.sendJson({ ...request, method: 'PATCH', responseKind: 'json' });
+  }
+
+  putJson<TResponse>(request: InternalJsonPutRequest<TResponse>): Promise<TResponse> {
+    return this.sendJson({ ...request, method: 'PUT', responseKind: 'json' });
   }
 
   put<TResponse>(request: InternalMultipartPutRequest<TResponse>): Promise<TResponse> {

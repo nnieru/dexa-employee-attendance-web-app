@@ -56,6 +56,7 @@ export {
   type InternalBinaryGetRequest,
   type InternalBinaryResponse,
   type InternalGetRequest,
+  type InternalJsonPutRequest,
   type InternalMultipartFile,
   type InternalMultipartPutRequest,
   type InternalPostRequest,

@@ -66,6 +66,14 @@ export {
   type EmployeeProvisioningIncompleteDetails,
 } from './employees/employee-provisioning-incomplete.schema.js';
 export {
+  employeeUpdateIncompleteDetailsSchema,
+  type EmployeeUpdateIncompleteDetails,
+} from './employees/employee-update-incomplete.schema.js';
+export {
+  updateEmployeeRequestSchema,
+  type UpdateEmployeeRequest,
+} from './employees/update-employee.schema.js';
+export {
   phoneNumberSchema,
   updateOwnProfileRequestSchema,
   type UpdateOwnProfileRequest,

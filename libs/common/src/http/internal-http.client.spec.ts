@@ -365,3 +365,44 @@ describe('InternalHttpClient.getBinary', () => {
     ).rejects.toBeInstanceOf(DependencyUnavailableError);
   });
 });
+
+describe('InternalHttpClient.putJson', () => {
+  const ACCOUNT_PATH = '/api/v1/internal/accounts/account-1/active-status';
+  const BODY = { actorAccountId: 'actor-1', isActive: false };
+
+  it('should send the JSON body as a PUT with this service token and no retry when the answer is 503', async () => {
+    script.respond = () => jsonError(503, 'UNAVAILABLE', 'Busy.');
+    const client = createClient();
+
+    await expect(
+      client.putJson({
+        target: ServiceName.EMPLOYEE_SERVICE,
+        path: ACCOUNT_PATH,
+        body: BODY,
+        responseSchema: ANSWER_SCHEMA,
+      }),
+    ).rejects.toBeInstanceOf(DependencyUnavailableError);
+
+    expect(recorded).toHaveLength(1);
+    const [request] = recorded;
+    expect(request?.method).toBe('PUT');
+    expect(request?.path).toBe(ACCOUNT_PATH);
+    expect(request?.contentType).toBe('application/json');
+    expect(request?.authorization).toBe(`Bearer ${SERVICE_TOKEN}`);
+    expect(JSON.parse(request?.body.toString('utf8') ?? '')).toEqual(BODY);
+  });
+
+  it('should resolve to undefined when the target answers 204 and the schema accepts no body', async () => {
+    script.respond = () => ({ status: 204 });
+    const client = createClient();
+
+    await expect(
+      client.putJson({
+        target: ServiceName.EMPLOYEE_SERVICE,
+        path: ACCOUNT_PATH,
+        body: BODY,
+        responseSchema: z.void(),
+      }),
+    ).resolves.toBeUndefined();
+  });
+});

@@ -24,6 +24,7 @@ function recordingHttpClient(outcome: () => Promise<unknown>): {
     getBinary: () => Promise.reject(new Error('The reader must not fetch bytes.')),
     post: () => Promise.reject(new Error('The reader must not POST.')),
     patch: () => Promise.reject(new Error('The reader must not PATCH.')),
+    putJson: () => Promise.reject(new Error('The reader must not PUT.')),
     put: () => Promise.reject(new Error('The reader must not PUT.')),
   };
   return { client, requests };

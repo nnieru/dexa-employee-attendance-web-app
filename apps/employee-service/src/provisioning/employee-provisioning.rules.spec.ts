@@ -1,7 +1,6 @@
 import { AccountProvisioningStatus } from '@dexa/contracts';
 import { EmployeeProvisioningState } from './employee-provisioning-state.js';
 import {
-  findUnassignableMasterField,
   isActivationConfirmed,
   isSameProvisioningRequest,
   needsActivation,
@@ -53,46 +52,6 @@ describe('provisioning phase transitions', () => {
       expect(needsActivation(state)).toBe(activates);
     },
   );
-});
-
-describe('findUnassignableMasterField', () => {
-  const ACTIVE = { isActive: true };
-  const INACTIVE = { isActive: false };
-
-  it.each([
-    {
-      condition: 'both options are active',
-      position: ACTIVE,
-      status: ACTIVE,
-      expected: undefined,
-    },
-    {
-      condition: 'the position is inactive',
-      position: INACTIVE,
-      status: ACTIVE,
-      expected: 'positionId',
-    },
-    {
-      condition: 'the position does not exist',
-      position: undefined,
-      status: ACTIVE,
-      expected: 'positionId',
-    },
-    {
-      condition: 'the employee status is inactive',
-      position: ACTIVE,
-      status: INACTIVE,
-      expected: 'employeeStatusId',
-    },
-    {
-      condition: 'both options are inactive, so the position is named',
-      position: INACTIVE,
-      status: INACTIVE,
-      expected: 'positionId',
-    },
-  ])('should return $expected when $condition', ({ position, status, expected }) => {
-    expect(findUnassignableMasterField(position, status)).toBe(expected);
-  });
 });
 
 describe('isActivationConfirmed', () => {

@@ -45,6 +45,7 @@ function recordingClient(
       return Promise.resolve(request.responseSchema.parse(ANSWER));
     },
     patch: () => Promise.reject(new Error('The client never patches.')),
+    putJson: () => Promise.reject(new Error('The client never puts JSON.')),
     put: () => Promise.reject(new Error('The client never puts.')),
   };
 }

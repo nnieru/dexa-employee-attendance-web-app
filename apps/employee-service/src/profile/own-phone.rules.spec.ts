@@ -10,6 +10,7 @@ function storedProfile(overrides: Partial<LockedEmployeeProfile>): LockedEmploye
     accountId: '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13',
     name: 'Nadia Rahma',
     positionId: '5a0c3c1e-7f43-4c55-9d2b-2d6f7f1f0e11',
+    employeeStatusId: '8c2d4e6f-1a3b-4c5d-9e7f-0a1b2c3d4e5f',
     phoneNumber: null,
     photoKey: null,
     profileStatus: ProfileStatus.INCOMPLETE,

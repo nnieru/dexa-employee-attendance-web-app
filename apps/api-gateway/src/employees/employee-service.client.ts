@@ -18,6 +18,7 @@ import {
   type EmployeeListQuery,
   type MasterOption,
   type OwnProfile,
+  type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
 } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
@@ -33,6 +34,8 @@ const EMPLOYEES_PATH = `/${API_PREFIX}/employees`;
 // A create that stopped partway answers 503 with this code, its operation ID, and the saved phase. The gateway
 // passes that answer on, so HR can retry the same operation (DATABASE §4.3).
 const PASS_THROUGH_CREATE_CODES = [ErrorCode.EMPLOYEE_PROVISIONING_INCOMPLETE];
+// An update that stopped after its first save answers 503 with this code and the steps that saved (DATABASE §4.3).
+const PASS_THROUGH_UPDATE_CODES = [ErrorCode.EMPLOYEE_UPDATE_INCOMPLETE];
 
 @Injectable()
 export class EmployeeServiceClient implements IEmployeeServiceClient {
@@ -78,6 +81,23 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
       forwardedUserToken: accessToken,
       refusalCodes: USER_TOKEN_REFUSAL_CODES,
       passThroughErrorCodes: PASS_THROUGH_CREATE_CODES,
+      responseSchema: employeeDetailSchema,
+    });
+  }
+
+  // The update is not retried: a lost answer may hide a change that already saved, so HR decides whether to save again.
+  updateEmployee(
+    accessToken: string,
+    accountId: string,
+    request: UpdateEmployeeRequest,
+  ): Promise<EmployeeDetail> {
+    return this.httpClient.patch({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: `${EMPLOYEES_PATH}/${encodeURIComponent(accountId)}`,
+      body: request,
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      passThroughErrorCodes: PASS_THROUGH_UPDATE_CODES,
       responseSchema: employeeDetailSchema,
     });
   }

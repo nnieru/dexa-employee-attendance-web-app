@@ -18,13 +18,11 @@ import {
 import { EmployeeProvisioningState } from './employee-provisioning-state.js';
 import {
   dependencyUnavailableError,
-  masterNotAssignableError,
   operationReusedError,
   profileExistsError,
   provisioningIncompleteError,
 } from './employee-provisioning.errors.js';
 import {
-  findUnassignableMasterField,
   isActivationConfirmed,
   isSameProvisioningRequest,
   needsActivation,
@@ -40,7 +38,17 @@ import {
 } from './employee-provisioning.repository.interface.js';
 import type { IEmployeeProvisioningService } from './employee-provisioning.service.interface.js';
 import { calculateProvisioningFingerprint } from './provisioning-fingerprint.rules.js';
-import { toEmployeeDetail } from './employee-detail.rules.js';
+import {
+  EMPLOYEE_DETAIL_READER,
+  type IEmployeeDetailReader,
+} from '../employees/employee-detail.reader.interface.js';
+import { toEmployeeDetail } from '../employees/employee-detail.rules.js';
+import { assertMastersAssignable } from '../masters/assert-masters-assignable.js';
+import { masterNotAssignableError } from '../masters/master-assignment.errors.js';
+import {
+  MASTER_ASSIGNMENT_READER,
+  type IMasterAssignmentReader,
+} from '../masters/master-assignment.reader.interface.js';
 
 /**
  * Creates an employee in three steps that survive a failure between them (DATABASE §4.3): Auth creates the
@@ -56,6 +64,8 @@ export class EmployeeProvisioningService implements IEmployeeProvisioningService
     private readonly repository: IEmployeeProvisioningRepository,
     @Inject(AUTH_PROVISIONING_CLIENT) private readonly authProvisioning: IAuthProvisioningClient,
     @Inject(AUTH_ACCOUNT_CLIENT) private readonly authAccounts: IAuthAccountClient,
+    @Inject(MASTER_ASSIGNMENT_READER) private readonly masters: IMasterAssignmentReader,
+    @Inject(EMPLOYEE_DETAIL_READER) private readonly details: IEmployeeDetailReader,
   ) {}
 
   async createEmployee(
@@ -68,7 +78,7 @@ export class EmployeeProvisioningService implements IEmployeeProvisioningService
     // A saved profile is never checked again, so a retry still reaches activation when HR has since deactivated a
     // master option that the profile uses.
     if (stored === undefined || needsProfileSave(stored.state)) {
-      await this.assertMastersAssignable(request);
+      await this.assertRequestedMastersAssignable(request);
     }
     const operation =
       stored ?? (await this.reserveOperation(actorAccountId, request.operationId, fingerprint));
@@ -79,11 +89,11 @@ export class EmployeeProvisioningService implements IEmployeeProvisioningService
     return this.readEmployeeDetail(accountId);
   }
 
-  private async assertMastersAssignable(request: CreateEmployeeRequest): Promise<void> {
-    const position = await this.repository.findPositionOption(request.positionId);
-    const employeeStatus = await this.repository.findEmployeeStatusOption(request.employeeStatusId);
-    const field = findUnassignableMasterField(position, employeeStatus);
-    if (field !== undefined) throw masterNotAssignableError(field);
+  private assertRequestedMastersAssignable(request: CreateEmployeeRequest): Promise<void> {
+    return assertMastersAssignable(this.masters, [
+      { field: 'positionId', optionId: request.positionId },
+      { field: 'employeeStatusId', optionId: request.employeeStatusId },
+    ]);
   }
 
   private async reserveOperation(
@@ -161,7 +171,7 @@ export class EmployeeProvisioningService implements IEmployeeProvisioningService
   }
 
   private async readEmployeeDetail(accountId: string): Promise<EmployeeDetail> {
-    const record = await this.repository.findEmployeeDetail(accountId);
+    const record = await this.details.findEmployeeDetail(accountId);
     if (record === undefined) throw new Error('The saved employee profile is missing.');
     const account = await this.authAccounts.findAccountById(accountId);
     if (account === undefined) throw dependencyUnavailableError();

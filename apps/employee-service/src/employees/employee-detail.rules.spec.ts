@@ -1,5 +1,5 @@
 import { ProfileStatus, Role } from '@dexa/contracts';
-import type { EmployeeDetailRecord } from './employee-provisioning.repository.interface.js';
+import type { EmployeeDetailRecord } from './employee-detail.reader.interface.js';
 import { toEmployeeDetail } from './employee-detail.rules.js';
 
 const RECORD: EmployeeDetailRecord = {

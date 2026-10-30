@@ -10,6 +10,7 @@ import {
   ErrorCode,
   PHOTO_FIELD_NAME,
   type CreateEmployeeRequest,
+  type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
 } from '@dexa/contracts';
 import { EmployeeServiceClient } from './employee-service.client.js';
@@ -29,6 +30,7 @@ function recordingHttpClient(recorded: InternalGetRequest<unknown>[]): IInternal
     getBinary: () => Promise.reject(new Error('The photo tests use their own client.')),
     post: () => Promise.reject(new Error('The client never posts.')),
     patch: () => Promise.reject(new Error('The client never patches.')),
+    putJson: () => Promise.reject(new Error('The client never puts JSON.')),
     put: () => Promise.reject(new Error('The client never puts.')),
   };
 }
@@ -73,6 +75,7 @@ describe('EmployeeServiceClient.updateOwnProfile', () => {
         recorded.push(patchRequest);
         return Promise.reject(new Error('The recording client does not answer.'));
       },
+      putJson: () => Promise.reject(new Error('The client never puts JSON here.')),
       put: () => Promise.reject(new Error('The client never puts here.')),
     };
     const client = new EmployeeServiceClient(httpClient);
@@ -182,6 +185,7 @@ function rejectingHttpClient(): IInternalHttpClient {
     getBinary: () => Promise.reject(new Error('The client never fetches bytes here.')),
     post: () => Promise.reject(new Error('The client never posts.')),
     patch: () => Promise.reject(new Error('The client never patches.')),
+    putJson: () => Promise.reject(new Error('The client never puts JSON here.')),
     put: () => Promise.reject(new Error('The client never puts here.')),
   };
 }
@@ -240,6 +244,35 @@ describe('EmployeeServiceClient.getEmployeePhoto', () => {
       path: '/api/v1/employees/5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13/photo',
       forwardedUserToken: USER_TOKEN,
       refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+    });
+  });
+});
+
+describe('EmployeeServiceClient.updateEmployee', () => {
+  const ACCOUNT_ID = '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13';
+  const REQUEST: UpdateEmployeeRequest = { name: 'Nadia Rahma', newPassword: 'reset-pass-2' };
+
+  it('should patch the employee with the body and the HR token forwarded, with the incomplete code passed through and no retry', async () => {
+    const recorded: Parameters<IInternalHttpClient['patch']>[0][] = [];
+    const httpClient: IInternalHttpClient = {
+      ...rejectingHttpClient(),
+      patch: (patchRequest) => {
+        recorded.push(patchRequest);
+        return Promise.reject(new Error('The recording client does not answer.'));
+      },
+    };
+    const client = new EmployeeServiceClient(httpClient);
+
+    await client.updateEmployee(USER_TOKEN, ACCOUNT_ID, REQUEST).catch(() => undefined);
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: `/api/v1/employees/${ACCOUNT_ID}`,
+      body: REQUEST,
+      forwardedUserToken: USER_TOKEN,
+      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      passThroughErrorCodes: [ErrorCode.EMPLOYEE_UPDATE_INCOMPLETE],
     });
   });
 });

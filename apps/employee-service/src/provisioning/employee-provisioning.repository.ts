@@ -1,35 +1,21 @@
-import { readCheckViolationConstraint } from '@dexa/common';
-import { profileStatusSchema } from '@dexa/contracts';
 import type { Database } from '@dexa/db';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, DrizzleQueryError, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { DATABASE } from '../infrastructure/db/database.token.js';
-import {
-  employeeProvisioningOperations,
-  employees,
-  masterEmployeeStatuses,
-  masterPositions,
-} from '../infrastructure/db/schema.js';
+import { wrapStorageError } from '../infrastructure/db/storage-errors.js';
+import { employeeProvisioningOperations, employees } from '../infrastructure/db/schema.js';
+import { findMasterAssignmentViolation } from '../masters/master-assignment-violation.js';
 import {
   employeeProvisioningStateSchema,
   EmployeeProvisioningState,
 } from './employee-provisioning-state.js';
 import type {
-  EmployeeDetailRecord,
   EmployeeProvisioningOperation,
   IEmployeeProvisioningRepository,
-  MasterAssignmentField,
-  MasterOptionStatus,
   NewEmployeeProfile,
   NewEmployeeProvisioningOperation,
   ProfileSaveOutcome,
 } from './employee-provisioning.repository.interface.js';
-
-// Constraint names from the employees table (migration 0001). The trigger names the one it rejected.
-const MASTER_CONSTRAINT_FIELDS: Readonly<Record<string, MasterAssignmentField>> = {
-  employees_position_id_active_ck: 'positionId',
-  employees_employee_status_id_active_ck: 'employeeStatusId',
-};
 
 // Only the statements that a transaction runs need the update and insert methods.
 type ProvisioningRunner = Pick<Database['db'], 'select' | 'insert' | 'update'>;
@@ -84,28 +70,6 @@ export class EmployeeProvisioningRepository implements IEmployeeProvisioningRepo
     });
   }
 
-  findPositionOption(positionId: string): Promise<MasterOptionStatus> {
-    return sanitizeStorageErrors(async () => {
-      const [row] = await this.database.db
-        .select({ isActive: masterPositions.isActive })
-        .from(masterPositions)
-        .where(eq(masterPositions.id, positionId))
-        .limit(1);
-      return row;
-    });
-  }
-
-  findEmployeeStatusOption(employeeStatusId: string): Promise<MasterOptionStatus> {
-    return sanitizeStorageErrors(async () => {
-      const [row] = await this.database.db
-        .select({ isActive: masterEmployeeStatuses.isActive })
-        .from(masterEmployeeStatuses)
-        .where(eq(masterEmployeeStatuses.id, employeeStatusId))
-        .limit(1);
-      return row;
-    });
-  }
-
   // A rejected master is reported as its field, so the caller can answer 400. The trigger's exception rolls the
   // transaction back first, so no partial profile is left behind.
   async saveProfileForReservedOperation(
@@ -117,7 +81,7 @@ export class EmployeeProvisioningRepository implements IEmployeeProvisioningRepo
         saveProfileInTransaction(transaction, operationId, profile),
       );
     } catch (error: unknown) {
-      const field = findMasterAssignmentField(error);
+      const field = findMasterAssignmentViolation(error);
       if (field !== undefined) return { kind: 'MASTER_NOT_ASSIGNABLE', field };
       throw toStorageError(error);
     }
@@ -135,45 +99,6 @@ export class EmployeeProvisioningRepository implements IEmployeeProvisioningRepo
             eq(employeeProvisioningOperations.state, EmployeeProvisioningState.PROFILE_SAVED),
           ),
         );
-    });
-  }
-
-  findEmployeeDetail(accountId: string): Promise<EmployeeDetailRecord | undefined> {
-    return sanitizeStorageErrors(async () => {
-      const [row] = await this.database.db
-        .select({
-          accountId: employees.accountId,
-          name: employees.name,
-          phoneNumber: employees.phoneNumber,
-          profileStatus: employees.profileStatus,
-          positionId: masterPositions.id,
-          positionCode: masterPositions.code,
-          positionName: masterPositions.name,
-          employeeStatusId: masterEmployeeStatuses.id,
-          employeeStatusCode: masterEmployeeStatuses.code,
-          employeeStatusName: masterEmployeeStatuses.name,
-        })
-        .from(employees)
-        .innerJoin(masterPositions, eq(employees.positionId, masterPositions.id))
-        .innerJoin(
-          masterEmployeeStatuses,
-          eq(employees.employeeStatusId, masterEmployeeStatuses.id),
-        )
-        .where(eq(employees.accountId, accountId))
-        .limit(1);
-      if (row === undefined) return undefined;
-      return {
-        accountId: row.accountId,
-        name: row.name,
-        position: { id: row.positionId, code: row.positionCode, name: row.positionName },
-        employeeStatus: {
-          id: row.employeeStatusId,
-          code: row.employeeStatusCode,
-          name: row.employeeStatusName,
-        },
-        phoneNumber: row.phoneNumber,
-        profileStatus: profileStatusSchema.parse(row.profileStatus),
-      };
     });
   }
 }
@@ -227,17 +152,10 @@ function toOperation(row: OperationRow): EmployeeProvisioningOperation {
   };
 }
 
-function findMasterAssignmentField(error: unknown): MasterAssignmentField | undefined {
-  const constraint = readCheckViolationConstraint(error);
-  return constraint === undefined ? undefined : MASTER_CONSTRAINT_FIELDS[constraint];
-}
-
 // Driver errors carry the bind parameters, and the profile insert binds the phone number. Only the SQLSTATE and the
 // database message survive, so a failed write never reports personal data or SQL to the caller.
 function toStorageError(error: unknown): Error {
-  return new Error('The employee provisioning record could not be stored.', {
-    cause: error instanceof DrizzleQueryError ? error.cause : error,
-  });
+  return wrapStorageError(error, 'The employee provisioning record could not be stored.');
 }
 
 async function sanitizeStorageErrors<TResult>(work: () => Promise<TResult>): Promise<TResult> {

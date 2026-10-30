@@ -10,6 +10,7 @@ export interface IInternalHttpClient {
   getBinary(request: InternalBinaryGetRequest): Promise<InternalBinaryResponse>;
   post<TResponse>(request: InternalPostRequest<TResponse>): Promise<TResponse>;
   patch<TResponse>(request: InternalPatchRequest<TResponse>): Promise<TResponse>;
+  putJson<TResponse>(request: InternalJsonPutRequest<TResponse>): Promise<TResponse>;
   put<TResponse>(request: InternalMultipartPutRequest<TResponse>): Promise<TResponse>;
 }
 
@@ -52,6 +53,11 @@ export type InternalPostRequest<TResponse> = InternalRequest<TResponse> & {
 // A PATCH is never retried, like a POST: the target may have applied the change when the answer was lost.
 // A 204 answer has no body, so its response schema accepts undefined (z.void()).
 export type InternalPatchRequest<TResponse> = InternalRequest<TResponse> & {
+  readonly body: unknown;
+};
+
+// A PUT with a JSON body is never retried either: the target may have applied it when the answer was lost.
+export type InternalJsonPutRequest<TResponse> = InternalRequest<TResponse> & {
   readonly body: unknown;
 };
 

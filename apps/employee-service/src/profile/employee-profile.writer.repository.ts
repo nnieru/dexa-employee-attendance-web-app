@@ -1,10 +1,15 @@
 import type { Database } from '@dexa/db';
 import { profileStatusSchema } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
-import { DrizzleQueryError, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { DATABASE } from '../infrastructure/db/database.token.js';
+import { wrapStorageError } from '../infrastructure/db/storage-errors.js';
 import { employees } from '../infrastructure/db/schema.js';
+import { findMasterAssignmentViolation } from '../masters/master-assignment-violation.js';
+import { masterNotAssignableError } from '../masters/master-assignment.errors.js';
 import type {
+  EmployeeFieldsChanges,
+  EmployeeFieldsUpdate,
   EmployeePhoneUpdate,
   EmployeePhotoUpdate,
   IEmployeeProfileTransaction,
@@ -21,6 +26,7 @@ export class EmployeeProfileWriter implements IEmployeeProfileWriter {
 
   // Driver errors carry the bind parameters, which include the phone number. Wrapping them keeps only the
   // SQLSTATE and the database's message, so a failed write never leaks SQL or personal data to the caller.
+  // A rejected master option is the one error that a caller can act on, so it is named as a 400 instead.
   async runInTransaction<TResult>(
     work: (transaction: IEmployeeProfileTransaction) => Promise<TResult>,
   ): Promise<TResult> {
@@ -29,7 +35,9 @@ export class EmployeeProfileWriter implements IEmployeeProfileWriter {
         work(createTransactionScope(transaction)),
       );
     } catch (error: unknown) {
-      throw toEmployeeProfileWriteError(error);
+      const field = findMasterAssignmentViolation(error);
+      if (field !== undefined) throw masterNotAssignableError(field);
+      throw wrapStorageError(error, 'Could not write the employee profile.');
     }
   }
 }
@@ -39,10 +47,11 @@ function createTransactionScope(runner: EmployeeProfileRunner): IEmployeeProfile
     lockProfileForUpdate: (accountId) => lockProfileForUpdate(runner, accountId),
     updatePhone: (update) => updatePhone(runner, update),
     updatePhoto: (update) => updatePhoto(runner, update),
+    updateFields: (update) => updateFields(runner, update),
   };
 }
 
-// FOR UPDATE serializes concurrent edits of one profile, so the completion decision sees the stored fields.
+// FOR UPDATE serializes concurrent edits of one profile, so the plan is decided from the stored values.
 async function lockProfileForUpdate(
   runner: EmployeeProfileRunner,
   accountId: string,
@@ -52,6 +61,7 @@ async function lockProfileForUpdate(
       accountId: employees.accountId,
       name: employees.name,
       positionId: employees.positionId,
+      employeeStatusId: employees.employeeStatusId,
       phoneNumber: employees.phoneNumber,
       photoKey: employees.photoKey,
       profileStatus: employees.profileStatus,
@@ -93,10 +103,25 @@ async function updatePhoto(
     .where(eq(employees.accountId, update.accountId));
 }
 
-function toEmployeeProfileWriteError(error: unknown): Error {
-  return new Error('Could not write the employee profile.', { cause: unwrapDriverError(error) });
+// Drizzle rejects an undefined value in a SET, so only the columns that changed are named.
+async function updateFields(
+  runner: EmployeeProfileRunner,
+  update: EmployeeFieldsUpdate,
+): Promise<void> {
+  await runner
+    .update(employees)
+    .set(toColumnValues(update.changes))
+    .where(eq(employees.accountId, update.accountId));
 }
 
-function unwrapDriverError(error: unknown): unknown {
-  return error instanceof DrizzleQueryError ? error.cause : error;
+function toColumnValues(changes: EmployeeFieldsChanges): Partial<typeof employees.$inferInsert> {
+  return {
+    ...(changes.name === undefined ? {} : { name: changes.name }),
+    ...(changes.positionId === undefined ? {} : { positionId: changes.positionId }),
+    ...(changes.phoneNumber === undefined ? {} : { phoneNumber: changes.phoneNumber }),
+    ...(changes.employeeStatusId === undefined
+      ? {}
+      : { employeeStatusId: changes.employeeStatusId }),
+    ...(changes.profileStatus === undefined ? {} : { profileStatus: changes.profileStatus }),
+  };
 }

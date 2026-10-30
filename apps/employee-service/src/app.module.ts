@@ -32,11 +32,13 @@ export function createAppModule(config: EmployeeServiceConfig): Type<unknown> {
       }),
       AccountStatusModule.forRemote(),
       DatabaseModule,
-      EmployeesModule,
       MasterDataModule,
       MastersModule,
       HrProfileBootstrapModule,
+      // Registration follows import order. The self-service profile routes come before EmployeesModule, so that
+      // PATCH employees/me is not matched by the HR route PATCH employees/:accountId.
       ProfileModule,
+      EmployeesModule,
       PhotoModule,
       ProvisioningModule,
       HealthModule,

@@ -1,12 +1,8 @@
 import type { ProfileStatus } from '@dexa/contracts';
+import type { MasterAssignmentField } from '../masters/master-assignment.reader.interface.js';
 import type { EmployeeProvisioningState } from './employee-provisioning-state.js';
 
 export const EMPLOYEE_PROVISIONING_REPOSITORY = Symbol('IEmployeeProvisioningRepository');
-
-/** The position or employee status that a profile names. Undefined when no such option exists. */
-export type MasterOptionStatus = { readonly isActive: boolean } | undefined;
-
-export type MasterAssignmentField = 'positionId' | 'employeeStatusId';
 
 /** One stored operation. accountId is undefined until Auth has answered for the operation. */
 export type EmployeeProvisioningOperation = {
@@ -39,23 +35,6 @@ export type ProfileSaveOutcome =
   | { readonly kind: 'PROFILE_EXISTS' }
   | { readonly kind: 'MASTER_NOT_ASSIGNABLE'; readonly field: MasterAssignmentField };
 
-/** A master option as an employee response shows it. */
-type MasterOptionRecord = {
-  readonly id: string;
-  readonly code: string;
-  readonly name: string;
-};
-
-/** One saved employee profile with its position and employee status resolved. */
-export type EmployeeDetailRecord = {
-  readonly accountId: string;
-  readonly name: string;
-  readonly position: MasterOptionRecord;
-  readonly employeeStatus: MasterOptionRecord;
-  readonly phoneNumber: string | null;
-  readonly profileStatus: ProfileStatus;
-};
-
 /**
  * Reads and writes the provisioning operations and the employee profiles they create. Every write that spans
  * the operation and the profile runs in one transaction. Driver errors are sanitized before they leave this port.
@@ -66,8 +45,6 @@ export interface IEmployeeProvisioningRepository {
   reserveOperation(
     operation: NewEmployeeProvisioningOperation,
   ): Promise<EmployeeProvisioningOperation>;
-  findPositionOption(positionId: string): Promise<MasterOptionStatus>;
-  findEmployeeStatusOption(employeeStatusId: string): Promise<MasterOptionStatus>;
   /** Saves the profile and binds the account in one transaction, only while the operation is still RESERVED. */
   saveProfileForReservedOperation(
     operationId: string,
@@ -75,5 +52,4 @@ export interface IEmployeeProvisioningRepository {
   ): Promise<ProfileSaveOutcome>;
   /** Moves a PROFILE_SAVED operation to ACTIVE. Any other stored phase is left unchanged. */
   markOperationActive(operationId: string): Promise<void>;
-  findEmployeeDetail(accountId: string): Promise<EmployeeDetailRecord | undefined>;
 }
