@@ -6,6 +6,7 @@ import {
   ownProfileSchema,
   type MasterOption,
   type OwnProfile,
+  type UpdateOwnProfileRequest,
 } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import type { IEmployeeServiceClient } from './employee-service-client.interface.js';
@@ -43,6 +44,18 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
     return this.httpClient.get({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: `/${API_PREFIX}/employees/me`,
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      responseSchema: ownProfileSchema,
+    });
+  }
+
+  // The employee-service writes only the caller's own phone, so the gateway forwards the caller's token unchanged.
+  updateOwnProfile(accessToken: string, request: UpdateOwnProfileRequest): Promise<OwnProfile> {
+    return this.httpClient.patch({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: `/${API_PREFIX}/employees/me`,
+      body: request,
       forwardedUserToken: accessToken,
       refusalCodes: USER_TOKEN_REFUSAL_CODES,
       responseSchema: ownProfileSchema,

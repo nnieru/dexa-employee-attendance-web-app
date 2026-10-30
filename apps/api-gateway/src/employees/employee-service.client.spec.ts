@@ -1,5 +1,5 @@
 import { ServiceName, type IInternalHttpClient, type InternalGetRequest } from '@dexa/common';
-import { ErrorCode } from '@dexa/contracts';
+import { ErrorCode, type UpdateOwnProfileRequest } from '@dexa/contracts';
 import { EmployeeServiceClient } from './employee-service.client.js';
 
 const USER_TOKEN = 'user-access-token';
@@ -43,4 +43,31 @@ describe('EmployeeServiceClient', () => {
       });
     },
   );
+});
+
+describe('EmployeeServiceClient.updateOwnProfile', () => {
+  it('should patch the own profile with the body and the user token forwarded', async () => {
+    const recorded: Parameters<IInternalHttpClient['patch']>[0][] = [];
+    const request: UpdateOwnProfileRequest = { phoneNumber: '+6281234567890' };
+    const httpClient: IInternalHttpClient = {
+      get: () => Promise.reject(new Error('The client never gets here.')),
+      post: () => Promise.reject(new Error('The client never posts.')),
+      patch: (patchRequest) => {
+        recorded.push(patchRequest);
+        return Promise.reject(new Error('The recording client does not answer.'));
+      },
+    };
+    const client = new EmployeeServiceClient(httpClient);
+
+    await client.updateOwnProfile(USER_TOKEN, request).catch(() => undefined);
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: '/api/v1/employees/me',
+      body: request,
+      forwardedUserToken: USER_TOKEN,
+      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+    });
+  });
 });

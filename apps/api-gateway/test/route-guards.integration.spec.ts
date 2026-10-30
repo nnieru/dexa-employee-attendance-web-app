@@ -7,6 +7,7 @@ import {
   Role,
   type MasterOption,
   type OwnProfile,
+  type UpdateOwnProfileRequest,
 } from '@dexa/contracts';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -86,10 +87,16 @@ const OWN_PROFILE: OwnProfile = {
   profileStatus: 'INCOMPLETE',
 };
 const forwardedTokens: string[] = [];
+const profileUpdates: UpdateOwnProfileRequest[] = [];
 const employeeServiceFake: IEmployeeServiceClient = {
   getOwnProfile: (accessToken: string) => {
     forwardedTokens.push(accessToken);
     return Promise.resolve(OWN_PROFILE);
+  },
+  updateOwnProfile: (accessToken: string, request: UpdateOwnProfileRequest) => {
+    forwardedTokens.push(accessToken);
+    profileUpdates.push(request);
+    return Promise.resolve({ ...OWN_PROFILE, phoneNumber: request.phoneNumber });
   },
   listPositions: (accessToken: string) => {
     forwardedTokens.push(accessToken);
@@ -234,6 +241,13 @@ describe('api-gateway route guards through a running auth-service', () => {
 
   function getWithToken(path: string, accessToken: string) {
     return request(app.getHttpServer()).get(path).set('Authorization', `Bearer ${accessToken}`);
+  }
+
+  function patchWithToken(path: string, accessToken: string, body: unknown) {
+    return request(app.getHttpServer())
+      .patch(path)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(body as object);
   }
 
   it(
@@ -394,6 +408,72 @@ describe('api-gateway route guards through a running auth-service', () => {
       forwardedTokens.length = 0;
 
       const response = await request(app.getHttpServer()).get(OWN_PROFILE_PATH).expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      expect(forwardedTokens).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it.each([
+    { caller: 'an employee', token: () => employeeToken },
+    { caller: 'an HR account', token: () => hrToken },
+  ])(
+    'should return the updated profile and forward the caller token when $caller updates the phone number',
+    async ({ token }) => {
+      forwardedTokens.length = 0;
+      profileUpdates.length = 0;
+
+      const response = await patchWithToken(OWN_PROFILE_PATH, token(), {
+        phoneNumber: '  +6281234567890  ',
+      }).expect(200);
+
+      expect(response.body).toEqual({ ...OWN_PROFILE, phoneNumber: '+6281234567890' });
+      expect(profileUpdates).toEqual([{ phoneNumber: '+6281234567890' }]);
+      expect(forwardedTokens).toEqual([token()]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it.each([
+    { condition: 'the name is sent', body: { phoneNumber: '+6281234567890', name: 'Changed' } },
+    {
+      condition: 'the email is sent',
+      body: { phoneNumber: '+6281234567890', email: 'changed@dexa.test' },
+    },
+    {
+      condition: 'the position is sent',
+      body: { phoneNumber: '+6281234567890', positionId: randomUUID() },
+    },
+    {
+      condition: 'the profile status is sent',
+      body: { phoneNumber: '+6281234567890', profileStatus: 'COMPLETE' },
+    },
+    { condition: 'the phone number is not a phone number', body: { phoneNumber: 'call me' } },
+  ])(
+    'should return 400 VALIDATION_FAILED without calling employee-service when $condition',
+    async ({ body }) => {
+      forwardedTokens.length = 0;
+      profileUpdates.length = 0;
+
+      const response = await patchWithToken(OWN_PROFILE_PATH, employeeToken, body).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(profileUpdates).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 401 UNAUTHORIZED on the phone update route when no bearer token is sent, without calling employee-service',
+    async () => {
+      forwardedTokens.length = 0;
+
+      const response = await request(app.getHttpServer())
+        .patch(OWN_PROFILE_PATH)
+        .send({ phoneNumber: '+6281234567890' })
+        .expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
       expect(forwardedTokens).toEqual([]);
