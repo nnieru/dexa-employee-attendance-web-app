@@ -25,6 +25,7 @@ export {
 export { AuthConfigSchema, type AuthConfig } from './config/auth-config.schema.js';
 export { AuthModule } from './auth/auth.module.js';
 export { CurrentUser } from './auth/current-user.decorator.js';
+export { IS_PUBLIC_KEY, Public, isPublicRoute } from './auth/public.decorator.js';
 export { JwtAuthGuard } from './auth/jwt-auth.guard.js';
 export { ServiceAuthGuard } from './auth/service-auth.guard.js';
 export { ServiceName } from './auth/service-name.js';
@@ -32,7 +33,11 @@ export {
   SERVICE_TOKEN_SIGNER,
   type IServiceTokenSigner,
 } from './auth/service-token-signer.interface.js';
-export type { AuthenticatedService, AuthenticatedUser } from './auth/authenticated-principal.js';
+export {
+  authenticatedUserSchema,
+  type AuthenticatedService,
+  type AuthenticatedUser,
+} from './auth/authenticated-principal.js';
 export { InternalHttpModule, type InternalHttpModuleOptions } from './http/internal-http.module.js';
 export {
   INTERNAL_HTTP_CLIENT,
