@@ -1,5 +1,25 @@
-import { Module } from '@nestjs/common';
 import { HealthModule } from '@dexa/common';
+import { Module, type Type } from '@nestjs/common';
+import type { AttendanceServiceConfig } from './config/attendance-service-config.schema.js';
+import { ConfigModule } from './config/config.module.js';
+import { DatabaseModule } from './infrastructure/db/database.module.js';
+import { SchedulesModule } from './schedules/schedules.module.js';
+import { ClockModule } from './time/clock.module.js';
 
-@Module({ imports: [HealthModule] })
-export class AppModule {}
+/**
+ * Builds the root module from the validated config. The config is parsed before the module graph is declared, so
+ * the class is declared inside this function, as in employee-service.
+ */
+export function createAppModule(config: AttendanceServiceConfig): Type<unknown> {
+  @Module({
+    imports: [
+      ConfigModule.forRoot(config),
+      ClockModule,
+      DatabaseModule,
+      SchedulesModule,
+      HealthModule,
+    ],
+  })
+  class AppModule {}
+  return AppModule;
+}
