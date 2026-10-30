@@ -5,10 +5,12 @@ import {
   MASTER_DATA_REPOSITORY,
   type IMasterDataRepository,
 } from './master-data.repository.interface.js';
+import type { IMasterDataSeeder } from './master-data-seeder.interface.js';
 
 @Injectable()
-export class MasterDataSeedService implements OnApplicationBootstrap {
+export class MasterDataSeedService implements IMasterDataSeeder, OnApplicationBootstrap {
   private readonly logger = new Logger(MasterDataSeedService.name);
+  private seeding: Promise<void> | undefined;
 
   constructor(
     @Inject(CONFIG) private readonly config: EmployeeServiceConfig,
@@ -17,6 +19,16 @@ export class MasterDataSeedService implements OnApplicationBootstrap {
 
   // Nest runs the migrations in onModuleInit before this hook, so the master tables exist here.
   async onApplicationBootstrap(): Promise<void> {
+    await this.ensureSeeded();
+  }
+
+  // The run is shared, so a caller that starts first does not race a second seed of the same rows.
+  ensureSeeded(): Promise<void> {
+    this.seeding ??= this.seedOrWarn();
+    return this.seeding;
+  }
+
+  private async seedOrWarn(): Promise<void> {
     const document = this.config.EMPLOYEE_MASTER_DATA;
     if (document === undefined) {
       await this.warnWhenMasterDataIsEmpty();

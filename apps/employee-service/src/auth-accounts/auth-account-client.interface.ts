@@ -1,4 +1,4 @@
-import type { AccountLookupItem } from '@dexa/contracts';
+import type { AccountLookupItem, AccountReference } from '@dexa/contracts';
 
 export const AUTH_ACCOUNT_CLIENT = Symbol('IAuthAccountClient');
 
@@ -8,4 +8,6 @@ export const AUTH_ACCOUNT_CLIENT = Symbol('IAuthAccountClient');
  */
 export interface IAuthAccountClient {
   findAccountById(accountId: string): Promise<AccountLookupItem | undefined>;
+  /** Resolves the account ID and role for a company email, or undefined when no active account uses it. */
+  findAccountReferenceByEmail(email: string): Promise<AccountReference | undefined>;
 }

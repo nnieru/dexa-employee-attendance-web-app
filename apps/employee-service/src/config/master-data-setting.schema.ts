@@ -12,7 +12,8 @@ const MASTER_NAME_MAX_LENGTH = 150;
 // Deactivation assigns INACTIVE and blocks access (DATABASE §4), so both codes must exist for it to work.
 const REQUIRED_EMPLOYEE_STATUS_CODES = ['ACTIVE', 'INACTIVE'] as const;
 
-const masterCodeSchema = z
+// Shared with the bootstrap HR position code, so both settings accept the same codes (DATABASE §2).
+export const masterCodeSchema = z
   .string()
   .max(MASTER_CODE_MAX_LENGTH, { error: `must be at most ${MASTER_CODE_MAX_LENGTH} characters` })
   .regex(MASTER_CODE_PATTERN, {

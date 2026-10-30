@@ -76,6 +76,8 @@ const fakeAccountStatusReader: IAccountStatusReader = {
 const accountDirectory = new Map<string, AccountLookupItem>();
 const fakeAuthAccountClient: IAuthAccountClient = {
   findAccountById: (accountId) => Promise.resolve(accountDirectory.get(accountId)),
+  // These specs do not run the HR profile bootstrap, so no email lookup is expected.
+  findAccountReferenceByEmail: () => Promise.resolve(undefined),
 };
 
 function encodeJsonSegment(value: object): string {

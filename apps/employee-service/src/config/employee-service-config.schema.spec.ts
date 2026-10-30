@@ -7,6 +7,13 @@ const DATABASE_URL = 'postgres://employee_app:test-only-password@postgres:5432/e
 const PROTOCOL_MESSAGE = 'must be a postgres:// connection URL';
 const TARGET_MESSAGE = 'must name a host and a database';
 const FIXTURES = 'fixtures';
+// Production requires the bootstrap HR settings (see the EMPLOYEE_BOOTSTRAP_HR_* block below), so the helpers that
+// start a production config supply valid ones. Those tests then fail only on the setting they name.
+const BOOTSTRAP_HR_SETTINGS = {
+  EMPLOYEE_BOOTSTRAP_HR_EMAIL: 'hr.admin@dexa.test',
+  EMPLOYEE_BOOTSTRAP_HR_NAME: 'Sari Lestari',
+  EMPLOYEE_BOOTSTRAP_HR_POSITION_CODE: 'HR_OFFICER',
+};
 
 const VALID_DOCUMENT = {
   positions: [{ code: 'FULLSTACK_DEVELOPER', name: 'Fullstack Developer' }],
@@ -19,7 +26,11 @@ const VALID_DOCUMENT = {
 function parseMasterData(setting: string | undefined, nodeEnvironment = 'test'): unknown {
   return parseConfig(
     EmployeeServiceConfigSchema,
-    employeeServiceEnvironment({ NODE_ENV: nodeEnvironment, EMPLOYEE_MASTER_DATA: setting }),
+    employeeServiceEnvironment({
+      NODE_ENV: nodeEnvironment,
+      EMPLOYEE_MASTER_DATA: setting,
+      ...BOOTSTRAP_HR_SETTINGS,
+    }),
   ).EMPLOYEE_MASTER_DATA;
 }
 
@@ -243,6 +254,7 @@ describe('EmployeeServiceConfigSchema EMPLOYEE_PHOTO_DIRECTORY', () => {
         employeeServiceEnvironment({
           NODE_ENV: nodeEnvironment,
           EMPLOYEE_PHOTO_DIRECTORY: setting,
+          ...BOOTSTRAP_HR_SETTINGS,
         }),
       );
     } catch (error) {
@@ -279,6 +291,145 @@ describe('EmployeeServiceConfigSchema EMPLOYEE_PHOTO_DIRECTORY', () => {
   it('should reject a relative directory without echoing the value', () => {
     expect(photoDirectoryError('photos/../../etc', 'development')).toBe(
       'Invalid configuration: EMPLOYEE_PHOTO_DIRECTORY: must be an absolute path',
+    );
+  });
+});
+
+describe('EmployeeServiceConfigSchema EMPLOYEE_BOOTSTRAP_HR_*', () => {
+  function bootstrapHrError(
+    overrides: Record<string, string | undefined>,
+    nodeEnvironment = 'test',
+  ): string {
+    try {
+      parseConfig(
+        EmployeeServiceConfigSchema,
+        employeeServiceEnvironment({ NODE_ENV: nodeEnvironment, ...overrides }),
+      );
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+    throw new Error('Expected the bootstrap HR settings to be rejected, but they were accepted.');
+  }
+
+  it('should return all three values when they are set', () => {
+    const config = parseConfig(
+      EmployeeServiceConfigSchema,
+      employeeServiceEnvironment(BOOTSTRAP_HR_SETTINGS),
+    );
+
+    expect(config).toMatchObject(BOOTSTRAP_HR_SETTINGS);
+  });
+
+  it('should trim the email and the name when they are surrounded by whitespace', () => {
+    const config = parseConfig(
+      EmployeeServiceConfigSchema,
+      employeeServiceEnvironment({
+        ...BOOTSTRAP_HR_SETTINGS,
+        EMPLOYEE_BOOTSTRAP_HR_EMAIL: '  hr.admin@dexa.test ',
+        EMPLOYEE_BOOTSTRAP_HR_NAME: '  Sari Lestari  ',
+      }),
+    );
+
+    expect(config.EMPLOYEE_BOOTSTRAP_HR_EMAIL).toBe('hr.admin@dexa.test');
+    expect(config.EMPLOYEE_BOOTSTRAP_HR_NAME).toBe('Sari Lestari');
+  });
+
+  it('should leave all three values unset when they are none of them set outside production', () => {
+    const config = parseConfig(EmployeeServiceConfigSchema, employeeServiceEnvironment());
+
+    expect(config.EMPLOYEE_BOOTSTRAP_HR_EMAIL).toBeUndefined();
+    expect(config.EMPLOYEE_BOOTSTRAP_HR_NAME).toBeUndefined();
+    expect(config.EMPLOYEE_BOOTSTRAP_HR_POSITION_CODE).toBeUndefined();
+  });
+
+  it('should treat blank and whitespace-only values as unset', () => {
+    const config = parseConfig(
+      EmployeeServiceConfigSchema,
+      employeeServiceEnvironment({
+        EMPLOYEE_BOOTSTRAP_HR_EMAIL: '',
+        EMPLOYEE_BOOTSTRAP_HR_NAME: '   ',
+        EMPLOYEE_BOOTSTRAP_HR_POSITION_CODE: '',
+      }),
+    );
+
+    expect(config.EMPLOYEE_BOOTSTRAP_HR_NAME).toBeUndefined();
+    expect(config.EMPLOYEE_BOOTSTRAP_HR_EMAIL).toBeUndefined();
+  });
+
+  it('should reject a partial set and name each missing field', () => {
+    expect(bootstrapHrError({ EMPLOYEE_BOOTSTRAP_HR_EMAIL: 'hr.admin@dexa.test' })).toBe(
+      'Invalid configuration: EMPLOYEE_BOOTSTRAP_HR_NAME: must be set when the other EMPLOYEE_BOOTSTRAP_HR settings are set; EMPLOYEE_BOOTSTRAP_HR_POSITION_CODE: must be set when the other EMPLOYEE_BOOTSTRAP_HR settings are set',
+    );
+  });
+
+  it('should require all three fields by name when NODE_ENV is production and none is set', () => {
+    expect(
+      bootstrapHrError(
+        {
+          EMPLOYEE_BOOTSTRAP_HR_EMAIL: undefined,
+          EMPLOYEE_BOOTSTRAP_HR_NAME: undefined,
+          EMPLOYEE_BOOTSTRAP_HR_POSITION_CODE: undefined,
+        },
+        'production',
+      ),
+    ).toBe(
+      'Invalid configuration: EMPLOYEE_BOOTSTRAP_HR_EMAIL: must be set when NODE_ENV is production; EMPLOYEE_BOOTSTRAP_HR_NAME: must be set when NODE_ENV is production; EMPLOYEE_BOOTSTRAP_HR_POSITION_CODE: must be set when NODE_ENV is production',
+    );
+  });
+
+  it('should accept all three values when NODE_ENV is production', () => {
+    const config = parseConfig(
+      EmployeeServiceConfigSchema,
+      employeeServiceEnvironment({
+        NODE_ENV: 'production',
+        EMPLOYEE_PHOTO_DIRECTORY: '/var/lib/dexa/employee-photos',
+        ...BOOTSTRAP_HR_SETTINGS,
+      }),
+    );
+
+    expect(config.EMPLOYEE_BOOTSTRAP_HR_POSITION_CODE).toBe('HR_OFFICER');
+  });
+
+  it('should reject an invalid email without echoing it', () => {
+    const message = bootstrapHrError({
+      ...BOOTSTRAP_HR_SETTINGS,
+      EMPLOYEE_BOOTSTRAP_HR_EMAIL: 'not-an-email-secret',
+    });
+
+    expect(message).toBe(
+      'Invalid configuration: EMPLOYEE_BOOTSTRAP_HR_EMAIL: must be an email address',
+    );
+    expect(message).not.toContain('not-an-email-secret');
+  });
+
+  it('should reject an email longer than 254 characters', () => {
+    const longEmail = `${'a'.repeat(250)}@dexa.test`;
+
+    expect(
+      bootstrapHrError({ ...BOOTSTRAP_HR_SETTINGS, EMPLOYEE_BOOTSTRAP_HR_EMAIL: longEmail }),
+    ).toBe('Invalid configuration: EMPLOYEE_BOOTSTRAP_HR_EMAIL: must be at most 254 characters');
+  });
+
+  it('should reject a name longer than 150 characters without echoing it', () => {
+    const message = bootstrapHrError({
+      ...BOOTSTRAP_HR_SETTINGS,
+      EMPLOYEE_BOOTSTRAP_HR_NAME: 'N'.repeat(151),
+    });
+
+    expect(message).toBe(
+      'Invalid configuration: EMPLOYEE_BOOTSTRAP_HR_NAME: must be at most 150 characters',
+    );
+    expect(message).not.toContain('NNNN');
+  });
+
+  it.each([
+    { code: 'hr-officer', reason: 'lowercase letters' },
+    { code: 'HR OFFICER', reason: 'a space' },
+  ])('should reject a position code with $reason', ({ code }) => {
+    expect(
+      bootstrapHrError({ ...BOOTSTRAP_HR_SETTINGS, EMPLOYEE_BOOTSTRAP_HR_POSITION_CODE: code }),
+    ).toBe(
+      'Invalid configuration: EMPLOYEE_BOOTSTRAP_HR_POSITION_CODE: must use only uppercase letters, digits, and underscores',
     );
   });
 });
