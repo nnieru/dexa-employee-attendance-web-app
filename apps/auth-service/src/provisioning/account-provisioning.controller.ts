@@ -21,7 +21,7 @@ import {
   ACCOUNT_PROVISIONING_SERVICE,
   type IAccountProvisioningService,
 } from './account-provisioning-service.interface.js';
-import { EmployeeServiceCallerGuard } from './employee-service-caller.guard.js';
+import { EmployeeServiceCallerGuard } from '../internal-callers/employee-service-caller.guard.js';
 
 // Every route answers 200, including the create. A first create and an idempotent replay return the same
 // shape, so the caller does not need to tell them apart by status code.

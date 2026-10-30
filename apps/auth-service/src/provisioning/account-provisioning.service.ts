@@ -5,6 +5,7 @@ import {
   type AccountProvisioningRequest,
 } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
+import { isEligibleHrActor } from '../accounts/hr-actor.rules.js';
 import { PASSWORD_HASHER, type IPasswordHasher } from '../credentials/password-hasher.interface.js';
 import type { IAccountProvisioningService } from './account-provisioning-service.interface.js';
 import {
@@ -13,10 +14,7 @@ import {
   type InsertRejection,
   type ProvisioningOperationRecord,
 } from './account-provisioning.repository.interface.js';
-import {
-  isEligibleProvisioningActor,
-  isRetryOfStoredRequest,
-} from './account-provisioning.rules.js';
+import { isRetryOfStoredRequest } from './account-provisioning.rules.js';
 
 const ACTOR_NOT_ELIGIBLE_MESSAGE = 'Only an active HR account can provision accounts.';
 const EMAIL_IN_USE_MESSAGE = 'An account already uses this company email.';
@@ -66,7 +64,7 @@ export class AccountProvisioningService implements IAccountProvisioningService {
 
   private async assertEligibleActor(actorAccountId: string): Promise<void> {
     const actor = await this.operations.findActorAccount(actorAccountId);
-    if (!isEligibleProvisioningActor(actor)) {
+    if (!isEligibleHrActor(actor)) {
       throw new ForbiddenError(ErrorCode.FORBIDDEN, ACTOR_NOT_ELIGIBLE_MESSAGE);
     }
   }

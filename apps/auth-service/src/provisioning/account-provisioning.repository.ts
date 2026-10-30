@@ -9,9 +9,9 @@ import {
   toAccountWriteError,
   type AccountQueryRunner,
 } from '../accounts/account.repository.js';
+import type { HrActorAccount } from '../accounts/hr-actor.rules.js';
 import { DATABASE } from '../infrastructure/db/database.token.js';
 import { accountProvisioningOperations, accounts } from '../infrastructure/db/schema.js';
-import type { ProvisioningActor } from './account-provisioning.rules.js';
 import type {
   InsertProvisioningOperationResult,
   InsertRejection,
@@ -49,7 +49,7 @@ type OperationRow = {
 export class AccountProvisioningRepository implements IAccountProvisioningRepository {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
 
-  findActorAccount(accountId: string): Promise<ProvisioningActor | undefined> {
+  findActorAccount(accountId: string): Promise<HrActorAccount | undefined> {
     return queryAccountById(this.database.db, accountId);
   }
 

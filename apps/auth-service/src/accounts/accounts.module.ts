@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { CredentialsModule } from '../credentials/credentials.module.js';
 import { DatabaseModule } from '../infrastructure/db/database.module.js';
+import { AccountAdministrationController } from './account-administration.controller.js';
+import { AccountAdministrationRepository } from './account-administration.repository.js';
+import { ACCOUNT_ADMINISTRATION_REPOSITORY } from './account-administration.repository.interface.js';
+import { AccountAdministrationService } from './account-administration.service.js';
+import { ACCOUNT_ADMINISTRATION_SERVICE } from './account-administration.service.interface.js';
 import { AccountLookupController } from './account-lookup.controller.js';
 import { ACCOUNT_LOOKUP_READER } from './account-lookup-reader.interface.js';
 import { AccountLookupRepository } from './account-lookup.repository.js';
@@ -16,9 +21,11 @@ import { HrBootstrapService } from './hr-bootstrap.service.js';
     { provide: ACCOUNT_REPOSITORY, useClass: AccountRepository },
     { provide: ACCOUNT_LOOKUP_READER, useClass: AccountLookupRepository },
     { provide: ACCOUNT_LOOKUP_SERVICE, useClass: AccountLookupService },
+    { provide: ACCOUNT_ADMINISTRATION_SERVICE, useClass: AccountAdministrationService },
+    { provide: ACCOUNT_ADMINISTRATION_REPOSITORY, useClass: AccountAdministrationRepository },
     HrBootstrapService,
   ],
-  controllers: [AccountLookupController],
+  controllers: [AccountLookupController, AccountAdministrationController],
   exports: [ACCOUNT_REPOSITORY],
 })
 export class AccountsModule {}

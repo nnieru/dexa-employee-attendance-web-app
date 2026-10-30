@@ -1,5 +1,5 @@
 import type { AccountProvisioningStatus, Role } from '@dexa/contracts';
-import type { ProvisioningActor } from './account-provisioning.rules.js';
+import type { HrActorAccount } from '../accounts/hr-actor.rules.js';
 
 /** One operation as stored. It includes the initial password verifier, so it never leaves the service. */
 export type ProvisioningOperationRecord = {
@@ -28,7 +28,7 @@ export type InsertProvisioningOperationResult =
   | { readonly kind: InsertRejection };
 
 export interface IAccountProvisioningRepository {
-  findActorAccount(accountId: string): Promise<ProvisioningActor | undefined>;
+  findActorAccount(accountId: string): Promise<HrActorAccount | undefined>;
   findOperation(operationId: string): Promise<ProvisioningOperationRecord | undefined>;
   /** Inserts the account and its PENDING operation in one transaction, or reports the unique index that refused them. */
   createAccountWithOperation(

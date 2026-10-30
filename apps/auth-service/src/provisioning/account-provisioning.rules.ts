@@ -14,13 +14,6 @@ export type ProvisioningRequestFields = {
   readonly role: Role;
 };
 
-/** The account state that decides whether an actor may create accounts. */
-export type ProvisioningActor = {
-  readonly roleCode: string;
-  readonly isActive: boolean;
-  readonly isProvisioningPending: boolean;
-};
-
 /**
  * Decides whether a create request repeats the request that its operation ID already stored. The
  * password is judged by the caller, because only the caller holds the argon2 verifier. A retry
@@ -36,15 +29,5 @@ export function isRetryOfStoredRequest(
     stored.actorAccountId === request.actorAccountId &&
     stored.requestedEmail === request.email &&
     stored.requestedRole === request.role
-  );
-}
-
-/** Only an active HR account that is past its own provisioning may create accounts (D-16, DATABASE §3.1). */
-export function isEligibleProvisioningActor(actor: ProvisioningActor | undefined): boolean {
-  return (
-    actor !== undefined &&
-    actor.roleCode === Role.HR &&
-    actor.isActive &&
-    !actor.isProvisioningPending
   );
 }

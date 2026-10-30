@@ -2,6 +2,12 @@
 export { API_PREFIX } from './api-prefix.js';
 export { currentAccountSchema, type CurrentAccount } from './auth/current-account.schema.js';
 export {
+  resetAccountPasswordRequestSchema,
+  setAccountActiveStatusRequestSchema,
+  type ResetAccountPasswordRequest,
+  type SetAccountActiveStatusRequest,
+} from './auth/account-administration.schema.js';
+export {
   ACCOUNT_LOOKUP_MAX_IDS,
   ACCOUNT_SEARCH_MAX_IDS,
   accountEmailQuerySchema,
