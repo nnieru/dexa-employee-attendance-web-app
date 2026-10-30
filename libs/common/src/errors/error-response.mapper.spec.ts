@@ -1,6 +1,7 @@
 import { BadRequestException, HttpException } from '@nestjs/common';
 import { ErrorCode } from '@dexa/contracts';
 import {
+  ConflictError,
   DependencyUnavailableError,
   NotFoundError,
   PayloadTooLargeError,
@@ -125,5 +126,35 @@ describe('toErrorResponse', () => {
       code: ErrorCode.INTERNAL_ERROR,
       message: UNEXPECTED_ERROR_MESSAGE,
     });
+  });
+});
+
+describe('toErrorResponse with details', () => {
+  const details = { operationId: '0b6f7c0e-4f3a-4d55-9d1e-7a2b3c4d5e6f', savedPhase: 'RESERVED' };
+
+  it('should include the details when the domain error carries them', () => {
+    const error = new DependencyUnavailableError(
+      ErrorCode.EMPLOYEE_PROVISIONING_INCOMPLETE,
+      'Provisioning is incomplete.',
+      { details },
+    );
+
+    expect(toErrorResponse(error)).toEqual({
+      statusCode: 503,
+      code: ErrorCode.EMPLOYEE_PROVISIONING_INCOMPLETE,
+      message: 'Provisioning is incomplete.',
+      details,
+    });
+  });
+
+  it('should omit the details key when the domain error has no details', () => {
+    const response = toErrorResponse(new ConflictError(ErrorCode.CONFLICT, 'Already exists.'));
+
+    expect(response).toEqual({
+      statusCode: 409,
+      code: ErrorCode.CONFLICT,
+      message: 'Already exists.',
+    });
+    expect(response).not.toHaveProperty('details');
   });
 });

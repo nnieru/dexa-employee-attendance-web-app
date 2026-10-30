@@ -2,17 +2,22 @@ import { Buffer } from 'node:buffer';
 import { createSign, randomUUID } from 'node:crypto';
 import {
   configureApp,
+  DependencyUnavailableError,
   parseConfig,
   Roles,
   ServiceName,
   type InternalBinaryResponse,
 } from '@dexa/common';
 import {
+  ErrorCode,
   loginResponseSchema,
   MAX_PHOTO_BYTES,
   PHOTO_CONTENT_TYPE,
   Portal,
   Role,
+  type CreateEmployeeRequest,
+  type EmployeeDetail,
+  type EmployeeProvisioningIncompleteDetails,
   type MasterOption,
   type OwnProfile,
   type UpdateOwnProfileRequest,
@@ -51,6 +56,7 @@ const HEALTH_PATH = '/api/v1/health';
 const HR_ROUTE_PATH = '/api/v1/route-guard-tests/hr';
 const POSITIONS_PATH = '/api/v1/positions';
 const EMPLOYEE_STATUSES_PATH = '/api/v1/employee-statuses';
+const CREATE_EMPLOYEE_PATH = '/api/v1/employees';
 const OWN_PROFILE_PATH = '/api/v1/employees/me';
 const OWN_PHOTO_PATH = '/api/v1/employees/me/photo';
 const PHOTO_MULTIPART_OVERHEAD_BYTES = 64 * 1024;
@@ -97,7 +103,35 @@ const OWN_PROFILE: OwnProfile = {
   photoUrl: null,
   profileStatus: 'INCOMPLETE',
 };
+const NEW_EMPLOYEE: EmployeeDetail = {
+  accountId: randomUUID(),
+  name: 'Bima Saputra',
+  email: 'bima.saputra@dexa.test',
+  role: Role.EMPLOYEE,
+  position: { id: randomUUID(), code: 'HR_OFFICER', name: 'HR Officer' },
+  employeeStatus: { id: randomUUID(), code: 'ACTIVE', name: 'Active' },
+  phoneNumber: null,
+  profileStatus: 'INCOMPLETE',
+};
+const CREATE_EMPLOYEE_BODY = {
+  operationId: randomUUID(),
+  name: '  Bima Saputra ',
+  email: 'Bima.Saputra@Dexa.Test',
+  positionId: randomUUID(),
+  employeeStatusId: randomUUID(),
+  phoneNumber: null,
+  role: Role.EMPLOYEE,
+  initialPassword: 'initial-pass-1',
+};
+const INCOMPLETE_DETAILS: EmployeeProvisioningIncompleteDetails = {
+  operationId: CREATE_EMPLOYEE_BODY.operationId,
+  savedPhase: 'RESERVED',
+};
+const DEFAULT_CREATE_OUTCOME = (): Promise<EmployeeDetail> => Promise.resolve(NEW_EMPLOYEE);
+// A test that needs another answer from employee-service replaces this, and the hook below restores it.
+let createEmployeeOutcome: () => Promise<EmployeeDetail> = DEFAULT_CREATE_OUTCOME;
 const forwardedTokens: string[] = [];
+const createRequests: CreateEmployeeRequest[] = [];
 const profileUpdates: UpdateOwnProfileRequest[] = [];
 const photoUploads: Buffer[] = [];
 const OWN_PHOTO_FILE: InternalBinaryResponse = {
@@ -130,6 +164,11 @@ const employeeServiceFake: IEmployeeServiceClient = {
   listEmployeeStatuses: (accessToken: string) => {
     forwardedTokens.push(accessToken);
     return Promise.resolve(EMPLOYEE_STATUSES);
+  },
+  createEmployee: (accessToken: string, request: CreateEmployeeRequest) => {
+    forwardedTokens.push(accessToken);
+    createRequests.push(request);
+    return createEmployeeOutcome();
   },
 };
 
@@ -196,6 +235,10 @@ describe('api-gateway route guards through a running auth-service', () => {
     await authService?.stop();
     await container?.stop();
   }, SETUP_TIMEOUT_MS);
+
+  afterEach(() => {
+    createEmployeeOutcome = DEFAULT_CREATE_OUTCOME;
+  });
 
   beforeAll(async () => {
     keys = generateAuthKeySet();
@@ -266,6 +309,13 @@ describe('api-gateway route guards through a running auth-service', () => {
 
   function getWithToken(path: string, accessToken: string) {
     return request(app.getHttpServer()).get(path).set('Authorization', `Bearer ${accessToken}`);
+  }
+
+  function postWithToken(path: string, accessToken: string, body: unknown) {
+    return request(app.getHttpServer())
+      .post(path)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(body as object);
   }
 
   function patchWithToken(path: string, accessToken: string, body: unknown) {
@@ -604,6 +654,112 @@ describe('api-gateway route guards through a running auth-service', () => {
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
       expect(forwardedTokens).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 201 with the employee and forward the HR token when an HR token creates an employee',
+    async () => {
+      forwardedTokens.length = 0;
+      createRequests.length = 0;
+
+      const response = await postWithToken(
+        CREATE_EMPLOYEE_PATH,
+        hrToken,
+        CREATE_EMPLOYEE_BODY,
+      ).expect(201);
+
+      expect(response.body).toEqual(NEW_EMPLOYEE);
+      expect(forwardedTokens).toEqual([hrToken]);
+      expect(createRequests).toEqual([
+        { ...CREATE_EMPLOYEE_BODY, name: 'Bima Saputra', email: 'bima.saputra@dexa.test' },
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 FORBIDDEN without calling employee-service when an employee token creates an employee',
+    async () => {
+      forwardedTokens.length = 0;
+      createRequests.length = 0;
+
+      const response = await postWithToken(
+        CREATE_EMPLOYEE_PATH,
+        employeeToken,
+        CREATE_EMPLOYEE_BODY,
+      ).expect(403);
+
+      expect(response.body).toEqual({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Your role cannot use this action.',
+      });
+      expect(forwardedTokens).toEqual([]);
+      expect(createRequests).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 401 UNAUTHORIZED without calling employee-service when no bearer token is sent to the create route',
+    async () => {
+      forwardedTokens.length = 0;
+
+      const response = await request(app.getHttpServer())
+        .post(CREATE_EMPLOYEE_PATH)
+        .send(CREATE_EMPLOYEE_BODY)
+        .expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      expect(forwardedTokens).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 400 VALIDATION_FAILED without calling employee-service when the create body carries an extra field',
+    async () => {
+      forwardedTokens.length = 0;
+
+      const response = await postWithToken(CREATE_EMPLOYEE_PATH, hrToken, {
+        ...CREATE_EMPLOYEE_BODY,
+        profileStatus: 'COMPLETE',
+      }).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedTokens).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 503 with the code, message, and details unchanged when employee-service cannot finish the create',
+    async () => {
+      forwardedTokens.length = 0;
+      const message =
+        'Employee creation did not finish. Retry with the same operation ID to finish it.';
+      createEmployeeOutcome = () =>
+        Promise.reject(
+          new DependencyUnavailableError(ErrorCode.EMPLOYEE_PROVISIONING_INCOMPLETE, message, {
+            details: INCOMPLETE_DETAILS,
+          }),
+        );
+
+      const response = await postWithToken(
+        CREATE_EMPLOYEE_PATH,
+        hrToken,
+        CREATE_EMPLOYEE_BODY,
+      ).expect(503);
+
+      expect(response.body).toEqual({
+        statusCode: 503,
+        code: ErrorCode.EMPLOYEE_PROVISIONING_INCOMPLETE,
+        message,
+        details: INCOMPLETE_DETAILS,
+      });
+      expect(forwardedTokens).toEqual([hrToken]);
     },
     TEST_TIMEOUT_MS,
   );

@@ -9,6 +9,16 @@ export type DomainErrorKind =
   | 'payload_too_large';
 
 /**
+ * Facts a client needs to act on a failure, such as an operation ID and the phase that was saved. Only
+ * identifiers and phase names belong here: the details are sent to clients as they are.
+ */
+export type DomainErrorDetails = Readonly<Record<string, unknown>>;
+
+export type DomainErrorOptions = ErrorOptions & {
+  readonly details?: DomainErrorDetails;
+};
+
+/**
  * Business code throws these instead of HTTP exceptions, so domain logic stays independent of the
  * transport. The code is required so every failure carries a specific, documented identifier; use
  * the generic `ErrorCode` values only when nothing more specific applies. The message is sent to
@@ -17,11 +27,14 @@ export type DomainErrorKind =
 export abstract class DomainError extends Error {
   abstract readonly kind: DomainErrorKind;
   readonly code: string;
+  // Undefined unless the failure has details, so the response omits the field for every other error.
+  readonly details: DomainErrorDetails | undefined;
 
-  constructor(code: string, message: string, options?: ErrorOptions) {
+  constructor(code: string, message: string, options?: DomainErrorOptions) {
     super(message, options);
     this.name = new.target.name;
     this.code = code;
+    this.details = options?.details;
   }
 }
 

@@ -9,6 +9,7 @@ import {
   UnauthorizedError,
   ValidationError,
   type DomainError,
+  type DomainErrorOptions,
 } from '../errors/domain.errors.js';
 
 export type InternalHttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT';
@@ -19,7 +20,8 @@ export type InternalHttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT';
  */
 export type AttemptFailure =
   | { readonly kind: 'no_response' }
-  | { readonly kind: 'server_error'; readonly status: number }
+  // remoteBody is kept only for a 5xx answer that the target may define a code for (see toFailureError).
+  | { readonly kind: 'server_error'; readonly status: number; readonly remoteBody?: unknown }
   | { readonly kind: 'client_error'; readonly status: number; readonly remoteBody: unknown }
   | { readonly kind: 'unexpected_status'; readonly status: number };
 
@@ -34,7 +36,11 @@ const SERVER_ERROR_CLASS = 5;
 const STATUS_CLASS_DIVISOR = 100;
 
 type ClientErrorMapping = {
-  readonly errorClass: new (code: string, message: string, options: ErrorOptions) => DomainError;
+  readonly errorClass: new (
+    code: string,
+    message: string,
+    options: DomainErrorOptions,
+  ) => DomainError;
   readonly fallbackCode: string;
   readonly fallbackMessage: string;
 };
@@ -103,12 +109,18 @@ export function createDependencyUnavailableError(cause?: unknown): DependencyUna
 /**
  * The error that callers receive for a failed attempt. The cause stays internal, never sent.
  * @param refusalCodes the codes that make a 401 answer a refusal of the call's own credentials.
+ * @param passThroughErrorCodes the codes that make a 503 answer a known outcome of the call, such as a partial
+ * provisioning failure, which reaches the caller with its code, message, and details.
  */
 export function toFailureError(
   failure: AttemptFailure,
   cause: unknown,
   refusalCodes: ReadonlyArray<string> = [],
+  passThroughErrorCodes: ReadonlyArray<string> = [],
 ): DomainError {
+  if (failure.kind === 'server_error') {
+    return toPassThroughError(failure, passThroughErrorCodes, cause);
+  }
   if (failure.kind !== 'client_error') return createDependencyUnavailableError(cause);
   if (failure.status === HttpStatus.UNAUTHORIZED) {
     return toRefusalError(failure.remoteBody, refusalCodes, cause);
@@ -118,6 +130,27 @@ export function toFailureError(
 
 export function describeFailure(failure: AttemptFailure): string {
   return failure.kind === 'no_response' ? 'no response' : `HTTP ${failure.status}`;
+}
+
+// Only a 503 that carries one of the call's pass-through codes reaches the caller. Any other 5xx answer stays
+// generic, because its body is not written for clients.
+function toPassThroughError(
+  failure: { readonly status: number; readonly remoteBody?: unknown },
+  passThroughErrorCodes: ReadonlyArray<string>,
+  cause: unknown,
+): DomainError {
+  const remoteError = errorResponseSchema.safeParse(failure.remoteBody);
+  if (
+    failure.status !== HttpStatus.SERVICE_UNAVAILABLE ||
+    !remoteError.success ||
+    !passThroughErrorCodes.includes(remoteError.data.code)
+  ) {
+    return createDependencyUnavailableError(cause);
+  }
+  return new DependencyUnavailableError(remoteError.data.code, remoteError.data.message, {
+    cause,
+    details: remoteError.data.details,
+  });
 }
 
 // A 401 is a refusal of the caller's credentials only when the call names the code in the answer.
@@ -132,7 +165,10 @@ function toRefusalError(
   if (!remoteError.success || !refusalCodes.includes(remoteError.data.code)) {
     return createDependencyUnavailableError(cause);
   }
-  return new UnauthorizedError(remoteError.data.code, remoteError.data.message, { cause });
+  return new UnauthorizedError(remoteError.data.code, remoteError.data.message, {
+    cause,
+    details: remoteError.data.details,
+  });
 }
 
 function toClientError(status: number, remoteBody: unknown, cause: unknown): DomainError {
@@ -144,5 +180,8 @@ function toClientError(status: number, remoteBody: unknown, cause: unknown): Dom
   if (!remoteError.success) {
     return new mapping.errorClass(mapping.fallbackCode, mapping.fallbackMessage, { cause });
   }
-  return new mapping.errorClass(remoteError.data.code, remoteError.data.message, { cause });
+  return new mapping.errorClass(remoteError.data.code, remoteError.data.message, {
+    cause,
+    details: remoteError.data.details,
+  });
 }

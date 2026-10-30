@@ -3,6 +3,7 @@ import { isRecord } from './is-record.js';
 
 const UNIQUE_VIOLATION_SQL_STATE = '23505';
 const EXCLUSION_VIOLATION_SQL_STATE = '23P01';
+const CHECK_VIOLATION_SQL_STATE = '23514';
 // Drizzle wraps driver errors, sometimes more than once. The bound stops a cyclic cause chain.
 const MAX_CAUSE_DEPTH = 5;
 
@@ -20,10 +21,15 @@ export function isExclusionViolation(error: unknown): boolean {
  * for any error that is not a unique violation.
  */
 export function readUniqueViolationConstraint(error: unknown): string | undefined {
-  const violation = findSqlStateError(error, UNIQUE_VIOLATION_SQL_STATE);
-  return violation !== undefined && typeof violation.constraint === 'string'
-    ? violation.constraint
-    : undefined;
+  return readConstraintName(error, UNIQUE_VIOLATION_SQL_STATE);
+}
+
+/**
+ * Returns the name of the check constraint that rejected the row. A trigger that raises a check_violation
+ * names its constraint the same way, so a rule kept in a trigger maps to the same name.
+ */
+export function readCheckViolationConstraint(error: unknown): string | undefined {
+  return readConstraintName(error, CHECK_VIOLATION_SQL_STATE);
 }
 
 /**
@@ -33,6 +39,13 @@ export function readUniqueViolationConstraint(error: unknown): string | undefine
 export function toConflictError(error: unknown, code: string, message: string): ConflictError {
   if (!isUniqueViolation(error) && !isExclusionViolation(error)) throw error;
   return new ConflictError(code, message, { cause: error });
+}
+
+function readConstraintName(error: unknown, sqlState: string): string | undefined {
+  const violation = findSqlStateError(error, sqlState);
+  return violation !== undefined && typeof violation.constraint === 'string'
+    ? violation.constraint
+    : undefined;
 }
 
 function hasSqlState(error: unknown, sqlState: string): boolean {

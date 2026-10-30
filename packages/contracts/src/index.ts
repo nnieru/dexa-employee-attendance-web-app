@@ -56,11 +56,29 @@ export {
 } from './employees/employee-photo.js';
 export { ownProfileSchema, type OwnProfile } from './employees/employee-profile.schema.js';
 export {
+  createEmployeeRequestSchema,
+  type CreateEmployeeRequest,
+} from './employees/create-employee.schema.js';
+export { employeeDetailSchema, type EmployeeDetail } from './employees/employee-detail.schema.js';
+export {
+  EmployeeProvisioningSavedPhase,
+  employeeProvisioningIncompleteDetailsSchema,
+  type EmployeeProvisioningIncompleteDetails,
+} from './employees/employee-provisioning-incomplete.schema.js';
+export {
   phoneNumberSchema,
   updateOwnProfileRequestSchema,
   type UpdateOwnProfileRequest,
 } from './employees/update-own-profile.schema.js';
 export { ProfileStatus, profileStatusSchema } from './employees/profile-status.js';
+export {
+  EMPLOYEE_LOOKUP_MAX_IDS,
+  employeeLookupItemSchema,
+  employeeLookupRequestSchema,
+  employeeLookupResponseSchema,
+  type EmployeeLookupItem,
+  type EmployeeLookupRequest,
+} from './employees/employee-lookup.schema.js';
 export {
   masterOptionListSchema,
   masterOptionSchema,

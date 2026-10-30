@@ -179,6 +179,94 @@ describe('InternalHttpClient.put', () => {
   });
 });
 
+describe('InternalHttpClient.post pass-through answers', () => {
+  const CREATE_PATH = '/api/v1/employees';
+  const INCOMPLETE_CODE = 'EMPLOYEE_PROVISIONING_INCOMPLETE';
+  const DETAILS = { operationId: '0b6f7c0e-4f3a-4d55-9d1e-7a2b3c4d5e6f', savedPhase: 'RESERVED' };
+
+  it('should reject with the code, message, and details when a 503 carries a pass-through code', async () => {
+    script.respond = () => ({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        statusCode: 503,
+        code: INCOMPLETE_CODE,
+        message: 'Provisioning is incomplete.',
+        details: DETAILS,
+      }),
+    });
+    const client = createClient();
+
+    const failure = await client
+      .post({
+        target: ServiceName.EMPLOYEE_SERVICE,
+        path: CREATE_PATH,
+        body: { name: 'Nadia' },
+        responseSchema: ANSWER_SCHEMA,
+        passThroughErrorCodes: [INCOMPLETE_CODE],
+      })
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(DependencyUnavailableError);
+    expect(failure).toMatchObject({
+      code: INCOMPLETE_CODE,
+      message: 'Provisioning is incomplete.',
+      details: DETAILS,
+    });
+    expect(recorded).toHaveLength(1);
+  });
+
+  it('should keep neither the request body nor the bearer token in the cause when a call fails', async () => {
+    const initialPassword = 'initial-pass-1';
+    script.respond = () => jsonError(409, ErrorCode.CONFLICT, 'Email already in use.');
+    const client = createClient();
+
+    const failure = await client
+      .post({
+        target: ServiceName.EMPLOYEE_SERVICE,
+        path: CREATE_PATH,
+        body: { initialPassword },
+        responseSchema: ANSWER_SCHEMA,
+        forwardedUserToken: USER_TOKEN,
+      })
+      .catch((error: unknown) => error);
+
+    const cause: unknown = failure instanceof Error ? failure.cause : undefined;
+    expect(cause).toBeInstanceOf(Error);
+    expect(cause).not.toHaveProperty('config');
+    const serialized = JSON.stringify(cause, Object.getOwnPropertyNames(cause));
+    expect(serialized).not.toContain(initialPassword);
+    expect(serialized).not.toContain(USER_TOKEN);
+  });
+
+  it('should reject with the generic dependency error and no details when the 503 code is not named', async () => {
+    script.respond = () => ({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        statusCode: 503,
+        code: INCOMPLETE_CODE,
+        message: 'Provisioning is incomplete.',
+        details: DETAILS,
+      }),
+    });
+    const client = createClient();
+
+    const failure = await client
+      .post({
+        target: ServiceName.EMPLOYEE_SERVICE,
+        path: CREATE_PATH,
+        body: { name: 'Nadia' },
+        responseSchema: ANSWER_SCHEMA,
+      })
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(DependencyUnavailableError);
+    expect(failure).toMatchObject({ code: ErrorCode.DEPENDENCY_UNAVAILABLE });
+    expect(failure).not.toHaveProperty('details', DETAILS);
+  });
+});
+
 describe('InternalHttpClient.getBinary', () => {
   it('should resolve to the bytes and the content type that the target answered with', async () => {
     script.respond = () => ({ status: 200, contentType: 'image/jpeg', body: PHOTO_BYTES });

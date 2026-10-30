@@ -6,10 +6,13 @@ import {
 } from '@dexa/common';
 import {
   API_PREFIX,
+  employeeDetailSchema,
   ErrorCode,
   masterOptionListSchema,
   ownProfileSchema,
   PHOTO_FIELD_NAME,
+  type CreateEmployeeRequest,
+  type EmployeeDetail,
   type MasterOption,
   type OwnProfile,
   type UpdateOwnProfileRequest,
@@ -23,6 +26,10 @@ const USER_TOKEN_REFUSAL_CODES = [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISA
 // A photo is at most 5 MiB, so its transfer needs more than the default timeout of the internal calls.
 const PHOTO_TIMEOUT_MILLISECONDS = 10_000;
 const PHOTO_PATH = `/${API_PREFIX}/employees/me/photo`;
+const EMPLOYEES_PATH = `/${API_PREFIX}/employees`;
+// A create that stopped partway answers 503 with this code, its operation ID, and the saved phase. The gateway
+// passes that answer on, so HR can retry the same operation (DATABASE §4.3).
+const PASS_THROUGH_CREATE_CODES = [ErrorCode.EMPLOYEE_PROVISIONING_INCOMPLETE];
 
 @Injectable()
 export class EmployeeServiceClient implements IEmployeeServiceClient {
@@ -56,6 +63,19 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
       forwardedUserToken: accessToken,
       refusalCodes: USER_TOKEN_REFUSAL_CODES,
       responseSchema: ownProfileSchema,
+    });
+  }
+
+  // The create is not retried: a lost answer is replayed by HR with the same operation ID, never by the gateway.
+  createEmployee(accessToken: string, request: CreateEmployeeRequest): Promise<EmployeeDetail> {
+    return this.httpClient.post({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: EMPLOYEES_PATH,
+      body: request,
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      passThroughErrorCodes: PASS_THROUGH_CREATE_CODES,
+      responseSchema: employeeDetailSchema,
     });
   }
 

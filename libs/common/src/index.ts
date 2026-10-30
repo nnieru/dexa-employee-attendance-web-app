@@ -21,6 +21,7 @@ export { DomainExceptionFilter } from './errors/domain-exception.filter.js';
 export {
   isExclusionViolation,
   isUniqueViolation,
+  readCheckViolationConstraint,
   readUniqueViolationConstraint,
   toConflictError,
 } from './errors/postgres-error.js';

@@ -31,6 +31,10 @@ type InternalRequestTarget = {
   // failure. Never name UNAUTHORIZED for a call that sends this service's token: the target uses that
   // code when it refuses the service token.
   readonly refusalCodes?: ReadonlyArray<string>;
+  // Codes that a 503 answer carries when the target reports an outcome that it defines for this call, such as a
+  // partial provisioning failure. Such an answer reaches the caller with the code, message, and details. Any
+  // other 5xx answer stays a generic dependency failure.
+  readonly passThroughErrorCodes?: ReadonlyArray<string>;
 };
 
 type InternalRequest<TResponse> = InternalRequestTarget & {

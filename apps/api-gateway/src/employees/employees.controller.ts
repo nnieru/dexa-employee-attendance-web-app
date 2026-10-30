@@ -1,8 +1,11 @@
 import { Roles } from '@dexa/common';
 import {
+  createEmployeeRequestSchema,
   PHOTO_CONTENT_TYPE,
   Role,
   updateOwnProfileRequestSchema,
+  type CreateEmployeeRequest,
+  type EmployeeDetail,
   type OwnProfile,
   type UpdateOwnProfileRequest,
 } from '@dexa/contracts';
@@ -12,8 +15,11 @@ import {
   Get,
   Header,
   Headers,
+  HttpCode,
+  HttpStatus,
   Inject,
   Patch,
+  Post,
   Put,
   StreamableFile,
   UploadedFile,
@@ -27,8 +33,8 @@ import { PhotoUploadInterceptor } from './photo-upload.interceptor.js';
 import { readBearerToken } from '../auth/read-bearer-token.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 
-// The employee's own profile. The gateway forwards the caller's token, and employee-service takes the
-// account from that token, so no account ID is read from the request here.
+// The gateway forwards the caller's token, and employee-service takes the account from that token, so no account
+// ID is read from the request here.
 @Controller('employees')
 export class EmployeesController {
   constructor(
@@ -39,6 +45,18 @@ export class EmployeesController {
   @Get('me')
   getOwnProfile(@Headers('authorization') authorization: string | undefined): Promise<OwnProfile> {
     return this.employeeService.getOwnProfile(readBearerToken(authorization));
+  }
+
+  // HR creates an employee (ADM-1). The body is validated strictly here and again by employee-service. The body holds
+  // a password, so it is never logged. A matching retry answers 201 with the same employee, as a first create does.
+  @Roles(Role.HR)
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  createEmployee(
+    @Headers('authorization') authorization: string | undefined,
+    @Body(new ZodValidationPipe(createEmployeeRequestSchema)) request: CreateEmployeeRequest,
+  ): Promise<EmployeeDetail> {
+    return this.employeeService.createEmployee(readBearerToken(authorization), request);
   }
 
   // The body is strict, so only the phone number can change here. Name, email, position, and status stay read only.

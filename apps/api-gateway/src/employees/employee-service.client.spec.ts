@@ -4,8 +4,14 @@ import {
   type InternalBinaryGetRequest,
   type InternalGetRequest,
   type InternalMultipartPutRequest,
+  type InternalPostRequest,
 } from '@dexa/common';
-import { ErrorCode, PHOTO_FIELD_NAME, type UpdateOwnProfileRequest } from '@dexa/contracts';
+import {
+  ErrorCode,
+  PHOTO_FIELD_NAME,
+  type CreateEmployeeRequest,
+  type UpdateOwnProfileRequest,
+} from '@dexa/contracts';
 import { EmployeeServiceClient } from './employee-service.client.js';
 
 const USER_TOKEN = 'user-access-token';
@@ -129,6 +135,42 @@ describe('EmployeeServiceClient.getOwnPhoto', () => {
       path: PHOTO_PATH,
       forwardedUserToken: USER_TOKEN,
       refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+    });
+  });
+});
+
+describe('EmployeeServiceClient.createEmployee', () => {
+  it('should post the create request to the employees route with the user token forwarded and no retry', async () => {
+    const recorded: InternalPostRequest<unknown>[] = [];
+    const httpClient: IInternalHttpClient = {
+      ...rejectingHttpClient(),
+      post: (postRequest) => {
+        recorded.push(postRequest);
+        return Promise.reject(new Error('The recording client does not answer.'));
+      },
+    };
+    const client = new EmployeeServiceClient(httpClient);
+    const request: CreateEmployeeRequest = {
+      operationId: '0b6f7c0e-4f3a-4d55-9d1e-7a2b3c4d5e6f',
+      name: 'Nadia Rahma',
+      email: 'nadia.rahma@dexa.test',
+      positionId: '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13',
+      employeeStatusId: '7a1d2e3f-4b5c-4d6e-8f70-1a2b3c4d5e6f',
+      phoneNumber: null,
+      role: 'EMPLOYEE',
+      initialPassword: 'initial-pass-1',
+    };
+
+    await client.createEmployee(USER_TOKEN, request).catch(() => undefined);
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: '/api/v1/employees',
+      body: request,
+      forwardedUserToken: USER_TOKEN,
+      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      passThroughErrorCodes: [ErrorCode.EMPLOYEE_PROVISIONING_INCOMPLETE],
     });
   });
 });

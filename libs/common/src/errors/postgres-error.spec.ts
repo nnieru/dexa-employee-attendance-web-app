@@ -3,6 +3,7 @@ import { ConflictError } from './domain.errors.js';
 import {
   isExclusionViolation,
   isUniqueViolation,
+  readCheckViolationConstraint,
   readUniqueViolationConstraint,
   toConflictError,
 } from './postgres-error.js';
@@ -144,5 +145,39 @@ describe('readUniqueViolationConstraint', () => {
     { condition: 'the error is null', error: null },
   ])('should return undefined when $condition', ({ error }) => {
     expect(readUniqueViolationConstraint(error)).toBeUndefined();
+  });
+});
+
+describe('readCheckViolationConstraint', () => {
+  function namedDatabaseError(sqlState: string, constraint: string): Error & { code: string } {
+    return Object.assign(new Error('driver failure'), { code: sqlState, constraint });
+  }
+
+  it.each([
+    {
+      condition: 'the check violation names its constraint',
+      error: namedDatabaseError('23514', 'employees_position_id_active_ck'),
+      expected: 'employees_position_id_active_ck',
+    },
+    {
+      condition: 'the named check violation is wrapped as a cause',
+      error: new Error('Failed query', {
+        cause: namedDatabaseError('23514', 'employees_employee_status_id_active_ck'),
+      }),
+      expected: 'employees_employee_status_id_active_ck',
+    },
+  ])('should return the constraint name when $condition', ({ error, expected }) => {
+    expect(readCheckViolationConstraint(error)).toBe(expected);
+  });
+
+  it.each([
+    { condition: 'the error is a unique violation', error: namedDatabaseError('23505', 'x_uq') },
+    { condition: 'the error is null', error: null },
+    {
+      condition: 'the check violation carries no constraint name',
+      error: Object.assign(new Error('driver failure'), { code: '23514' }),
+    },
+  ])('should return undefined when $condition', ({ error }) => {
+    expect(readCheckViolationConstraint(error)).toBeUndefined();
   });
 });

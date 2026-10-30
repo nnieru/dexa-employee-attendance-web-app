@@ -63,6 +63,7 @@ type InternalCall = {
   readonly timeoutMilliseconds?: number;
   readonly forwardedUserToken?: string;
   readonly refusalCodes?: ReadonlyArray<string>;
+  readonly passThroughErrorCodes?: ReadonlyArray<string>;
 };
 
 // A JSON call also names the schema that the answer must match.
@@ -73,7 +74,7 @@ type JsonCall<TResponse> = InternalCall & {
 // What logs and error mapping need to know about a call. It never includes the body, query, or token.
 type CallSummary = Pick<
   InternalCall,
-  'method' | 'path' | 'target' | 'correlationId' | 'refusalCodes'
+  'method' | 'path' | 'target' | 'correlationId' | 'refusalCodes' | 'passThroughErrorCodes'
 >;
 
 /**
@@ -117,6 +118,7 @@ export class InternalHttpClient implements IInternalHttpClient {
       timeoutMilliseconds: request.timeoutMilliseconds,
       forwardedUserToken: request.forwardedUserToken,
       refusalCodes: request.refusalCodes,
+      passThroughErrorCodes: request.passThroughErrorCodes,
       method: 'PUT',
       responseKind: 'json',
     });
@@ -150,7 +152,7 @@ export class InternalHttpClient implements IInternalHttpClient {
       if (!isAxiosError(error)) throw error;
       const failure = describeAxiosFailure(error);
       if (!shouldRetry(call.method, failure, attempt)) {
-        throw this.toCallError(call, failure, error);
+        throw this.toCallError(call, failure, toSafeCause(error));
       }
       const reason = describeFailure(failure);
       this.logger.warn(`Retrying ${describeCall(call)}: attempt ${attempt} failed with ${reason}.`);
@@ -168,7 +170,7 @@ export class InternalHttpClient implements IInternalHttpClient {
   }
 
   private toCallError(call: CallSummary, failure: AttemptFailure, cause: unknown): DomainError {
-    const error = toFailureError(failure, cause, call.refusalCodes);
+    const error = toFailureError(failure, cause, call.refusalCodes, call.passThroughErrorCodes);
     if (error.kind === 'dependency_unavailable') {
       this.logger.error(`${describeCall(call)} failed: ${describeFailure(failure)}.`);
     }
@@ -224,11 +226,28 @@ function buildHeaders(
   return headers;
 }
 
+// An AxiosError carries its request config, which holds the bearer token and the request body (an initial
+// password, for example). The cause kept on the domain error names only the failure, so a later log of the
+// cause cannot leak either.
+function toSafeCause(error: AxiosError): Error {
+  const status = error.response?.status;
+  const cause = new Error(
+    status === undefined
+      ? `Internal call failed with ${error.code ?? 'no response'}.`
+      : `Internal call answered with HTTP ${status}.`,
+  );
+  cause.name = 'InternalHttpCallError';
+  return cause;
+}
+
 // A response that never arrived (timeout, refused connection, reset) has no status to classify.
 function describeAxiosFailure(error: AxiosError): AttemptFailure {
   const response = error.response;
   if (response === undefined) return { kind: 'no_response' };
-  return classifyStatus(response.status, readRemoteErrorBody(response.data));
+  const remoteBody = readRemoteErrorBody(response.data);
+  const failure = classifyStatus(response.status, remoteBody);
+  // A 5xx body is kept only for the pass-through check, which reads it when a call names its code.
+  return failure.kind === 'server_error' ? { ...failure, remoteBody } : failure;
 }
 
 // A binary call receives its error body as bytes, so the JSON error shape is parsed back here. A body that

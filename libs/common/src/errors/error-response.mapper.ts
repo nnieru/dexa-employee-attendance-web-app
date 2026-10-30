@@ -23,16 +23,22 @@ const CODE_BY_CLIENT_STATUS: Readonly<Partial<Record<number, string>>> = {
  */
 export function toErrorResponse(exception: unknown): ErrorResponse {
   if (exception instanceof DomainError) {
-    return {
-      statusCode: DOMAIN_ERROR_STATUS[exception.kind],
-      code: exception.code,
-      message: exception.message,
-    };
+    return toDomainErrorResponse(exception);
   }
   if (exception instanceof HttpException) {
     return mapHttpException(exception);
   }
   return mapExposedClientError(exception) ?? createUnexpectedErrorResponse();
+}
+
+// Details are added only when the error carries them, so every other response keeps its three fields.
+function toDomainErrorResponse(error: DomainError): ErrorResponse {
+  const response: ErrorResponse = {
+    statusCode: DOMAIN_ERROR_STATUS[error.kind],
+    code: error.code,
+    message: error.message,
+  };
+  return error.details === undefined ? response : { ...response, details: error.details };
 }
 
 function mapHttpException(exception: HttpException): ErrorResponse {

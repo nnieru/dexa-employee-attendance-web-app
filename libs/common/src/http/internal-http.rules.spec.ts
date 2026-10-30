@@ -360,3 +360,79 @@ describe('toFailureError with refusal codes', () => {
     expect(error).toBeInstanceOf(DependencyUnavailableError);
   });
 });
+
+describe('toFailureError with pass-through codes', () => {
+  const PASS_THROUGH_CODE = 'EMPLOYEE_PROVISIONING_INCOMPLETE';
+  const PASS_THROUGH_MESSAGE = 'Provisioning is incomplete.';
+  const DETAILS = { operationId: '0b6f7c0e-4f3a-4d55-9d1e-7a2b3c4d5e6f', savedPhase: 'RESERVED' };
+  const incompleteBody = {
+    statusCode: 503,
+    code: PASS_THROUGH_CODE,
+    message: PASS_THROUGH_MESSAGE,
+    details: DETAILS,
+  };
+
+  it('should return DependencyUnavailableError with the code, message, and details when a 503 carries a pass-through code', () => {
+    const error = toFailureError(
+      { kind: 'server_error', status: HttpStatus.SERVICE_UNAVAILABLE, remoteBody: incompleteBody },
+      CAUSE,
+      [],
+      [PASS_THROUGH_CODE],
+    );
+
+    expect(error).toBeInstanceOf(DependencyUnavailableError);
+    expect(error).toMatchObject({
+      code: PASS_THROUGH_CODE,
+      message: PASS_THROUGH_MESSAGE,
+      details: DETAILS,
+    });
+    expect(error.cause).toBe(CAUSE);
+  });
+
+  it.each([
+    {
+      condition: 'the 503 code is not a pass-through code',
+      failure: { kind: 'server_error', status: 503, remoteBody: incompleteBody },
+      passThroughCodes: ['SOME_OTHER_CODE'],
+    },
+    {
+      condition: 'no pass-through codes are given',
+      failure: { kind: 'server_error', status: 503, remoteBody: incompleteBody },
+      passThroughCodes: [],
+    },
+    {
+      condition: 'the 500 answer carries the pass-through code',
+      failure: { kind: 'server_error', status: 500, remoteBody: incompleteBody },
+      passThroughCodes: [PASS_THROUGH_CODE],
+    },
+    {
+      condition: 'the 503 body is not an error response',
+      failure: { kind: 'server_error', status: 503, remoteBody: 'upstream text' },
+      passThroughCodes: [PASS_THROUGH_CODE],
+    },
+  ])(
+    'should return the generic DependencyUnavailableError with no details when $condition',
+    ({ failure, passThroughCodes }) => {
+      const error = toFailureError(failure as AttemptFailure, CAUSE, [], passThroughCodes);
+
+      expect(error).toBeInstanceOf(DependencyUnavailableError);
+      expect(error).toMatchObject({ code: ErrorCode.DEPENDENCY_UNAVAILABLE });
+      expect(error.details).toBeUndefined();
+    },
+  );
+
+  it('should pass the details of a mapped client error through when the target sends them', () => {
+    const error = toFailureError(
+      clientFailure(HttpStatus.CONFLICT, {
+        statusCode: 409,
+        code: 'CONFLICT',
+        message: 'Taken.',
+        details: DETAILS,
+      }),
+      CAUSE,
+    );
+
+    expect(error).toBeInstanceOf(ConflictError);
+    expect(error.details).toEqual(DETAILS);
+  });
+});
