@@ -1,6 +1,11 @@
 import { ErrorCode } from '@dexa/contracts';
 import { ConflictError } from './domain.errors.js';
-import { isExclusionViolation, isUniqueViolation, toConflictError } from './postgres-error.js';
+import {
+  isExclusionViolation,
+  isUniqueViolation,
+  readUniqueViolationConstraint,
+  toConflictError,
+} from './postgres-error.js';
 
 function databaseError(sqlState: string): Error & { code: string } {
   return Object.assign(new Error('driver failure'), { code: sqlState });
@@ -104,5 +109,40 @@ describe('toConflictError', () => {
     expect(thrownBy(() => toConflictError(error, ErrorCode.CONFLICT, 'Already exists.'))).toBe(
       error,
     );
+  });
+});
+
+describe('readUniqueViolationConstraint', () => {
+  function namedDatabaseError(sqlState: string, constraint: string): Error & { code: string } {
+    return Object.assign(new Error('driver failure'), { code: sqlState, constraint });
+  }
+
+  it.each([
+    {
+      condition: 'the unique violation names its constraint',
+      error: namedDatabaseError('23505', 'accounts_company_email_uq'),
+      expected: 'accounts_company_email_uq',
+    },
+    {
+      condition: 'the named unique violation is wrapped as a cause',
+      error: new Error('Failed query', {
+        cause: namedDatabaseError('23505', 'account_provisioning_operations_operation_id_pk'),
+      }),
+      expected: 'account_provisioning_operations_operation_id_pk',
+    },
+  ])('should return the constraint name when $condition', ({ error, expected }) => {
+    expect(readUniqueViolationConstraint(error)).toBe(expected);
+  });
+
+  it.each([
+    {
+      condition: 'the error is an exclusion violation',
+      error: namedDatabaseError('23P01', 'x_ex'),
+    },
+    { condition: 'the unique violation names no constraint', error: databaseError('23505') },
+    { condition: 'the error is not a database error', error: new Error('connect failed') },
+    { condition: 'the error is null', error: null },
+  ])('should return undefined when $condition', ({ error }) => {
+    expect(readUniqueViolationConstraint(error)).toBeUndefined();
   });
 });

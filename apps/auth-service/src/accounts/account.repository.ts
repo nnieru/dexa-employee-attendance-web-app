@@ -17,7 +17,7 @@ import type {
 } from './account.repository.interface.js';
 
 // A query runs on the connection pool or inside one transaction. Both expose the same methods.
-type AccountQueryRunner = Pick<Database['db'], 'select' | 'insert' | 'execute'>;
+export type AccountQueryRunner = Pick<Database['db'], 'select' | 'insert' | 'execute'>;
 
 // An account that provisioning has created but HR has not yet activated has this status (DATABASE §3.1).
 const PENDING_PROVISIONING_STATUS = 'PENDING';
@@ -109,7 +109,7 @@ async function querySignInAccountByEmail(
   return { ...toAccountRecord(row), passwordHash: row.passwordHash };
 }
 
-async function queryAccountById(
+export async function queryAccountById(
   runner: AccountQueryRunner,
   accountId: string,
 ): Promise<AccountRecord | undefined> {
@@ -148,7 +148,7 @@ async function insertAccount(runner: AccountQueryRunner, account: NewAccount): P
   }
 }
 
-async function queryRoleId(runner: AccountQueryRunner, roleCode: Role): Promise<string> {
+export async function queryRoleId(runner: AccountQueryRunner, roleCode: Role): Promise<string> {
   const rows = await runner
     .select({ id: masterRoles.id })
     .from(masterRoles)
@@ -163,7 +163,7 @@ async function queryRoleId(runner: AccountQueryRunner, roleCode: Role): Promise<
 // Drizzle's error message lists the bind parameters, and this insert binds the password hash. The
 // error that leaves the repository therefore carries neither the query nor its parameters. It keeps
 // only the driver cause, which holds the SQLSTATE and the database's own message.
-function toAccountWriteError(error: unknown): Error {
+export function toAccountWriteError(error: unknown): Error {
   if (isUniqueViolation(error)) {
     return new ConflictError(ErrorCode.CONFLICT, 'An account already uses this company email.');
   }

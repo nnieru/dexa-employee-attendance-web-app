@@ -15,6 +15,18 @@ export function isExclusionViolation(error: unknown): boolean {
 }
 
 /**
+ * Returns the name of the index or constraint that rejected the row, when the driver reports one.
+ * Callers use it to tell apart two unique indexes that fail in the same statement. It is undefined
+ * for any error that is not a unique violation.
+ */
+export function readUniqueViolationConstraint(error: unknown): string | undefined {
+  const violation = findSqlStateError(error, UNIQUE_VIOLATION_SQL_STATE);
+  return violation !== undefined && typeof violation.constraint === 'string'
+    ? violation.constraint
+    : undefined;
+}
+
+/**
  * Turns a unique or exclusion violation into a conflict that keeps the driver error as its cause.
  * Any other error is rethrown unchanged, so a real failure is never reported as a conflict.
  */
@@ -24,10 +36,14 @@ export function toConflictError(error: unknown, code: string, message: string): 
 }
 
 function hasSqlState(error: unknown, sqlState: string): boolean {
+  return findSqlStateError(error, sqlState) !== undefined;
+}
+
+function findSqlStateError(error: unknown, sqlState: string): Record<string, unknown> | undefined {
   let current: unknown = error;
   for (let depth = 0; depth < MAX_CAUSE_DEPTH && isRecord(current); depth += 1) {
-    if (current.code === sqlState) return true;
+    if (current.code === sqlState) return current;
     current = current.cause;
   }
-  return false;
+  return undefined;
 }

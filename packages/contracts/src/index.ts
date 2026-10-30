@@ -27,6 +27,15 @@ export {
   type LoginRequest,
   type LoginResponse,
 } from './auth/login.schema.js';
+export {
+  AccountProvisioningStatus,
+  accountProvisioningOperationIdSchema,
+  accountProvisioningOperationSchema,
+  accountProvisioningRequestSchema,
+  accountProvisioningStatusSchema,
+  type AccountProvisioningOperation,
+  type AccountProvisioningRequest,
+} from './auth/account-provisioning.schema.js';
 export { Portal } from './auth/portal.js';
 export {
   PASSWORD_MAX_LENGTH,

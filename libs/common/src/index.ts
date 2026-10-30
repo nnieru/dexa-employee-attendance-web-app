@@ -20,6 +20,7 @@ export { DomainExceptionFilter } from './errors/domain-exception.filter.js';
 export {
   isExclusionViolation,
   isUniqueViolation,
+  readUniqueViolationConstraint,
   toConflictError,
 } from './errors/postgres-error.js';
 export { AuthConfigSchema, type AuthConfig } from './config/auth-config.schema.js';

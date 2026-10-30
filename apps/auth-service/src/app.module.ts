@@ -6,6 +6,7 @@ import { ConfigModule } from './config/config.module.js';
 import { CredentialsModule } from './credentials/credentials.module.js';
 import { DatabaseModule } from './infrastructure/db/database.module.js';
 import { LoginModule } from './login/login.module.js';
+import { ProvisioningModule } from './provisioning/provisioning.module.js';
 
 /**
  * Builds the root module from the validated config. AuthModule.forRoot takes the config as a value, so
@@ -21,6 +22,7 @@ export function createAppModule(config: AuthServiceConfig): Type<unknown> {
       CredentialsModule,
       AccountsModule,
       LoginModule,
+      ProvisioningModule,
       HealthModule,
     ],
   })
