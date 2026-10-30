@@ -12,6 +12,7 @@ export {
   DomainError,
   ForbiddenError,
   NotFoundError,
+  PayloadTooLargeError,
   UnauthorizedError,
   ValidationError,
   type DomainErrorKind,
@@ -51,6 +52,10 @@ export { internalBaseUrlSchema } from './http/internal-service-base-urls.schema.
 export {
   INTERNAL_HTTP_CLIENT,
   type IInternalHttpClient,
+  type InternalBinaryGetRequest,
+  type InternalBinaryResponse,
   type InternalGetRequest,
+  type InternalMultipartFile,
+  type InternalMultipartPutRequest,
   type InternalPostRequest,
 } from './http/internal-http-client.interface.js';

@@ -7,18 +7,19 @@ import type { ServiceName } from '../auth/service-name.js';
  */
 export interface IInternalHttpClient {
   get<TResponse>(request: InternalGetRequest<TResponse>): Promise<TResponse>;
+  getBinary(request: InternalBinaryGetRequest): Promise<InternalBinaryResponse>;
   post<TResponse>(request: InternalPostRequest<TResponse>): Promise<TResponse>;
   patch<TResponse>(request: InternalPatchRequest<TResponse>): Promise<TResponse>;
+  put<TResponse>(request: InternalMultipartPutRequest<TResponse>): Promise<TResponse>;
 }
 
 export const INTERNAL_HTTP_CLIENT = Symbol('IInternalHttpClient');
 
-type InternalRequest<TResponse> = {
+type InternalRequestTarget = {
   readonly target: ServiceName;
   // The route below the service root, such as /api/v1/internal/accounts. axios does not encode
   // this string, so encode path parameters with encodeURIComponent before passing them in.
   readonly path: string;
-  readonly responseSchema: z.ZodType<TResponse>;
   readonly correlationId?: string;
   readonly timeoutMilliseconds?: number;
   // The end user's token. When set, it replaces this service's token as the bearer credential, so the
@@ -30,6 +31,10 @@ type InternalRequest<TResponse> = {
   // failure. Never name UNAUTHORIZED for a call that sends this service's token: the target uses that
   // code when it refuses the service token.
   readonly refusalCodes?: ReadonlyArray<string>;
+};
+
+type InternalRequest<TResponse> = InternalRequestTarget & {
+  readonly responseSchema: z.ZodType<TResponse>;
 };
 
 export type InternalGetRequest<TResponse> = InternalRequest<TResponse> & {
@@ -44,4 +49,25 @@ export type InternalPostRequest<TResponse> = InternalRequest<TResponse> & {
 // A 204 answer has no body, so its response schema accepts undefined (z.void()).
 export type InternalPatchRequest<TResponse> = InternalRequest<TResponse> & {
   readonly body: unknown;
+};
+
+/** One file sent as a multipart/form-data part. The caller bounds its size before it reaches the client. */
+export type InternalMultipartFile = {
+  readonly fieldName: string;
+  readonly fileName: string;
+  readonly contentType?: string;
+  readonly content: Buffer;
+};
+
+// A PUT with a multipart body is never retried, for the same reason as a POST.
+export type InternalMultipartPutRequest<TResponse> = InternalRequest<TResponse> & {
+  readonly file: InternalMultipartFile;
+};
+
+// A binary GET has no schema to check. The caller checks what the bytes mean.
+export type InternalBinaryGetRequest = InternalRequestTarget;
+
+export type InternalBinaryResponse = {
+  readonly contentType: string;
+  readonly body: Buffer;
 };

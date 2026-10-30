@@ -9,4 +9,5 @@ export const DOMAIN_ERROR_STATUS: Readonly<Record<DomainErrorKind, HttpStatus>> 
   forbidden: HttpStatus.FORBIDDEN,
   unauthorized: HttpStatus.UNAUTHORIZED,
   dependency_unavailable: HttpStatus.SERVICE_UNAVAILABLE,
+  payload_too_large: HttpStatus.PAYLOAD_TOO_LARGE,
 };

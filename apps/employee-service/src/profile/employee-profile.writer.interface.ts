@@ -19,10 +19,18 @@ export type EmployeePhoneUpdate = {
   readonly profileStatus: ProfileStatus;
 };
 
+/** The photo reference and the status it implies, written together in one UPDATE (DATABASE §4.2). */
+export type EmployeePhotoUpdate = {
+  readonly accountId: string;
+  readonly photoKey: string;
+  readonly profileStatus: ProfileStatus;
+};
+
 /** Writes that share one transaction, so the row lock and the update commit or roll back together. */
 export interface IEmployeeProfileTransaction {
   lockProfileForUpdate(accountId: string): Promise<LockedEmployeeProfile | undefined>;
   updatePhone(update: EmployeePhoneUpdate): Promise<void>;
+  updatePhoto(update: EmployeePhotoUpdate): Promise<void>;
 }
 
 /** Runs profile writes inside one transaction (DATABASE §4.1). Reads belong to IEmployeeProfileReader. */

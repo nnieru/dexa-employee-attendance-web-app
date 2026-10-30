@@ -1,8 +1,16 @@
 import { Buffer } from 'node:buffer';
 import { createSign, randomUUID } from 'node:crypto';
-import { configureApp, parseConfig, Roles, ServiceName } from '@dexa/common';
+import {
+  configureApp,
+  parseConfig,
+  Roles,
+  ServiceName,
+  type InternalBinaryResponse,
+} from '@dexa/common';
 import {
   loginResponseSchema,
+  MAX_PHOTO_BYTES,
+  PHOTO_CONTENT_TYPE,
   Portal,
   Role,
   type MasterOption,
@@ -44,6 +52,9 @@ const HR_ROUTE_PATH = '/api/v1/route-guard-tests/hr';
 const POSITIONS_PATH = '/api/v1/positions';
 const EMPLOYEE_STATUSES_PATH = '/api/v1/employee-statuses';
 const OWN_PROFILE_PATH = '/api/v1/employees/me';
+const OWN_PHOTO_PATH = '/api/v1/employees/me/photo';
+const PHOTO_MULTIPART_OVERHEAD_BYTES = 64 * 1024;
+const STORED_PHOTO_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
 const SELF_SERVICE_ROUTE_PATH = '/api/v1/route-guard-tests/self-service';
 const SIGNED_TOKEN_LIFETIME_SECONDS = 300;
 
@@ -88,7 +99,21 @@ const OWN_PROFILE: OwnProfile = {
 };
 const forwardedTokens: string[] = [];
 const profileUpdates: UpdateOwnProfileRequest[] = [];
+const photoUploads: Buffer[] = [];
+const OWN_PHOTO_FILE: InternalBinaryResponse = {
+  contentType: PHOTO_CONTENT_TYPE,
+  body: STORED_PHOTO_BYTES,
+};
 const employeeServiceFake: IEmployeeServiceClient = {
+  updateOwnPhoto: (accessToken: string, photo: Buffer) => {
+    forwardedTokens.push(accessToken);
+    photoUploads.push(photo);
+    return Promise.resolve(OWN_PROFILE);
+  },
+  getOwnPhoto: (accessToken: string) => {
+    forwardedTokens.push(accessToken);
+    return Promise.resolve(OWN_PHOTO_FILE);
+  },
   getOwnProfile: (accessToken: string) => {
     forwardedTokens.push(accessToken);
     return Promise.resolve(OWN_PROFILE);
@@ -248,6 +273,27 @@ describe('api-gateway route guards through a running auth-service', () => {
       .patch(path)
       .set('Authorization', `Bearer ${accessToken}`)
       .send(body as object);
+  }
+
+  function putPhotoWithToken(accessToken: string, bytes: Buffer) {
+    return request(app.getHttpServer())
+      .put(OWN_PHOTO_PATH)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .attach('photo', bytes, { filename: 'photo.png', contentType: 'image/png' });
+  }
+
+  // The photo answer is bytes, so the body is collected rather than parsed.
+  function getPhotoWithToken(accessToken: string) {
+    return request(app.getHttpServer())
+      .get(OWN_PHOTO_PATH)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('error', (error: Error) => callback(error, Buffer.alloc(0)));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
   }
 
   it(
@@ -474,6 +520,87 @@ describe('api-gateway route guards through a running auth-service', () => {
         .patch(OWN_PROFILE_PATH)
         .send({ phoneNumber: '+6281234567890' })
         .expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      expect(forwardedTokens).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should store the uploaded bytes and forward the employee token when the employee uploads a photo',
+    async () => {
+      forwardedTokens.length = 0;
+      photoUploads.length = 0;
+      const upload = Buffer.from('uploaded photo bytes');
+
+      const response = await putPhotoWithToken(employeeToken, upload).expect(200);
+
+      expect(response.body).toEqual(OWN_PROFILE);
+      expect(forwardedTokens).toEqual([employeeToken]);
+      expect(photoUploads).toHaveLength(1);
+      expect(photoUploads[0]?.equals(upload)).toBe(true);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 413 PHOTO_TOO_LARGE without calling employee-service when the declared length is over the limit',
+    async () => {
+      forwardedTokens.length = 0;
+      photoUploads.length = 0;
+      const oversized = Buffer.alloc(MAX_PHOTO_BYTES + PHOTO_MULTIPART_OVERHEAD_BYTES + 1, 0x61);
+
+      const response = await putPhotoWithToken(employeeToken, oversized).expect(413);
+
+      expect(response.body).toMatchObject({ statusCode: 413, code: 'PHOTO_TOO_LARGE' });
+      expect(forwardedTokens).toEqual([]);
+      expect(photoUploads).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 401 UNAUTHORIZED on the photo upload route when no bearer token is sent, without calling employee-service',
+    async () => {
+      forwardedTokens.length = 0;
+      photoUploads.length = 0;
+
+      const response = await request(app.getHttpServer())
+        .put(OWN_PHOTO_PATH)
+        .attach('photo', Buffer.from('uploaded photo bytes'), 'photo.png')
+        .expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(photoUploads).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return the stored bytes with the private photo headers and forward the employee token when the employee fetches the photo',
+    async () => {
+      forwardedTokens.length = 0;
+
+      const response = await getPhotoWithToken(employeeToken).expect(200);
+
+      expect(response.headers['content-type']).toBe(PHOTO_CONTENT_TYPE);
+      expect(response.headers['cache-control']).toBe('private, no-store');
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      const body: unknown = response.body;
+      expect(Buffer.isBuffer(body) && body.equals(STORED_PHOTO_BYTES)).toBe(true);
+      expect(forwardedTokens).toEqual([employeeToken]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 401 UNAUTHORIZED on the photo fetch route when no bearer token is sent, without calling employee-service',
+    async () => {
+      forwardedTokens.length = 0;
+
+      const response = await request(app.getHttpServer()).get(OWN_PHOTO_PATH).expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
       expect(forwardedTokens).toEqual([]);

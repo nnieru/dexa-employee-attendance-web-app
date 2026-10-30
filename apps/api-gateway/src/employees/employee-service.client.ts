@@ -1,9 +1,15 @@
-import { INTERNAL_HTTP_CLIENT, ServiceName, type IInternalHttpClient } from '@dexa/common';
+import {
+  INTERNAL_HTTP_CLIENT,
+  ServiceName,
+  type IInternalHttpClient,
+  type InternalBinaryResponse,
+} from '@dexa/common';
 import {
   API_PREFIX,
   ErrorCode,
   masterOptionListSchema,
   ownProfileSchema,
+  PHOTO_FIELD_NAME,
   type MasterOption,
   type OwnProfile,
   type UpdateOwnProfileRequest,
@@ -14,6 +20,9 @@ import type { IEmployeeServiceClient } from './employee-service-client.interface
 // The gateway forwards the user's token on these calls, so a 401 means that token was refused. The
 // employee-service does not check account status itself; the gateway's status check ran before this call.
 const USER_TOKEN_REFUSAL_CODES = [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED];
+// A photo is at most 5 MiB, so its transfer needs more than the default timeout of the internal calls.
+const PHOTO_TIMEOUT_MILLISECONDS = 10_000;
+const PHOTO_PATH = `/${API_PREFIX}/employees/me/photo`;
 
 @Injectable()
 export class EmployeeServiceClient implements IEmployeeServiceClient {
@@ -59,6 +68,30 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
       forwardedUserToken: accessToken,
       refusalCodes: USER_TOKEN_REFUSAL_CODES,
       responseSchema: ownProfileSchema,
+    });
+  }
+
+  // The bytes were size-limited at the edge. employee-service decides what they are from their content, so the
+  // part carries no client-declared type. A PUT is never retried, so a lost answer is not replayed.
+  updateOwnPhoto(accessToken: string, photo: Buffer): Promise<OwnProfile> {
+    return this.httpClient.put({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: PHOTO_PATH,
+      file: { fieldName: PHOTO_FIELD_NAME, fileName: 'photo', content: photo },
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      timeoutMilliseconds: PHOTO_TIMEOUT_MILLISECONDS,
+      responseSchema: ownProfileSchema,
+    });
+  }
+
+  getOwnPhoto(accessToken: string): Promise<InternalBinaryResponse> {
+    return this.httpClient.getBinary({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: PHOTO_PATH,
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      timeoutMilliseconds: PHOTO_TIMEOUT_MILLISECONDS,
     });
   }
 }

@@ -13,7 +13,11 @@ import type { DomainError } from '../errors/domain.errors.js';
 import { CORRELATION_ID_HEADER } from './correlation-id-header.js';
 import type {
   IInternalHttpClient,
+  InternalBinaryGetRequest,
+  InternalBinaryResponse,
   InternalGetRequest,
+  InternalMultipartFile,
+  InternalMultipartPutRequest,
   InternalPatchRequest,
   InternalPostRequest,
 } from './internal-http-client.interface.js';
@@ -31,15 +35,28 @@ import { INTERNAL_SERVICE_BASE_URLS } from './internal-service-base-urls.token.j
 
 const DEFAULT_TIMEOUT_MILLISECONDS = 3000;
 const RETRY_BACKOFF_MILLISECONDS = 200;
+const DEFAULT_PART_CONTENT_TYPE = 'application/octet-stream';
 // Bounds the memory that one answer can take. Paginated responses stay far below this.
 const MAX_RESPONSE_BYTES = 1_048_576;
+// A stored photo is a JPEG of at most 1024 by 1024 pixels, far below this bound. The bound only stops a runaway answer.
+const MAX_BINARY_RESPONSE_BYTES = 6 * 1_048_576;
+
+// How an answer is read. A JSON answer is parsed and checked against a schema; a binary answer is kept as bytes.
+type ResponseKind = 'json' | 'bytes';
+
+const RESPONSE_LIMITS: Readonly<
+  Record<ResponseKind, { readonly responseType?: 'arraybuffer'; readonly maxContentLength: number }>
+> = {
+  json: { maxContentLength: MAX_RESPONSE_BYTES },
+  bytes: { responseType: 'arraybuffer', maxContentLength: MAX_BINARY_RESPONSE_BYTES },
+};
 
 // Everything one call needs. The public methods build it, and each attempt sends it.
-type InternalCall<TResponse> = {
+type InternalCall = {
   readonly method: InternalHttpMethod;
   readonly target: ServiceName;
   readonly path: string;
-  readonly responseSchema: z.ZodType<TResponse>;
+  readonly responseKind: ResponseKind;
   readonly query?: Readonly<Record<string, string>>;
   readonly body?: unknown;
   readonly correlationId?: string;
@@ -48,9 +65,14 @@ type InternalCall<TResponse> = {
   readonly refusalCodes?: ReadonlyArray<string>;
 };
 
+// A JSON call also names the schema that the answer must match.
+type JsonCall<TResponse> = InternalCall & {
+  readonly responseSchema: z.ZodType<TResponse>;
+};
+
 // What logs and error mapping need to know about a call. It never includes the body, query, or token.
 type CallSummary = Pick<
-  InternalCall<unknown>,
+  InternalCall,
   'method' | 'path' | 'target' | 'correlationId' | 'refusalCodes'
 >;
 
@@ -70,29 +92,55 @@ export class InternalHttpClient implements IInternalHttpClient {
   ) {}
 
   get<TResponse>(request: InternalGetRequest<TResponse>): Promise<TResponse> {
-    return this.send({ ...request, method: 'GET' });
+    return this.sendJson({ ...request, method: 'GET', responseKind: 'json' });
+  }
+
+  getBinary(request: InternalBinaryGetRequest): Promise<InternalBinaryResponse> {
+    return this.sendBinary({ ...request, method: 'GET', responseKind: 'bytes' });
   }
 
   post<TResponse>(request: InternalPostRequest<TResponse>): Promise<TResponse> {
-    return this.send({ ...request, method: 'POST' });
+    return this.sendJson({ ...request, method: 'POST', responseKind: 'json' });
   }
 
   patch<TResponse>(request: InternalPatchRequest<TResponse>): Promise<TResponse> {
-    return this.send({ ...request, method: 'PATCH' });
+    return this.sendJson({ ...request, method: 'PATCH', responseKind: 'json' });
   }
 
-  private async send<TResponse>(call: InternalCall<TResponse>): Promise<TResponse> {
+  put<TResponse>(request: InternalMultipartPutRequest<TResponse>): Promise<TResponse> {
+    return this.sendJson({
+      target: request.target,
+      path: request.path,
+      responseSchema: request.responseSchema,
+      body: buildMultipartBody(request.file),
+      correlationId: request.correlationId,
+      timeoutMilliseconds: request.timeoutMilliseconds,
+      forwardedUserToken: request.forwardedUserToken,
+      refusalCodes: request.refusalCodes,
+      method: 'PUT',
+      responseKind: 'json',
+    });
+  }
+
+  private async sendJson<TResponse>(call: JsonCall<TResponse>): Promise<TResponse> {
     const response = await this.sendAttempt(call, 1);
     // axios reports a 204 body as an empty string, which is not the empty answer the call means.
     const body = response.status === HttpStatus.NO_CONTENT ? undefined : response.data;
     return this.parseBody(body, call);
   }
 
+  private async sendBinary(call: InternalCall): Promise<InternalBinaryResponse> {
+    const response = await this.sendAttempt(call, 1);
+    const contentType = response.headers['content-type'];
+    if (typeof contentType !== 'string' || !Buffer.isBuffer(response.data)) {
+      this.logger.error(`${describeCall(call)} answered without a binary body and content type.`);
+      throw createDependencyUnavailableError();
+    }
+    return { contentType, body: response.data };
+  }
+
   // attempt counts the attempts made so far, starting at 1.
-  private async sendAttempt<TResponse>(
-    call: InternalCall<TResponse>,
-    attempt: number,
-  ): Promise<AxiosResponse<unknown>> {
+  private async sendAttempt(call: InternalCall, attempt: number): Promise<AxiosResponse<unknown>> {
     const config = await this.buildRequestConfig(call);
     try {
       return await firstValueFrom(this.httpService.request<unknown>(config));
@@ -111,7 +159,7 @@ export class InternalHttpClient implements IInternalHttpClient {
     }
   }
 
-  private parseBody<TResponse>(body: unknown, call: InternalCall<TResponse>): TResponse {
+  private parseBody<TResponse>(body: unknown, call: JsonCall<TResponse>): TResponse {
     const parsed = call.responseSchema.safeParse(body);
     if (parsed.success) return parsed.data;
     // The body stays out of the log, because it can hold personal data.
@@ -129,14 +177,13 @@ export class InternalHttpClient implements IInternalHttpClient {
 
   // Built per attempt: each attempt gets a fresh token and its own deadline, so a retry is not
   // cut short by the timeout of the attempt before it.
-  private async buildRequestConfig<TResponse>(
-    call: InternalCall<TResponse>,
-  ): Promise<AxiosRequestConfig> {
+  private async buildRequestConfig(call: InternalCall): Promise<AxiosRequestConfig> {
     const baseUrl = this.resolveBaseUrl(call.target);
     // A forwarded user token replaces the service token, so the target authorizes the user and this
     // service signs nothing for the call.
     const credential = call.forwardedUserToken ?? (await this.tokenSigner.signFor(call.target));
     const timeout = call.timeoutMilliseconds ?? DEFAULT_TIMEOUT_MILLISECONDS;
+    const limits = RESPONSE_LIMITS[call.responseKind];
     return {
       method: call.method,
       baseURL: baseUrl,
@@ -144,6 +191,7 @@ export class InternalHttpClient implements IInternalHttpClient {
       params: call.query,
       data: call.body,
       headers: buildHeaders(credential, call.correlationId),
+      responseType: limits.responseType,
       timeout,
       // axios's timeout covers only the connection and socket idle time, so a slow body could
       // outlast it. The signal bounds the whole attempt.
@@ -152,7 +200,7 @@ export class InternalHttpClient implements IInternalHttpClient {
       // taken from the environment.
       maxRedirects: 0,
       proxy: false,
-      maxContentLength: MAX_RESPONSE_BYTES,
+      maxContentLength: limits.maxContentLength,
     };
   }
 
@@ -180,7 +228,31 @@ function buildHeaders(
 function describeAxiosFailure(error: AxiosError): AttemptFailure {
   const response = error.response;
   if (response === undefined) return { kind: 'no_response' };
-  return classifyStatus(response.status, response.data);
+  return classifyStatus(response.status, readRemoteErrorBody(response.data));
+}
+
+// A binary call receives its error body as bytes, so the JSON error shape is parsed back here. A body that
+// is not JSON stays unreadable, and the error maps to the generic message for its status.
+function readRemoteErrorBody(data: unknown): unknown {
+  if (!Buffer.isBuffer(data)) return data;
+  try {
+    const parsed: unknown = JSON.parse(data.toString('utf8'));
+    return parsed;
+  } catch {
+    return undefined;
+  }
+}
+
+// The file is sent as the spec-compliant FormData that axios streams. The part's type is generic when the caller
+// does not know it, because the target decides what the bytes are from their content.
+function buildMultipartBody(file: InternalMultipartFile): FormData {
+  const form = new FormData();
+  // Blob takes an ArrayBuffer-backed view, so the bytes are copied once into one; a photo is at most 5 MiB.
+  const content = new Blob([new Uint8Array(file.content)], {
+    type: file.contentType ?? DEFAULT_PART_CONTENT_TYPE,
+  });
+  form.append(file.fieldName, content, file.fileName);
+  return form;
 }
 
 // Logs carry the method, path, and target, never the query, the body, or the token.

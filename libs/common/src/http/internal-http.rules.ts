@@ -5,12 +5,13 @@ import {
   DependencyUnavailableError,
   ForbiddenError,
   NotFoundError,
+  PayloadTooLargeError,
   UnauthorizedError,
   ValidationError,
   type DomainError,
 } from '../errors/domain.errors.js';
 
-export type InternalHttpMethod = 'GET' | 'POST' | 'PATCH';
+export type InternalHttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT';
 
 /**
  * Why one attempt produced no usable answer. A timeout and a refused connection are both
@@ -63,10 +64,15 @@ const CLIENT_ERROR_MAPPING: Readonly<Partial<Record<number, ClientErrorMapping>>
     fallbackCode: ErrorCode.CONFLICT,
     fallbackMessage: 'The request conflicts with the current state.',
   },
+  [HttpStatus.PAYLOAD_TOO_LARGE]: {
+    errorClass: PayloadTooLargeError,
+    fallbackCode: ErrorCode.PAYLOAD_TOO_LARGE,
+    fallbackMessage: 'The payload is too large.',
+  },
 };
 
 /**
- * Only GET is retried, because a POST may already have changed state when its answer was lost.
+ * Only GET is retried, because a POST, PATCH, or PUT may already have changed state when its answer was lost.
  * A GET is retried only when no response arrived or the answer was 5xx.
  * @param attempt the number of attempts made so far, including the one that failed.
  */

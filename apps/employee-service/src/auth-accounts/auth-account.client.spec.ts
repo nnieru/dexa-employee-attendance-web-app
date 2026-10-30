@@ -13,11 +13,13 @@ function recordingHttpClient(
 ): IInternalHttpClient {
   return {
     get: () => Promise.reject(new Error('The client never gets.')),
+    getBinary: () => Promise.reject(new Error('The client never fetches bytes.')),
     post: <TResponse>(request: InternalPostRequest<TResponse>): Promise<TResponse> => {
       recorded.push(request);
       return Promise.resolve(request.responseSchema.parse(answer));
     },
     patch: () => Promise.reject(new Error('The client never patches.')),
+    put: () => Promise.reject(new Error('The client never puts.')),
   };
 }
 

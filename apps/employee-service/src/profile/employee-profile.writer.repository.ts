@@ -6,6 +6,7 @@ import { DATABASE } from '../infrastructure/db/database.token.js';
 import { employees } from '../infrastructure/db/schema.js';
 import type {
   EmployeePhoneUpdate,
+  EmployeePhotoUpdate,
   IEmployeeProfileTransaction,
   IEmployeeProfileWriter,
   LockedEmployeeProfile,
@@ -37,6 +38,7 @@ function createTransactionScope(runner: EmployeeProfileRunner): IEmployeeProfile
   return {
     lockProfileForUpdate: (accountId) => lockProfileForUpdate(runner, accountId),
     updatePhone: (update) => updatePhone(runner, update),
+    updatePhoto: (update) => updatePhoto(runner, update),
   };
 }
 
@@ -72,6 +74,20 @@ async function updatePhone(
     .update(employees)
     .set({
       phoneNumber: update.phoneNumber,
+      profileStatus: update.profileStatus,
+    })
+    .where(eq(employees.accountId, update.accountId));
+}
+
+// Only the photo reference and the status it implies are written. The set_updated_at trigger stamps updated_at.
+async function updatePhoto(
+  runner: EmployeeProfileRunner,
+  update: EmployeePhotoUpdate,
+): Promise<void> {
+  await runner
+    .update(employees)
+    .set({
+      photoKey: update.photoKey,
       profileStatus: update.profileStatus,
     })
     .where(eq(employees.accountId, update.accountId));

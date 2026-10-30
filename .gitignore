@@ -12,6 +12,9 @@ coverage
 # documents
 /docs
 
+# local photo storage for employee-service (EMPLOYEE_PHOTO_DIRECTORY default)
+.data/
+
 # agents
 .agents/
 .claude/

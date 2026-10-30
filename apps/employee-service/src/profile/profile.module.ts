@@ -10,6 +10,7 @@ import { OWN_PROFILE_SERVICE } from './own-profile.service.interface.js';
 import { OwnProfileController } from './own-profile.controller.js';
 import { OwnProfileService } from './own-profile.service.js';
 
+// The reader and writer ports are exported for the photo feature, which writes the same employee row.
 @Module({
   imports: [AuthAccountsModule],
   controllers: [OwnProfileController],
@@ -19,5 +20,6 @@ import { OwnProfileService } from './own-profile.service.js';
     { provide: EMPLOYEE_PROFILE_READER, useClass: EmployeeProfileRepository },
     { provide: EMPLOYEE_PROFILE_WRITER, useClass: EmployeeProfileWriter },
   ],
+  exports: [OWN_PROFILE_SERVICE, EMPLOYEE_PROFILE_READER, EMPLOYEE_PROFILE_WRITER],
 })
 export class ProfileModule {}

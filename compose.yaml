@@ -107,9 +107,13 @@ services:
       BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Asia/Jakarta}
       EMPLOYEE_DATABASE_URL: ${EMPLOYEE_DATABASE_URL_CONTAINER:-}
       EMPLOYEE_MASTER_DATA: ${EMPLOYEE_MASTER_DATA:-}
+      EMPLOYEE_PHOTO_DIRECTORY: /var/lib/dexa/employee-photos
       AUTH_SERVICE_INTERNAL_URL: http://auth-service:3000
     ports:
       - '127.0.0.1:3002:3000'
+    # The container root is read-only, so uploaded photos live in this named volume (DATABASE §4.2).
+    volumes:
+      - employee-photos:/var/lib/dexa/employee-photos
     read_only: true
     cap_drop: [ALL]
     security_opt: ['no-new-privileges:true']
@@ -221,3 +225,4 @@ services:
 volumes:
   postgres-data:
   rabbitmq-data:
+  employee-photos:

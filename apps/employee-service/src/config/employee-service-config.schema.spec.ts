@@ -234,3 +234,51 @@ describe('EmployeeServiceConfigSchema EMPLOYEE_MASTER_DATA', () => {
     expect(message).not.toContain('secret-token-value');
   });
 });
+
+describe('EmployeeServiceConfigSchema EMPLOYEE_PHOTO_DIRECTORY', () => {
+  function photoDirectoryError(setting: string | undefined, nodeEnvironment: string): string {
+    try {
+      parseConfig(
+        EmployeeServiceConfigSchema,
+        employeeServiceEnvironment({
+          NODE_ENV: nodeEnvironment,
+          EMPLOYEE_PHOTO_DIRECTORY: setting,
+        }),
+      );
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+    throw new Error('Expected the photo directory setting to be rejected, but it was accepted.');
+  }
+
+  it('should return the absolute directory when the value is an absolute path', () => {
+    const config = parseConfig(
+      EmployeeServiceConfigSchema,
+      employeeServiceEnvironment({ EMPLOYEE_PHOTO_DIRECTORY: '/var/lib/dexa/employee-photos' }),
+    );
+
+    expect(config.EMPLOYEE_PHOTO_DIRECTORY).toBe('/var/lib/dexa/employee-photos');
+  });
+
+  it('should fall back to the ignored local work directory when unset outside production', () => {
+    const config = parseConfig(
+      EmployeeServiceConfigSchema,
+      employeeServiceEnvironment({ NODE_ENV: 'development', EMPLOYEE_PHOTO_DIRECTORY: undefined }),
+    );
+
+    expect(config.EMPLOYEE_PHOTO_DIRECTORY).toMatch(/[\\/]\.data[\\/]photos$/);
+    expect(config.EMPLOYEE_PHOTO_DIRECTORY.startsWith('/')).toBe(true);
+  });
+
+  it('should reject the config when the directory is unset in production', () => {
+    expect(photoDirectoryError(undefined, 'production')).toBe(
+      'Invalid configuration: EMPLOYEE_PHOTO_DIRECTORY: must name an absolute directory when NODE_ENV is production',
+    );
+  });
+
+  it('should reject a relative directory without echoing the value', () => {
+    expect(photoDirectoryError('photos/../../etc', 'development')).toBe(
+      'Invalid configuration: EMPLOYEE_PHOTO_DIRECTORY: must be an absolute path',
+    );
+  });
+});

@@ -13,5 +13,7 @@ ARG APP
 ENV NODE_ENV=production APP=$APP
 WORKDIR /repo
 COPY --from=build --chown=node:node /repo /repo
+# A new named volume copies this directory's ownership, so employee-service can write photos while running as node.
+RUN mkdir -p /var/lib/dexa/employee-photos && chown node:node /var/lib/dexa/employee-photos
 USER node
 CMD ["sh", "-c", "node apps/$APP/dist/main.js"]

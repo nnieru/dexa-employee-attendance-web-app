@@ -1,6 +1,10 @@
 import { BadRequestException, HttpException } from '@nestjs/common';
 import { ErrorCode } from '@dexa/contracts';
-import { DependencyUnavailableError, NotFoundError } from './domain.errors.js';
+import {
+  DependencyUnavailableError,
+  NotFoundError,
+  PayloadTooLargeError,
+} from './domain.errors.js';
 import { toErrorResponse, UNEXPECTED_ERROR_MESSAGE } from './error-response.mapper.js';
 
 describe('toErrorResponse', () => {
@@ -75,6 +79,16 @@ describe('toErrorResponse', () => {
     );
 
     expect(toErrorResponse(error).statusCode).toBe(503);
+  });
+
+  it('should use the domain status 413 and its code when a payload is too large', () => {
+    const error = new PayloadTooLargeError(ErrorCode.PHOTO_TOO_LARGE, 'The photo is too large.');
+
+    expect(toErrorResponse(error)).toEqual({
+      statusCode: 413,
+      code: ErrorCode.PHOTO_TOO_LARGE,
+      message: 'The photo is too large.',
+    });
   });
 
   it('should use the status and message when a body-parser error exposes a 4xx status', () => {

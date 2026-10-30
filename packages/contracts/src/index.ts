@@ -46,6 +46,14 @@ export {
   type AccountProvisioningOperation,
   type AccountProvisioningRequest,
 } from './auth/account-provisioning.schema.js';
+export {
+  MAX_PHOTO_BYTES,
+  MAX_PHOTO_PIXELS,
+  MAX_PHOTO_UPLOAD_BYTES,
+  PHOTO_CONTENT_TYPE,
+  PHOTO_FIELD_NAME,
+  PHOTO_MAX_DIMENSION,
+} from './employees/employee-photo.js';
 export { ownProfileSchema, type OwnProfile } from './employees/employee-profile.schema.js';
 export {
   phoneNumberSchema,

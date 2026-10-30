@@ -1,6 +1,12 @@
 /** What went wrong. The HTTP status follows from the kind; clients act on the code. */
 export type DomainErrorKind =
-  'not_found' | 'conflict' | 'validation' | 'forbidden' | 'unauthorized' | 'dependency_unavailable';
+  | 'not_found'
+  | 'conflict'
+  | 'validation'
+  | 'forbidden'
+  | 'unauthorized'
+  | 'dependency_unavailable'
+  | 'payload_too_large';
 
 /**
  * Business code throws these instead of HTTP exceptions, so domain logic stays independent of the
@@ -41,4 +47,9 @@ export class UnauthorizedError extends DomainError {
 
 export class DependencyUnavailableError extends DomainError {
   readonly kind = 'dependency_unavailable';
+}
+
+// Refused before the body is buffered, so the message can name the limit without leaking anything.
+export class PayloadTooLargeError extends DomainError {
+  readonly kind = 'payload_too_large';
 }

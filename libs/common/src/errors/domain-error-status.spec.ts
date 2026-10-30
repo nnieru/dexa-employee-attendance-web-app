@@ -9,6 +9,7 @@ describe('DOMAIN_ERROR_STATUS', () => {
     { kind: 'forbidden', status: 403 },
     { kind: 'unauthorized', status: 401 },
     { kind: 'dependency_unavailable', status: 503 },
+    { kind: 'payload_too_large', status: 413 },
   ];
 
   it.each(expectedStatuses)('should map $kind to $status', ({ kind, status }) => {

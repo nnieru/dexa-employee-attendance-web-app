@@ -11,6 +11,7 @@ import type { EmployeeServiceConfig } from './config/employee-service-config.sch
 import { DatabaseModule } from './infrastructure/db/database.module.js';
 import { MasterDataModule } from './master-data/master-data.module.js';
 import { MastersModule } from './masters/masters.module.js';
+import { PhotoModule } from './photo/photo.module.js';
 import { ProfileModule } from './profile/profile.module.js';
 
 /**
@@ -31,6 +32,7 @@ export function createAppModule(config: EmployeeServiceConfig): Type<unknown> {
       MasterDataModule,
       MastersModule,
       ProfileModule,
+      PhotoModule,
       HealthModule,
     ],
   })

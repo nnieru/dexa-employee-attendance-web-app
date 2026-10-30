@@ -6,6 +6,7 @@ import {
 } from '@dexa/common';
 import { z } from 'zod';
 import { resolveMasterDataSetting, type MasterDataDocument } from './master-data-setting.schema.js';
+import { resolvePhotoDirectorySetting } from './photo-directory-setting.js';
 
 // pg silently falls back to local defaults for a missing host or database name, so both are
 // required here. Otherwise a bad URL would only surface at the first query.
@@ -37,27 +38,35 @@ const employeeServiceEnvironmentSchema = BaseConfigSchema.extend({
   SERVICE_NAME: ownServiceNameSchema,
   EMPLOYEE_DATABASE_URL: postgresUrlSchema,
   EMPLOYEE_MASTER_DATA: z.preprocess(treatBlankAsUnset, z.string().optional()),
+  EMPLOYEE_PHOTO_DIRECTORY: z.preprocess(treatBlankAsUnset, z.string().optional()),
   // Every user-token request checks the account with auth-service (JwtAuthGuard), so the URL is required.
   AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
 });
 
-// The master data setting depends on NODE_ENV, so it is resolved after the other variables parse.
-const masterDataSettingSchema = employeeServiceEnvironmentSchema.transform(
+// The master data and photo directory settings depend on NODE_ENV, so they are resolved after the other
+// variables parse.
+const resolvedSettingsSchema = employeeServiceEnvironmentSchema.transform(
   (environment, context) => {
     const masterData: MasterDataDocument | undefined = resolveMasterDataSetting(
       environment.NODE_ENV,
       environment.EMPLOYEE_MASTER_DATA,
       context,
     );
-    return { ...environment, EMPLOYEE_MASTER_DATA: masterData };
+    const photoDirectory = resolvePhotoDirectorySetting(
+      environment.NODE_ENV,
+      environment.EMPLOYEE_PHOTO_DIRECTORY,
+      context,
+    );
+    return {
+      ...environment,
+      EMPLOYEE_MASTER_DATA: masterData,
+      EMPLOYEE_PHOTO_DIRECTORY: photoDirectory,
+    };
   },
 );
 
 // Token settings are shared with every service (libs/common/src/config/auth-config.schema.ts). The
 // user private key is refused by the loader, so this service only verifies user tokens.
-export const EmployeeServiceConfigSchema = z.intersection(
-  masterDataSettingSchema,
-  AuthConfigSchema,
-);
+export const EmployeeServiceConfigSchema = z.intersection(resolvedSettingsSchema, AuthConfigSchema);
 
 export type EmployeeServiceConfig = z.infer<typeof EmployeeServiceConfigSchema>;
