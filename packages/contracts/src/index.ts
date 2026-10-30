@@ -100,6 +100,14 @@ export {
   masterOptionSchema,
   type MasterOption,
 } from './employees/master-option.schema.js';
+export {
+  checkInClassificationSchema,
+  clockInRequestSchema,
+  clockInResponseSchema,
+  type CheckInClassification,
+  type ClockInRequest,
+  type ClockInResponse,
+} from './attendance/clock-in.schema.js';
 export { Portal } from './auth/portal.js';
 export {
   PASSWORD_MAX_LENGTH,

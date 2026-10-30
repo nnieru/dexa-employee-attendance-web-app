@@ -4,6 +4,7 @@ import { ApiGatewayConfigSchema } from './api-gateway-config.schema.js';
 
 const AUTH_SERVICE_URL = 'http://auth-service:3000';
 const EMPLOYEE_SERVICE_URL = 'http://employee-service:3000';
+const ATTENDANCE_SERVICE_URL = 'http://attendance-service:3000';
 const URL_PROTOCOL_MESSAGE =
   'Invalid configuration: AUTH_SERVICE_INTERNAL_URL: must be an http or https URL';
 const URL_CREDENTIALS_MESSAGE =
@@ -12,6 +13,8 @@ const EMPLOYEE_URL_PROTOCOL_MESSAGE =
   'Invalid configuration: EMPLOYEE_SERVICE_INTERNAL_URL: must be an http or https URL';
 const EMPLOYEE_URL_CREDENTIALS_MESSAGE =
   'Invalid configuration: EMPLOYEE_SERVICE_INTERNAL_URL: must not contain credentials';
+const ATTENDANCE_URL_PROTOCOL_MESSAGE =
+  'Invalid configuration: ATTENDANCE_SERVICE_INTERNAL_URL: must be an http or https URL';
 
 // Generated once for the file. The config only needs well-formed keys, which the environment supplies.
 const TEST_KEYS = generateAuthKeySet();
@@ -20,9 +23,19 @@ const BASE_SOURCE = {
   ...authEnvironmentFor(TEST_KEYS, ServiceName.API_GATEWAY),
   AUTH_SERVICE_INTERNAL_URL: AUTH_SERVICE_URL,
   EMPLOYEE_SERVICE_INTERNAL_URL: EMPLOYEE_SERVICE_URL,
+  ATTENDANCE_SERVICE_INTERNAL_URL: ATTENDANCE_SERVICE_URL,
 };
 
 describe('ApiGatewayConfigSchema', () => {
+  it('should reject the config when the attendance-service URL is not an http URL', () => {
+    expect(() =>
+      parseConfig(ApiGatewayConfigSchema, {
+        ...BASE_SOURCE,
+        ATTENDANCE_SERVICE_INTERNAL_URL: 'ftp://attendance-service:21',
+      }),
+    ).toThrow(ATTENDANCE_URL_PROTOCOL_MESSAGE);
+  });
+
   it('should return the auth-service base URL when it names a single-label host', () => {
     const config = parseConfig(ApiGatewayConfigSchema, BASE_SOURCE);
 

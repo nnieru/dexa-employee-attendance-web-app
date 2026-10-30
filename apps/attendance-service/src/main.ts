@@ -1,9 +1,9 @@
 import 'reflect-metadata';
-import { bootstrapService, parseConfig } from '@dexa/common';
+import { bootstrapService } from '@dexa/common';
 import { createAppModule } from './app.module.js';
-import { AttendanceServiceConfigSchema } from './config/attendance-service-config.schema.js';
+import { loadAttendanceServiceConfig } from './config/load-attendance-service-config.js';
 
 await bootstrapService({
-  module: createAppModule(parseConfig(AttendanceServiceConfigSchema)),
+  module: createAppModule(loadAttendanceServiceConfig()),
   defaultPort: 3003,
 });

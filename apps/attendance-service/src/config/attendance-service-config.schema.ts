@@ -1,4 +1,9 @@
-import { BaseConfigSchema } from '@dexa/common';
+import {
+  AuthConfigSchema,
+  BaseConfigSchema,
+  internalBaseUrlSchema,
+  ServiceName,
+} from '@dexa/common';
 import { z } from 'zod';
 import {
   defaultScheduleEnvironmentSchema,
@@ -29,11 +34,29 @@ const defaultScheduleSettingsSchema = defaultScheduleEnvironmentSchema.transform
   },
 );
 
+// The name this service signs internal tokens with. The loader supplies it by default. Any other value is refused,
+// because a process that signed as another service would impersonate it.
+const ownServiceNameSchema = z.literal(ServiceName.ATTENDANCE_SERVICE, {
+  error: `must be ${ServiceName.ATTENDANCE_SERVICE}`,
+});
+
 // Parsed once at startup (see main.ts). BUSINESS_TIMEZONE comes from BaseConfigSchema and is the zone the default
 // schedule is written in (DATABASE §8).
-export const AttendanceServiceConfigSchema = z.intersection(
-  BaseConfigSchema.extend({ ATTENDANCE_DATABASE_URL: postgresUrlSchema }),
+const attendanceEnvironmentSchema = z.intersection(
+  BaseConfigSchema.extend({
+    SERVICE_NAME: ownServiceNameSchema,
+    ATTENDANCE_DATABASE_URL: postgresUrlSchema,
+    // Every user-token request checks the account with auth-service (JwtAuthGuard), so the URL is required.
+    AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
+  }),
   defaultScheduleSettingsSchema,
+);
+
+// Token settings are shared with every service (libs/common/src/config/auth-config.schema.ts). The user private key
+// is refused by the loader, so this service only verifies user tokens.
+export const AttendanceServiceConfigSchema = z.intersection(
+  attendanceEnvironmentSchema,
+  AuthConfigSchema,
 );
 
 export type AttendanceServiceConfig = z.infer<typeof AttendanceServiceConfigSchema>;
