@@ -25,6 +25,7 @@ describe('EmployeeServiceClient', () => {
       method: 'listEmployeeStatuses',
       path: '/api/v1/employee-statuses',
     },
+    { route: 'own profile', method: 'getOwnProfile', path: '/api/v1/employees/me' },
   ] as const)(
     'should call the $route route on employee-service with the user token forwarded',
     async ({ method, path }) => {

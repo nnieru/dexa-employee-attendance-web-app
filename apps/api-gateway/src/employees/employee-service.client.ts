@@ -1,5 +1,12 @@
 import { INTERNAL_HTTP_CLIENT, ServiceName, type IInternalHttpClient } from '@dexa/common';
-import { API_PREFIX, ErrorCode, masterOptionListSchema, type MasterOption } from '@dexa/contracts';
+import {
+  API_PREFIX,
+  ErrorCode,
+  masterOptionListSchema,
+  ownProfileSchema,
+  type MasterOption,
+  type OwnProfile,
+} from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import type { IEmployeeServiceClient } from './employee-service-client.interface.js';
 
@@ -28,6 +35,17 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
       forwardedUserToken: accessToken,
       refusalCodes: USER_TOKEN_REFUSAL_CODES,
       responseSchema: masterOptionListSchema,
+    });
+  }
+
+  // The employee-service derives the identity from this token, so the gateway forwards it unchanged.
+  getOwnProfile(accessToken: string): Promise<OwnProfile> {
+    return this.httpClient.get({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: `/${API_PREFIX}/employees/me`,
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      responseSchema: ownProfileSchema,
     });
   }
 }

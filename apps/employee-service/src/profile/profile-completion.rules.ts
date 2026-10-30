@@ -1,11 +1,4 @@
-// Mirrors the employees_profile_status_ck values. Kept here until a profile response carries it, at which
-// point it moves to packages/contracts with that response schema.
-export const ProfileStatus = {
-  INCOMPLETE: 'INCOMPLETE',
-  COMPLETE: 'COMPLETE',
-} as const;
-
-export type ProfileStatus = (typeof ProfileStatus)[keyof typeof ProfileStatus];
+import { ProfileStatus } from '@dexa/contracts';
 
 export type ProfileCompletionFields = {
   readonly name: string;

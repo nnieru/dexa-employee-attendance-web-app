@@ -1,4 +1,5 @@
-import { ProfileStatus, calculateProfileStatus } from './profile-completion.rules.js';
+import { ProfileStatus } from '@dexa/contracts';
+import { calculateProfileStatus } from './profile-completion.rules.js';
 
 const COMPLETE_PROFILE = {
   name: 'Nadia Rahma',

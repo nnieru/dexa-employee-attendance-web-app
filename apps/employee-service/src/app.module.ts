@@ -11,6 +11,7 @@ import type { EmployeeServiceConfig } from './config/employee-service-config.sch
 import { DatabaseModule } from './infrastructure/db/database.module.js';
 import { MasterDataModule } from './master-data/master-data.module.js';
 import { MastersModule } from './masters/masters.module.js';
+import { ProfileModule } from './profile/profile.module.js';
 
 /**
  * Builds the root module from the validated config. The config is parsed before the module graph is
@@ -29,6 +30,7 @@ export function createAppModule(config: EmployeeServiceConfig): Type<unknown> {
       DatabaseModule,
       MasterDataModule,
       MastersModule,
+      ProfileModule,
       HealthModule,
     ],
   })

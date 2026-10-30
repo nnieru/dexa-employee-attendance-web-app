@@ -1,7 +1,13 @@
 import { Buffer } from 'node:buffer';
 import { createSign, randomUUID } from 'node:crypto';
 import { configureApp, parseConfig, Roles, ServiceName } from '@dexa/common';
-import { loginResponseSchema, Portal, Role, type MasterOption } from '@dexa/contracts';
+import {
+  loginResponseSchema,
+  Portal,
+  Role,
+  type MasterOption,
+  type OwnProfile,
+} from '@dexa/contracts';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
@@ -36,6 +42,7 @@ const HEALTH_PATH = '/api/v1/health';
 const HR_ROUTE_PATH = '/api/v1/route-guard-tests/hr';
 const POSITIONS_PATH = '/api/v1/positions';
 const EMPLOYEE_STATUSES_PATH = '/api/v1/employee-statuses';
+const OWN_PROFILE_PATH = '/api/v1/employees/me';
 const SELF_SERVICE_ROUTE_PATH = '/api/v1/route-guard-tests/self-service';
 const SIGNED_TOKEN_LIFETIME_SECONDS = 300;
 
@@ -69,8 +76,21 @@ const POSITIONS: MasterOption[] = [
 const EMPLOYEE_STATUSES: MasterOption[] = [
   { id: randomUUID(), code: 'ACTIVE', name: 'Active', isActive: true },
 ];
+const OWN_PROFILE: OwnProfile = {
+  accountId: randomUUID(),
+  name: 'Nadia Rahma',
+  email: 'nadia.rahma@dexa.test',
+  position: { code: 'FULLSTACK_DEVELOPER', name: 'Fullstack Developer' },
+  phoneNumber: null,
+  photoUrl: null,
+  profileStatus: 'INCOMPLETE',
+};
 const forwardedTokens: string[] = [];
 const employeeServiceFake: IEmployeeServiceClient = {
+  getOwnProfile: (accessToken: string) => {
+    forwardedTokens.push(accessToken);
+    return Promise.resolve(OWN_PROFILE);
+  },
   listPositions: (accessToken: string) => {
     forwardedTokens.push(accessToken);
     return Promise.resolve(POSITIONS);
@@ -348,6 +368,35 @@ describe('api-gateway route guards through a running auth-service', () => {
 
       expect(response.body).toEqual(EMPLOYEE_STATUSES);
       expect(forwardedTokens).toEqual([hrToken]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it.each([
+    { caller: 'an employee', token: () => employeeToken },
+    { caller: 'an HR account', token: () => hrToken },
+  ])(
+    'should return the own profile and forward the caller token when $caller calls the own profile route',
+    async ({ token }) => {
+      forwardedTokens.length = 0;
+
+      const response = await getWithToken(OWN_PROFILE_PATH, token()).expect(200);
+
+      expect(response.body).toEqual(OWN_PROFILE);
+      expect(forwardedTokens).toEqual([token()]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 401 UNAUTHORIZED on the own profile route when no bearer token is sent, without calling employee-service',
+    async () => {
+      forwardedTokens.length = 0;
+
+      const response = await request(app.getHttpServer()).get(OWN_PROFILE_PATH).expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      expect(forwardedTokens).toEqual([]);
     },
     TEST_TIMEOUT_MS,
   );

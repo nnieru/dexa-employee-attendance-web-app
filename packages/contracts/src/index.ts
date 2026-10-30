@@ -46,6 +46,8 @@ export {
   type AccountProvisioningOperation,
   type AccountProvisioningRequest,
 } from './auth/account-provisioning.schema.js';
+export { ownProfileSchema, type OwnProfile } from './employees/employee-profile.schema.js';
+export { ProfileStatus, profileStatusSchema } from './employees/profile-status.js';
 export {
   masterOptionListSchema,
   masterOptionSchema,
