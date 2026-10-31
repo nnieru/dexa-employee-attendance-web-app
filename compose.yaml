@@ -190,6 +190,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Asia/Jakarta}
       AUDIT_DATABASE_URL: ${AUDIT_DATABASE_URL_CONTAINER:-}
+      RABBITMQ_URL: ${RABBITMQ_URL_CONTAINER:-}
     ports:
       - '127.0.0.1:3005:3000'
     read_only: true

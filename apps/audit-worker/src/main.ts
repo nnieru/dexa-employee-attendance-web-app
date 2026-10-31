@@ -1,5 +1,19 @@
 import 'reflect-metadata';
-import { bootstrapService } from '@dexa/common';
-import { AppModule } from './app.module.js';
+import { configureApp } from '@dexa/common';
+import { connectEventConsumer } from '@dexa/messaging';
+import { NestFactory } from '@nestjs/core';
+import { AUDIT_PROFILE_CHANGES_QUEUE } from './audit/audit-queue.constants.js';
+import { createAppModule } from './app.module.js';
+import { loadAuditWorkerConfig } from './config/load-audit-worker-config.js';
 
-await bootstrapService({ module: AppModule, defaultPort: 3005 });
+const DEFAULT_PORT = 3005;
+
+// A hybrid app: HTTP serves the health route, and the RMQ consumer runs beside it. The consumer is connected
+// before listen, so its handlers are registered with the ack interceptor, and started after listen, which runs
+// the migrations.
+const config = loadAuditWorkerConfig();
+const app = await NestFactory.create(createAppModule(config));
+configureApp(app, config);
+await connectEventConsumer(app, { url: config.RABBITMQ_URL, queue: AUDIT_PROFILE_CHANGES_QUEUE });
+await app.listen(config.PORT ?? DEFAULT_PORT, config.HOST);
+await app.startAllMicroservices();
