@@ -18,6 +18,8 @@ export const ApiGatewayConfigSchema = z.intersection(
     AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
     EMPLOYEE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
     ATTENDANCE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
+    // The HR notification stream is proxied to notification-service (D-08). Only the stream uses this URL.
+    NOTIFICATION_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
   }),
   AuthConfigSchema,
 );

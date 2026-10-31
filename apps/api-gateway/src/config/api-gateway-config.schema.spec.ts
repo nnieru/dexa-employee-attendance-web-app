@@ -5,6 +5,7 @@ import { ApiGatewayConfigSchema } from './api-gateway-config.schema.js';
 const AUTH_SERVICE_URL = 'http://auth-service:3000';
 const EMPLOYEE_SERVICE_URL = 'http://employee-service:3000';
 const ATTENDANCE_SERVICE_URL = 'http://attendance-service:3000';
+const NOTIFICATION_SERVICE_URL = 'http://notification-service:3000';
 const URL_PROTOCOL_MESSAGE =
   'Invalid configuration: AUTH_SERVICE_INTERNAL_URL: must be an http or https URL';
 const URL_CREDENTIALS_MESSAGE =
@@ -15,6 +16,8 @@ const EMPLOYEE_URL_CREDENTIALS_MESSAGE =
   'Invalid configuration: EMPLOYEE_SERVICE_INTERNAL_URL: must not contain credentials';
 const ATTENDANCE_URL_PROTOCOL_MESSAGE =
   'Invalid configuration: ATTENDANCE_SERVICE_INTERNAL_URL: must be an http or https URL';
+const NOTIFICATION_URL_PROTOCOL_MESSAGE =
+  'Invalid configuration: NOTIFICATION_SERVICE_INTERNAL_URL: must be an http or https URL';
 
 // Generated once for the file. The config only needs well-formed keys, which the environment supplies.
 const TEST_KEYS = generateAuthKeySet();
@@ -24,6 +27,7 @@ const BASE_SOURCE = {
   AUTH_SERVICE_INTERNAL_URL: AUTH_SERVICE_URL,
   EMPLOYEE_SERVICE_INTERNAL_URL: EMPLOYEE_SERVICE_URL,
   ATTENDANCE_SERVICE_INTERNAL_URL: ATTENDANCE_SERVICE_URL,
+  NOTIFICATION_SERVICE_INTERNAL_URL: NOTIFICATION_SERVICE_URL,
 };
 
 describe('ApiGatewayConfigSchema', () => {
@@ -99,6 +103,24 @@ describe('ApiGatewayConfigSchema', () => {
     expect(() =>
       parseConfig(ApiGatewayConfigSchema, { ...BASE_SOURCE, EMPLOYEE_SERVICE_INTERNAL_URL: url }),
     ).toThrow(new Error(message));
+  });
+
+  it('should return the notification-service base URL when it names a single-label host', () => {
+    const config = parseConfig(ApiGatewayConfigSchema, BASE_SOURCE);
+
+    expect(config.NOTIFICATION_SERVICE_INTERNAL_URL).toBe(NOTIFICATION_SERVICE_URL);
+  });
+
+  it.each([
+    { condition: 'the URL is unset', url: undefined },
+    { condition: 'the scheme is not http or https', url: 'ftp://notification-service:21' },
+  ])('should reject the config when $condition', ({ url }) => {
+    expect(() =>
+      parseConfig(ApiGatewayConfigSchema, {
+        ...BASE_SOURCE,
+        NOTIFICATION_SERVICE_INTERNAL_URL: url,
+      }),
+    ).toThrow(new Error(NOTIFICATION_URL_PROTOCOL_MESSAGE));
   });
 
   it('should reject the config when SERVICE_NAME is not api-gateway', () => {

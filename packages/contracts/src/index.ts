@@ -184,6 +184,12 @@ export {
   type ProfileField,
 } from './events/employee-profile-updated.schema.js';
 export {
+  NOTIFICATION_STREAM_EVENT_NAME,
+  notificationEventTypeSchema,
+  notificationSchema,
+  type Notification,
+} from './notifications/notification.schema.js';
+export {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   createPageSchema,

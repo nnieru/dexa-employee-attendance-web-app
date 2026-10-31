@@ -106,6 +106,7 @@ describe('api-gateway self-service password change through a running auth-servic
       AUTH_SERVICE_INTERNAL_URL: authService.baseUrl,
       EMPLOYEE_SERVICE_INTERNAL_URL: 'http://employee-service:3000',
       ATTENDANCE_SERVICE_INTERNAL_URL: 'http://attendance-service:3000',
+      NOTIFICATION_SERVICE_INTERNAL_URL: 'http://notification-service:3000',
     });
     const moduleRef = await Test.createTestingModule({
       imports: [createAppModule(config)],

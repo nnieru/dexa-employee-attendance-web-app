@@ -70,6 +70,11 @@ import {
   UNREACHABLE_BROKER_URL,
   type RunningAuthService,
 } from './auth-service-process.js';
+import {
+  startNotificationServiceStub,
+  type NotificationServiceStub,
+  type UpstreamStream,
+} from './notification-service-stub.js';
 
 // Starting the container and the auth-service process takes several seconds on a cold machine.
 const SETUP_TIMEOUT_MS = 180_000;
@@ -94,6 +99,11 @@ const PHOTO_MULTIPART_OVERHEAD_BYTES = 64 * 1024;
 const STORED_PHOTO_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
 const SELF_SERVICE_ROUTE_PATH = '/api/v1/route-guard-tests/self-service';
 const SIGNED_TOKEN_LIFETIME_SECONDS = 300;
+const NOTIFICATION_STREAM_PATH = '/api/v1/notifications/stream';
+const FIRST_NOTIFICATION_FRAME = 'event: notification\ndata: {"id":"first"}\n\n';
+const SECOND_NOTIFICATION_FRAME = 'event: notification\ndata: {"id":"second"}\n\n';
+// A relayed frame that does not arrive in this time means the gateway is holding it back.
+const RELAY_TIMEOUT_MS = 5_000;
 
 const HR_EMAIL = 'hr.admin@dexa.test';
 const HR_PASSWORD = 'hr-admin-pass-1';
@@ -457,10 +467,59 @@ function authServiceProcessEnvironment(
   };
 }
 
+// Reads the body until the text holds the expected frame, and returns everything read so far. A frame that never
+// arrives fails the spec with a message that names the buffering risk.
+async function readUntilContains(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  expected: string,
+): Promise<string> {
+  const decoder = new TextDecoder();
+  let received = '';
+  while (!received.includes(expected)) {
+    const chunk = await withRelayTimeout(reader.read(), 'the relayed frame');
+    if (chunk.done) throw new Error('The stream ended before the expected frame arrived.');
+    received += decoder.decode(chunk.value, { stream: true });
+  }
+  return received;
+}
+
+async function readToEnd(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<string> {
+  const decoder = new TextDecoder();
+  let received = '';
+  for (;;) {
+    const chunk = await withRelayTimeout(reader.read(), 'the end of the stream');
+    if (chunk.done) return received;
+    received += decoder.decode(chunk.value, { stream: true });
+  }
+}
+
+async function withRelayTimeout<TValue>(promise: Promise<TValue>, description: string) {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(
+        new Error(`Timed out waiting for ${description}. The gateway may be buffering the stream.`),
+      );
+    }, RELAY_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function bodyReaderOf(response: Response): ReadableStreamDefaultReader<Uint8Array> {
+  if (response.body === null) throw new Error('The stream answered without a body.');
+  return response.body.getReader();
+}
+
 describe('api-gateway route guards through a running auth-service', () => {
   let container: StartedPostgreSqlContainer;
   let authService: RunningAuthService;
+  let notificationService: NotificationServiceStub;
   let app: INestApplication;
+  let gatewayUrl: string;
   let keys: AuthKeySet;
   let hrToken: string;
   let employeeToken: string;
@@ -468,6 +527,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   // Teardown still stops each resource when setup failed partway through.
   afterAll(async () => {
     await app?.close();
+    await notificationService?.close();
     await authService?.stop();
     await container?.stop();
   }, SETUP_TIMEOUT_MS);
@@ -483,12 +543,14 @@ describe('api-gateway route guards through a running auth-service', () => {
     authService = await startAuthServiceProcess(
       authServiceProcessEnvironment(keys, container.getConnectionUri()),
     );
+    notificationService = await startNotificationServiceStub();
     const config = parseConfig(ApiGatewayConfigSchema, {
       BUSINESS_TIMEZONE: 'Asia/Jakarta',
       ...authEnvironmentFor(keys, ServiceName.API_GATEWAY),
       AUTH_SERVICE_INTERNAL_URL: authService.baseUrl,
       EMPLOYEE_SERVICE_INTERNAL_URL: 'http://employee-service:3000',
       ATTENDANCE_SERVICE_INTERNAL_URL: 'http://attendance-service:3000',
+      NOTIFICATION_SERVICE_INTERNAL_URL: notificationService.baseUrl,
     });
     const moduleRef = await Test.createTestingModule({
       imports: [createAppModule(config)],
@@ -506,6 +568,9 @@ describe('api-gateway route guards through a running auth-service', () => {
     app = moduleRef.createNestApplication();
     configureApp(app, { CORS_ORIGINS: [] });
     await app.init();
+    // The stream test uses fetch, which needs a real socket. Supertest keeps using the server handler directly.
+    await app.listen(0, '127.0.0.1');
+    gatewayUrl = await app.getUrl();
 
     // The employee copies the bootstrap HR password hash, so it can sign in through the gateway without
     // this test calling argon2 directly.
@@ -1764,4 +1829,77 @@ describe('api-gateway route guards through a running auth-service', () => {
     },
     TEST_TIMEOUT_MS,
   );
+
+  describe('HR notification stream', () => {
+    it(
+      'should relay each frame as soon as notification-service writes it, with the HR token forwarded',
+      async () => {
+        const response = await fetch(`${gatewayUrl}${NOTIFICATION_STREAM_PATH}`, {
+          headers: { Authorization: `Bearer ${hrToken}` },
+        });
+        const upstream: UpstreamStream = await notificationService.nextStream();
+        const reader = bodyReaderOf(response);
+
+        expect(response.status).toBe(200);
+        expect(response.headers.get('content-type')).toBe('text/event-stream; charset=utf-8');
+        expect(response.headers.get('cache-control')).toBe('no-cache, no-transform');
+        expect(response.headers.get('x-accel-buffering')).toBe('no');
+        expect(upstream.authorization).toBe(`Bearer ${hrToken}`);
+
+        // The second frame is written only after the first has reached the browser, so a gateway that buffers the
+        // upstream answer would hold the first frame until the relay timeout.
+        upstream.write(FIRST_NOTIFICATION_FRAME);
+        expect(await readUntilContains(reader, FIRST_NOTIFICATION_FRAME)).toBe(
+          FIRST_NOTIFICATION_FRAME,
+        );
+        upstream.write(SECOND_NOTIFICATION_FRAME);
+        upstream.end();
+        expect(await readToEnd(reader)).toBe(SECOND_NOTIFICATION_FRAME);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should close the upstream connection when the browser leaves the stream',
+      async () => {
+        const browser = new AbortController();
+        const response = await fetch(`${gatewayUrl}${NOTIFICATION_STREAM_PATH}`, {
+          headers: { Authorization: `Bearer ${hrToken}` },
+          signal: browser.signal,
+        });
+        const upstream = await notificationService.nextStream();
+        upstream.write(FIRST_NOTIFICATION_FRAME);
+        await readUntilContains(bodyReaderOf(response), FIRST_NOTIFICATION_FRAME);
+
+        browser.abort();
+
+        await withRelayTimeout(upstream.closed, 'the gateway to close the upstream connection');
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 403 without calling notification-service when an employee token opens the stream',
+      async () => {
+        const requestsBefore = notificationService.requestCount();
+
+        await getWithToken(NOTIFICATION_STREAM_PATH, employeeToken).expect(403);
+
+        expect(notificationService.requestCount()).toBe(requestsBefore);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 401 without calling notification-service when no bearer token is sent',
+      async () => {
+        const requestsBefore = notificationService.requestCount();
+
+        await request(app.getHttpServer()).get(NOTIFICATION_STREAM_PATH).expect(401);
+
+        expect(notificationService.requestCount()).toBe(requestsBefore);
+      },
+      TEST_TIMEOUT_MS,
+    );
+  });
 });

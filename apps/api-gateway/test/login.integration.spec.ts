@@ -79,6 +79,7 @@ describe('api-gateway sign-in through a running auth-service', () => {
       AUTH_SERVICE_INTERNAL_URL: authService.baseUrl,
       EMPLOYEE_SERVICE_INTERNAL_URL: 'http://employee-service:3000',
       ATTENDANCE_SERVICE_INTERNAL_URL: 'http://attendance-service:3000',
+      NOTIFICATION_SERVICE_INTERNAL_URL: 'http://notification-service:3000',
     });
     gatewayLogs = [];
     const moduleRef = await Test.createTestingModule({ imports: [createAppModule(config)] })
