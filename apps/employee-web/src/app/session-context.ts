@@ -11,7 +11,11 @@ export type SessionState =
 export type SessionContextValue = {
   apiClient: ApiClient;
   session: SessionState;
+  /** Reads the in-memory token synchronously, so it is current even before React re-renders. */
+  isSignedIn: () => boolean;
   signIn: (accessToken: string) => void;
+  /** The employee chose Logout: ends the session without a reason message. */
+  signOut: () => void;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);

@@ -1,79 +1,25 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { HttpResponse, http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mswServer } from '../test/msw-server.js';
-import { createAppRouter } from './router.js';
+import {
+  CURRENT_ACCOUNT_URL,
+  EMPLOYEE_ACCOUNT,
+  HR_ACCOUNT,
+  LOGIN_URL,
+  VALID_PASSWORD,
+  accountCheckRejected,
+  accountCheckSucceeds,
+  loginRejected,
+  loginResponseFor,
+  loginSucceeds,
+  renderEmployeeApp,
+  signInWith,
+} from '../test/employee-app-harness.js';
 import { listenForWindowFocus } from './window-focus.js';
 
-const LOGIN_URL = '/api/v1/auth/login';
-const CURRENT_ACCOUNT_URL = '/api/v1/auth/me';
 const SESSION_CHECK_INTERVAL_MS = 30_000;
-
-const ACCESS_TOKEN = 'access-token-for-tests';
-const EMPLOYEE_ACCOUNT = {
-  id: '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13',
-  email: 'rina.kusuma@dexa.test',
-  role: 'EMPLOYEE',
-};
-const HR_ACCOUNT = {
-  id: '9b1e4c7d-2f3a-4e5b-8c6d-1a2b3c4d5e6f',
-  email: 'sari.wulandari@dexa.test',
-  role: 'HR',
-};
-const VALID_PASSWORD = 'correct-horse-1';
-
-function loginResponseFor(account: typeof EMPLOYEE_ACCOUNT) {
-  return { accessToken: ACCESS_TOKEN, tokenType: 'Bearer', expiresIn: 3600, account };
-}
-
-function loginSucceeds(account: typeof EMPLOYEE_ACCOUNT = EMPLOYEE_ACCOUNT) {
-  return http.post(LOGIN_URL, () => HttpResponse.json(loginResponseFor(account)));
-}
-
-function loginRejected() {
-  return http.post(LOGIN_URL, () =>
-    HttpResponse.json(
-      { statusCode: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid credentials.' },
-      { status: 401 },
-    ),
-  );
-}
-
-function accountCheckSucceeds(account: typeof EMPLOYEE_ACCOUNT = EMPLOYEE_ACCOUNT) {
-  return http.get(CURRENT_ACCOUNT_URL, () => HttpResponse.json(account));
-}
-
-function accountCheckRejected(code: 'ACCOUNT_DISABLED' | 'UNAUTHORIZED') {
-  return http.get(CURRENT_ACCOUNT_URL, () =>
-    HttpResponse.json({ statusCode: 401, code, message: 'Unauthorized.' }, { status: 401 }),
-  );
-}
-
-async function renderEmployeeApp(initialPath = '/login') {
-  const router = createAppRouter(createMemoryHistory({ initialEntries: [initialPath] }));
-  await act(async () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>,
-    );
-    await router.load();
-  });
-  return router;
-}
-
-async function signInWith(
-  user: ReturnType<typeof userEvent.setup>,
-  email: string,
-  password = VALID_PASSWORD,
-) {
-  await user.type(screen.getByLabelText('Company email'), email);
-  await user.type(screen.getByLabelText('Password'), password);
-  await user.click(screen.getByRole('button', { name: 'Sign in' }));
-}
 
 let stopListeningForWindowFocus: () => void = () => undefined;
 
