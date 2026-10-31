@@ -2,7 +2,7 @@ import { createParamDecorator, UnauthorizedException, type ExecutionContext } fr
 import { authenticatedUserSchema, type AuthenticatedUser } from './authenticated-principal.js';
 
 /**
- * Reads the user that JwtAuthGuard attached to the request. A route without that guard has no user,
+ * Reads the user that the route's guard attached to the request (JwtAuthGuard or GatewayUserAuthGuard). A route without that guard has no user,
  * and it is refused rather than served without an identity.
  */
 export const CurrentUser = createParamDecorator(

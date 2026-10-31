@@ -10,11 +10,8 @@ import {
  */
 export function loadAttendanceServiceConfig(): AttendanceServiceConfig {
   const serviceName = process.env.SERVICE_NAME || ServiceName.ATTENDANCE_SERVICE;
-  // Only auth-service signs user tokens. Clearing the private key here keeps it out of this process even when a
-  // shared .env file contains it, so this service cannot mint user tokens.
   return parseConfig(AttendanceServiceConfigSchema, {
     ...process.env,
     SERVICE_NAME: serviceName,
-    USER_JWT_PRIVATE_KEY: undefined,
   });
 }

@@ -1,4 +1,4 @@
-import { JwtAuthGuard, Roles, RolesGuard } from '@dexa/common';
+import { GatewayUserAuthGuard, Roles, RolesGuard } from '@dexa/common';
 import {
   Role,
   workScheduleIdSchema,
@@ -20,7 +20,7 @@ import {
 
 // HR only (SCH-7). The grace values are in these responses, so an employee must never reach them.
 @Controller('work-schedules')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)
 export class WorkScheduleController {
   constructor(

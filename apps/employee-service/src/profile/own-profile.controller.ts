@@ -1,4 +1,10 @@
-import { CurrentUser, JwtAuthGuard, Roles, RolesGuard, type AuthenticatedUser } from '@dexa/common';
+import {
+  CurrentUser,
+  GatewayUserAuthGuard,
+  Roles,
+  RolesGuard,
+  type AuthenticatedUser,
+} from '@dexa/common';
 import {
   Role,
   updateOwnProfileRequestSchema,
@@ -13,7 +19,7 @@ import { OWN_PROFILE_SERVICE, type IOwnProfileService } from './own-profile.serv
 // The identity comes only from the verified token. A route with no account parameter cannot read or change
 // another employee's profile, whatever the request carries.
 @Controller('employees')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.EMPLOYEE, Role.HR)
 export class OwnProfileController {
   constructor(

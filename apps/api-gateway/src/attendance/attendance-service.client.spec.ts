@@ -3,20 +3,24 @@ import {
   type IInternalHttpClient,
   type InternalGetRequest,
   type InternalPostRequest,
+  type AuthenticatedUser,
 } from '@dexa/common';
 import {
-  ErrorCode,
   type AttendanceMonitoringPage,
   type AttendanceSummaryPage,
   type ClockInResponse,
   type ClockOutResponse,
   type TodayAttendanceResponse,
+  Role,
 } from '@dexa/contracts';
 import { AttendanceServiceClient } from './attendance-service.client.js';
 
 type RecordedRequest = InternalGetRequest<unknown> | InternalPostRequest<unknown>;
 
-const USER_TOKEN = 'user-access-token';
+const USER: AuthenticatedUser = {
+  accountId: '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13',
+  role: Role.EMPLOYEE,
+};
 const TODAY_RESPONSE: TodayAttendanceResponse = {
   businessDate: '2026-11-02',
   isWorkingDay: true,
@@ -104,13 +108,13 @@ function createRecordingHttpClient(
 }
 
 describe('AttendanceServiceClient.clockIn', () => {
-  it('should post an empty body to the clock-in route with the user token forwarded and no retry', async () => {
+  it('should post an empty body to the clock-in route on behalf of the user and no retry', async () => {
     const recorded: InternalPostRequest<unknown>[] = [];
     const client = new AttendanceServiceClient(
       createRecordingHttpClient(CLOCK_IN_RESPONSE, recorded),
     );
 
-    const response = await client.clockIn(USER_TOKEN);
+    const response = await client.clockIn(USER);
 
     expect(response).toEqual(CLOCK_IN_RESPONSE);
     expect(recorded).toHaveLength(1);
@@ -118,26 +122,24 @@ describe('AttendanceServiceClient.clockIn', () => {
       target: ServiceName.ATTENDANCE_SERVICE,
       path: '/api/v1/attendance/clock-in',
       body: {},
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
   });
 });
 
 describe('AttendanceServiceClient.getToday', () => {
-  it('should get the today route with the user token forwarded and no body', async () => {
+  it('should get the today route on behalf of the user and no body', async () => {
     const recorded: RecordedRequest[] = [];
     const client = new AttendanceServiceClient(createRecordingHttpClient(TODAY_RESPONSE, recorded));
 
-    const response = await client.getToday(USER_TOKEN);
+    const response = await client.getToday(USER);
 
     expect(response).toEqual(TODAY_RESPONSE);
     expect(recorded).toHaveLength(1);
     expect(recorded[0]).toMatchObject({
       target: ServiceName.ATTENDANCE_SERVICE,
       path: '/api/v1/attendance/me/today',
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
     expect(recorded[0]).not.toHaveProperty('body');
   });
@@ -148,18 +150,18 @@ describe('AttendanceServiceClient.getToday', () => {
       createRecordingHttpClient({ ...TODAY_RESPONSE, state: { status: 'CLOCKED_OUT' } }, recorded),
     );
 
-    await expect(client.getToday(USER_TOKEN)).rejects.toThrow();
+    await expect(client.getToday(USER)).rejects.toThrow();
   });
 });
 
 describe('AttendanceServiceClient.clockOut', () => {
-  it('should post an empty body to the clock-out route with the user token forwarded and no retry', async () => {
+  it('should post an empty body to the clock-out route on behalf of the user and no retry', async () => {
     const recorded: InternalPostRequest<unknown>[] = [];
     const client = new AttendanceServiceClient(
       createRecordingHttpClient(CLOCK_OUT_RESPONSE, recorded),
     );
 
-    const response = await client.clockOut(USER_TOKEN);
+    const response = await client.clockOut(USER);
 
     expect(response).toEqual(CLOCK_OUT_RESPONSE);
     expect(recorded).toHaveLength(1);
@@ -167,8 +169,7 @@ describe('AttendanceServiceClient.clockOut', () => {
       target: ServiceName.ATTENDANCE_SERVICE,
       path: '/api/v1/attendance/clock-out',
       body: {},
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
   });
 });
@@ -191,20 +192,19 @@ describe('AttendanceServiceClient.listOwnSummary', () => {
       expectedParameters: { to: '2026-11-15', page: '1', pageSize: '20' },
     },
   ])(
-    'should get the summary on attendance-service with the query and the user token when $condition',
+    'should get the summary on attendance-service with the query on behalf of the user when $condition',
     async ({ query, expectedParameters }) => {
       const recorded: InternalGetRequest<unknown>[] = [];
       const client = new AttendanceServiceClient(createRecordingHttpClient(SUMMARY_PAGE, recorded));
 
-      const response = await client.listOwnSummary(USER_TOKEN, query);
+      const response = await client.listOwnSummary(USER, query);
 
       expect(response).toEqual(SUMMARY_PAGE);
       expect(recorded).toHaveLength(1);
       expect(recorded[0]).toMatchObject({
         target: ServiceName.ATTENDANCE_SERVICE,
         path: '/api/v1/attendance/me',
-        forwardedUserToken: USER_TOKEN,
-        refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+        onBehalfOf: USER,
       });
       expect(recorded[0]?.query).toEqual(expectedParameters);
     },
@@ -218,7 +218,7 @@ describe('AttendanceServiceClient.listOwnSummary', () => {
     };
     const client = new AttendanceServiceClient(createRecordingHttpClient(malformedPage, recorded));
 
-    await expect(client.listOwnSummary(USER_TOKEN, { page: 1, pageSize: 20 })).rejects.toThrow();
+    await expect(client.listOwnSummary(USER, { page: 1, pageSize: 20 })).rejects.toThrow();
   });
 });
 
@@ -261,15 +261,14 @@ describe('AttendanceServiceClient.listAttendance', () => {
         createRecordingHttpClient(MONITORING_PAGE, recorded),
       );
 
-      const response = await client.listAttendance(USER_TOKEN, query);
+      const response = await client.listAttendance(USER, query);
 
       expect(response).toEqual(MONITORING_PAGE);
       expect(recorded).toHaveLength(1);
       expect(recorded[0]).toMatchObject({
         target: ServiceName.ATTENDANCE_SERVICE,
         path: '/api/v1/attendance',
-        forwardedUserToken: USER_TOKEN,
-        refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+        onBehalfOf: USER,
       });
       expect(recorded[0]?.query).toEqual(expectedParameters);
     },
@@ -283,6 +282,6 @@ describe('AttendanceServiceClient.listAttendance', () => {
     };
     const client = new AttendanceServiceClient(createRecordingHttpClient(malformedPage, recorded));
 
-    await expect(client.listAttendance(USER_TOKEN, { page: 1, pageSize: 20 })).rejects.toThrow();
+    await expect(client.listAttendance(USER, { page: 1, pageSize: 20 })).rejects.toThrow();
   });
 });

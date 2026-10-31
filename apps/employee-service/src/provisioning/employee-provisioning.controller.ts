@@ -1,4 +1,10 @@
-import { CurrentUser, JwtAuthGuard, Roles, RolesGuard, type AuthenticatedUser } from '@dexa/common';
+import {
+  CurrentUser,
+  GatewayUserAuthGuard,
+  Roles,
+  RolesGuard,
+  type AuthenticatedUser,
+} from '@dexa/common';
 import {
   createEmployeeRequestSchema,
   Role,
@@ -14,7 +20,7 @@ import {
 
 // HR only. The actor comes from the verified token, so the request body cannot name who is creating the employee.
 @Controller('employees')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)
 export class EmployeeProvisioningController {
   constructor(

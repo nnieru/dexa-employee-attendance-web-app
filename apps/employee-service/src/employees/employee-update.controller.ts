@@ -1,4 +1,10 @@
-import { CurrentUser, JwtAuthGuard, Roles, RolesGuard, type AuthenticatedUser } from '@dexa/common';
+import {
+  CurrentUser,
+  GatewayUserAuthGuard,
+  Roles,
+  RolesGuard,
+  type AuthenticatedUser,
+} from '@dexa/common';
 import {
   accountIdSchema,
   Role,
@@ -17,7 +23,7 @@ import {
 // self-service route PATCH employees/me is registered before this one (see AppModule), so `me` never reaches the
 // UUID check here.
 @Controller('employees')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)
 export class EmployeeUpdateController {
   constructor(

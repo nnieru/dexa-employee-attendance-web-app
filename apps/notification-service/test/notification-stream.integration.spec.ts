@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import { ServiceName } from '@dexa/common';
 import { notificationSchema, EventName, Role, type Notification } from '@dexa/contracts';
 import { createDatabase, type Database } from '@dexa/db';
 import {
@@ -20,12 +21,15 @@ import { startNotificationConsumerApp } from './notification-consumer-app.js';
 import { notificationServiceAuthKeys } from './notification-service-environment.js';
 import {
   CountingNotificationWriter,
-  ScriptedAccountStatusReader,
   ScriptedAuthClient,
   ScriptedEmployeeClient,
 } from './scripted-clients.js';
 import { SseFrameReader, type SseFrame } from './sse-frame-reader.js';
-import { signUserAccessToken } from './user-access-token.js';
+import {
+  forgeGatewayUserToken,
+  signEndUserJwt,
+  signGatewayUserToken,
+} from './gateway-user-token.js';
 
 // Same images as compose.yaml, so the tests run against the broker and database versions the services use.
 const POSTGRES_IMAGE = 'postgres:18';
@@ -45,7 +49,6 @@ const HR_RECIPIENT_A = '1f2e3d4c-5b6a-4789-8abc-0d1e2f3a4b5c';
 const HR_RECIPIENT_B = '3b4c5d6e-7f80-4912-8bcd-2e3f4a5b6c7d';
 // An active HR account that is not a recipient of the event. Its stream must stay silent.
 const HR_NOT_RECIPIENT = '7d8e9f0a-1b2c-4d3e-8f4a-5b6c7d8e9f0a';
-const HR_DEACTIVATED = '9a0b1c2d-3e4f-4a5b-9c6d-7e8f9a0b1c2d';
 const EMPLOYEE_ACCOUNT = '4e5f6a7b-8c9d-4e0f-8a1b-2c3d4e5f6a7b';
 
 type ConnectedStream = {
@@ -111,12 +114,12 @@ describe('HR notification stream on the running service', () => {
   let database: Database;
   let writer: CountingNotificationWriter;
   let baseUrl: string;
-  const accountStatuses = new ScriptedAccountStatusReader();
   const openedStreams: ConnectedStream[] = [];
   const keys = notificationServiceAuthKeys();
 
+  // The token the gateway sends for a call on behalf of this user. The stream checks it once, at connect.
   function tokenFor(accountId: string, role: Role = Role.HR): string {
-    return signUserAccessToken(keys, accountId, role);
+    return signGatewayUserToken(keys, ServiceName.NOTIFICATION_SERVICE, accountId, role);
   }
 
   async function requestStream(accessToken?: string): Promise<Response> {
@@ -153,11 +156,6 @@ describe('HR notification stream on the running service', () => {
     await publisherModule.init();
     publisher = publisherModule.get<IEventPublisher>(EVENT_PUBLISHER);
 
-    for (const accountId of [HR_RECIPIENT_A, HR_RECIPIENT_B, HR_NOT_RECIPIENT, HR_DEACTIVATED]) {
-      accountStatuses.setActive(accountId, true);
-    }
-    accountStatuses.setActive(EMPLOYEE_ACCOUNT, true);
-
     const databaseUrl = await createEmptyDatabaseUri(postgres.getConnectionUri());
     // The pool opens no connection until it is used, so it can exist before the app migrates the database.
     database = createDatabase(databaseUrl);
@@ -169,7 +167,6 @@ describe('HR notification stream on the running service', () => {
       authClient: new ScriptedAuthClient([HR_RECIPIENT_A, HR_RECIPIENT_B], 0),
       employeeClient: new ScriptedEmployeeClient([], 0),
       notificationWriter: writer,
-      accountStatusReader: accountStatuses,
       heartbeatMilliseconds: HEARTBEAT_MILLISECONDS,
     });
     baseUrl = await app.getUrl();
@@ -261,6 +258,35 @@ describe('HR notification stream on the running service', () => {
     );
 
     it(
+      'should answer 401 when an end-user JWT is sent, because only the gateway verifies end-user tokens',
+      async () => {
+        const response = await requestStream(signEndUserJwt(keys, HR_NOT_RECIPIENT, Role.HR));
+
+        expect(response.status).toBe(401);
+        await response.body?.cancel();
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 401 when a token names api-gateway but is signed with another service key',
+      async () => {
+        const forged = forgeGatewayUserToken(
+          keys,
+          ServiceName.NOTIFICATION_SERVICE,
+          HR_NOT_RECIPIENT,
+          Role.HR,
+        );
+
+        const response = await requestStream(forged);
+
+        expect(response.status).toBe(401);
+        await response.body?.cancel();
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
       'should answer 401 when no bearer token is sent',
       async () => {
         const response = await requestStream();
@@ -286,29 +312,9 @@ describe('HR notification stream on the running service', () => {
     );
   });
 
-  describe('heartbeat and account status', () => {
+  describe('heartbeat', () => {
     it(
-      'should close the stream at the next heartbeat when the account is deactivated',
-      async () => {
-        const stream = await connectStream(tokenFor(HR_DEACTIVATED));
-        const firstFrame = await stream.frames.nextFrame();
-        expect(firstFrame?.kind).toBe('heartbeat');
-
-        accountStatuses.setActive(HR_DEACTIVATED, false);
-
-        const framesUntilEnd: SseFrame[] = [];
-        for (;;) {
-          const frame = await stream.frames.nextFrame();
-          if (frame === undefined) break;
-          framesUntilEnd.push(frame);
-        }
-        expect(framesUntilEnd.filter((frame) => frame.kind === 'notification')).toEqual([]);
-      },
-      TEST_TIMEOUT_MS,
-    );
-
-    it(
-      'should keep the stream open with heartbeats while the account stays active',
+      'should keep the stream open with heartbeats, because the gateway checks the account while it proxies',
       async () => {
         const stream = await connectStream(tokenFor(HR_NOT_RECIPIENT));
 

@@ -1,4 +1,10 @@
-import { CurrentUser, JwtAuthGuard, Roles, RolesGuard, type AuthenticatedUser } from '@dexa/common';
+import {
+  CurrentUser,
+  GatewayUserAuthGuard,
+  Roles,
+  RolesGuard,
+  type AuthenticatedUser,
+} from '@dexa/common';
 import { Role } from '@dexa/contracts';
 import { Controller, Get, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
@@ -7,7 +13,7 @@ import { NotificationStreamService } from './notification-stream.service.js';
 // HR only, checked here as well as at the gateway (D-08). The guards run before this handler, so an employee token is
 // refused before any header is written.
 @Controller('notifications')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)
 export class NotificationStreamController {
   constructor(private readonly streams: NotificationStreamService) {}

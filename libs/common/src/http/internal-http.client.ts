@@ -4,6 +4,7 @@ import { isAxiosError, type AxiosError, type AxiosRequestConfig, type AxiosRespo
 import { setTimeout as delay } from 'node:timers/promises';
 import { firstValueFrom } from 'rxjs';
 import type { z } from 'zod';
+import type { AuthenticatedUser } from '../auth/authenticated-principal.js';
 import type { ServiceName } from '../auth/service-name.js';
 import {
   SERVICE_TOKEN_SIGNER,
@@ -63,7 +64,7 @@ type InternalCall = {
   readonly body?: unknown;
   readonly correlationId?: string;
   readonly timeoutMilliseconds?: number;
-  readonly forwardedUserToken?: string;
+  readonly onBehalfOf?: AuthenticatedUser;
   readonly refusalCodes?: ReadonlyArray<string>;
   readonly passThroughErrorCodes?: ReadonlyArray<string>;
 };
@@ -126,7 +127,7 @@ export class InternalHttpClient implements IInternalHttpClient {
       body: buildMultipartBody(request.file),
       correlationId: request.correlationId,
       timeoutMilliseconds: request.timeoutMilliseconds,
-      forwardedUserToken: request.forwardedUserToken,
+      onBehalfOf: request.onBehalfOf,
       refusalCodes: request.refusalCodes,
       passThroughErrorCodes: request.passThroughErrorCodes,
       method: 'PUT',
@@ -191,9 +192,8 @@ export class InternalHttpClient implements IInternalHttpClient {
   // cut short by the timeout of the attempt before it.
   private async buildRequestConfig(call: InternalCall): Promise<AxiosRequestConfig> {
     const baseUrl = this.resolveBaseUrl(call.target);
-    // A forwarded user token replaces the service token, so the target authorizes the user and this
-    // service signs nothing for the call.
-    const credential = call.forwardedUserToken ?? (await this.tokenSigner.signFor(call.target));
+    // The token is signed per attempt, and names the end user when the call acts for one (D-51).
+    const credential = await this.tokenSigner.signFor(call.target, call.onBehalfOf);
     const timeout = call.timeoutMilliseconds ?? DEFAULT_TIMEOUT_MILLISECONDS;
     const limits = RESPONSE_LIMITS[call.responseKind];
     return {

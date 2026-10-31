@@ -5,6 +5,7 @@ import {
   type InternalGetRequest,
   type InternalMultipartPutRequest,
   type InternalPostRequest,
+  type AuthenticatedUser,
 } from '@dexa/common';
 import {
   ErrorCode,
@@ -12,10 +13,14 @@ import {
   type CreateEmployeeRequest,
   type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
+  Role,
 } from '@dexa/contracts';
 import { EmployeeServiceClient } from './employee-service.client.js';
 
-const USER_TOKEN = 'user-access-token';
+const USER: AuthenticatedUser = {
+  accountId: '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13',
+  role: Role.EMPLOYEE,
+};
 const PHOTO_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
 const PHOTO_PATH = '/api/v1/employees/me/photo';
 
@@ -46,19 +51,18 @@ describe('EmployeeServiceClient', () => {
     },
     { route: 'own profile', method: 'getOwnProfile', path: '/api/v1/employees/me' },
   ] as const)(
-    'should call the $route route on employee-service with the user token forwarded',
+    'should call the $route route on employee-service on behalf of the user',
     async ({ method, path }) => {
       const recorded: InternalGetRequest<unknown>[] = [];
       const client = new EmployeeServiceClient(recordingHttpClient(recorded));
 
-      await client[method](USER_TOKEN).catch(() => undefined);
+      await client[method](USER).catch(() => undefined);
 
       expect(recorded).toHaveLength(1);
       expect(recorded[0]).toMatchObject({
         target: ServiceName.EMPLOYEE_SERVICE,
         path,
-        forwardedUserToken: USER_TOKEN,
-        refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+        onBehalfOf: USER,
       });
     },
   );
@@ -82,21 +86,20 @@ describe('EmployeeServiceClient.updateOwnProfile', () => {
     };
     const client = new EmployeeServiceClient(httpClient);
 
-    await client.updateOwnProfile(USER_TOKEN, request).catch(() => undefined);
+    await client.updateOwnProfile(USER, request).catch(() => undefined);
 
     expect(recorded).toHaveLength(1);
     expect(recorded[0]).toMatchObject({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: '/api/v1/employees/me',
       body: request,
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
   });
 });
 
 describe('EmployeeServiceClient.updateOwnPhoto', () => {
-  it('should put the photo as the photo part with the user token forwarded and no retry', async () => {
+  it('should put the photo as the photo part on behalf of the user and no retry', async () => {
     const recorded: InternalMultipartPutRequest<unknown>[] = [];
     const httpClient: IInternalHttpClient = {
       ...rejectingHttpClient(),
@@ -107,21 +110,20 @@ describe('EmployeeServiceClient.updateOwnPhoto', () => {
     };
     const client = new EmployeeServiceClient(httpClient);
 
-    await client.updateOwnPhoto(USER_TOKEN, PHOTO_BYTES).catch(() => undefined);
+    await client.updateOwnPhoto(USER, PHOTO_BYTES).catch(() => undefined);
 
     expect(recorded).toHaveLength(1);
     expect(recorded[0]).toMatchObject({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: PHOTO_PATH,
       file: { fieldName: PHOTO_FIELD_NAME, content: PHOTO_BYTES },
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
   });
 });
 
 describe('EmployeeServiceClient.getOwnPhoto', () => {
-  it('should fetch the own photo bytes with the user token forwarded', async () => {
+  it('should fetch the own photo bytes on behalf of the user', async () => {
     const recorded: InternalBinaryGetRequest[] = [];
     const httpClient: IInternalHttpClient = {
       ...rejectingHttpClient(),
@@ -132,20 +134,19 @@ describe('EmployeeServiceClient.getOwnPhoto', () => {
     };
     const client = new EmployeeServiceClient(httpClient);
 
-    await client.getOwnPhoto(USER_TOKEN).catch(() => undefined);
+    await client.getOwnPhoto(USER).catch(() => undefined);
 
     expect(recorded).toHaveLength(1);
     expect(recorded[0]).toMatchObject({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: PHOTO_PATH,
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
   });
 });
 
 describe('EmployeeServiceClient.createEmployee', () => {
-  it('should post the create request to the employees route with the user token forwarded and no retry', async () => {
+  it('should post the create request to the employees route on behalf of the user and no retry', async () => {
     const recorded: InternalPostRequest<unknown>[] = [];
     const httpClient: IInternalHttpClient = {
       ...rejectingHttpClient(),
@@ -166,15 +167,14 @@ describe('EmployeeServiceClient.createEmployee', () => {
       initialPassword: 'initial-pass-1',
     };
 
-    await client.createEmployee(USER_TOKEN, request).catch(() => undefined);
+    await client.createEmployee(USER, request).catch(() => undefined);
 
     expect(recorded).toHaveLength(1);
     expect(recorded[0]).toMatchObject({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: '/api/v1/employees',
       body: request,
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
       passThroughErrorCodes: [ErrorCode.EMPLOYEE_PROVISIONING_INCOMPLETE],
     });
   });
@@ -206,19 +206,18 @@ describe('EmployeeServiceClient.listEmployees', () => {
       expectedParameters: { page: '1', pageSize: '20' },
     },
   ])(
-    'should get the list on employee-service with the query and the user token when $condition',
+    'should get the list on employee-service with the query on behalf of the user when $condition',
     async ({ query, expectedParameters }) => {
       const recorded: InternalGetRequest<unknown>[] = [];
       const client = new EmployeeServiceClient(recordingHttpClient(recorded));
 
-      await client.listEmployees(USER_TOKEN, query).catch(() => undefined);
+      await client.listEmployees(USER, query).catch(() => undefined);
 
       expect(recorded).toHaveLength(1);
       expect(recorded[0]).toMatchObject({
         target: ServiceName.EMPLOYEE_SERVICE,
         path: '/api/v1/employees',
-        forwardedUserToken: USER_TOKEN,
-        refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+        onBehalfOf: USER,
       });
       expect(recorded[0]?.query).toEqual(expectedParameters);
     },
@@ -238,15 +237,14 @@ describe('EmployeeServiceClient.getEmployeePhoto', () => {
     const client = new EmployeeServiceClient(httpClient);
 
     await client
-      .getEmployeePhoto(USER_TOKEN, '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13')
+      .getEmployeePhoto(USER, '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13')
       .catch(() => undefined);
 
     expect(recorded).toHaveLength(1);
     expect(recorded[0]).toMatchObject({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: '/api/v1/employees/5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13/photo',
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
   });
 });
@@ -266,15 +264,14 @@ describe('EmployeeServiceClient.updateEmployee', () => {
     };
     const client = new EmployeeServiceClient(httpClient);
 
-    await client.updateEmployee(USER_TOKEN, ACCOUNT_ID, REQUEST).catch(() => undefined);
+    await client.updateEmployee(USER, ACCOUNT_ID, REQUEST).catch(() => undefined);
 
     expect(recorded).toHaveLength(1);
     expect(recorded[0]).toMatchObject({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: `/api/v1/employees/${ACCOUNT_ID}`,
       body: REQUEST,
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
       passThroughErrorCodes: [ErrorCode.EMPLOYEE_UPDATE_INCOMPLETE],
     });
   });

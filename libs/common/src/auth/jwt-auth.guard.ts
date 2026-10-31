@@ -13,10 +13,9 @@ const SIGN_IN_MESSAGE = 'Sign in to continue.';
 const ACCOUNT_DISABLED_MESSAGE = 'This account is no longer active.';
 
 /**
- * Requires a valid user token and an account that is still active. Handlers read the caller's identity with
- * @CurrentUser(). The status check runs on every request with no cache, so it is in the guard rather than in
- * a service that a route might forget to call. A reader failure propagates: the request is refused, never
- * allowed through.
+ * Requires a valid end-user token and an account that is still active. Only api-gateway uses it (D-51), so the
+ * status check runs once per request at the edge. Handlers read the caller's identity with @CurrentUser(). The
+ * check runs on every request with no cache. A reader failure propagates: the request is refused, never allowed.
  */
 @Injectable()
 export class JwtAuthGuard extends AuthGuard(USER_JWT_STRATEGY_NAME) {

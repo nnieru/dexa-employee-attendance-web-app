@@ -1,4 +1,4 @@
-import { JwtAuthGuard, Roles, RolesGuard, type BusinessDate } from '@dexa/common';
+import { GatewayUserAuthGuard, Roles, RolesGuard, type BusinessDate } from '@dexa/common';
 import {
   Role,
   workCalendarDateListQuerySchema,
@@ -34,7 +34,7 @@ import {
 
 // HR only (PRD SCH-5). Employees never read or change the company calendar through this service.
 @Controller('work-calendar-dates')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)
 export class WorkCalendarDateController {
   constructor(

@@ -4,19 +4,23 @@ import {
   type InternalGetRequest,
   type InternalJsonPutRequest,
   type InternalPostRequest,
+  type AuthenticatedUser,
 } from '@dexa/common';
 import {
-  ErrorCode,
   type WorkScheduleOverview,
   type WorkScheduleVersion,
   type WorkScheduleVersionRequest,
+  Role,
 } from '@dexa/contracts';
 import { WorkScheduleClient } from './work-schedule.client.js';
 
 type RecordedRequest =
   InternalGetRequest<unknown> | InternalPostRequest<unknown> | InternalJsonPutRequest<unknown>;
 
-const USER_TOKEN = 'user-access-token';
+const USER: AuthenticatedUser = {
+  accountId: '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13',
+  role: Role.EMPLOYEE,
+};
 const OVERVIEW: WorkScheduleOverview = {
   current: {
     id: '5f3c2a1e-7b4d-4c8e-9a6f-2d1b0e9c8a7f',
@@ -97,19 +101,18 @@ const SAVED_VERSION: WorkScheduleVersion = {
 const VERSION_ID = '0b9e8d7c-6a5f-4e3d-8c2b-1a0f9e8d7c6b';
 
 describe('WorkScheduleClient.getScheduleOverview', () => {
-  it('should get the work schedules route on attendance-service with the user token forwarded and no retry', async () => {
+  it('should get the work schedules route on attendance-service on behalf of the user and no retry', async () => {
     const recorded: RecordedRequest[] = [];
     const client = new WorkScheduleClient(createRecordingHttpClient(OVERVIEW, recorded));
 
-    const response = await client.getScheduleOverview(USER_TOKEN);
+    const response = await client.getScheduleOverview(USER);
 
     expect(response).toEqual(OVERVIEW);
     expect(recorded).toHaveLength(1);
     expect(recorded[0]).toMatchObject({
       target: ServiceName.ATTENDANCE_SERVICE,
       path: '/api/v1/work-schedules',
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
     expect(recorded[0]).not.toHaveProperty('body');
     expect(recorded[0]).not.toHaveProperty('query');
@@ -121,16 +124,16 @@ describe('WorkScheduleClient.getScheduleOverview', () => {
       createRecordingHttpClient({ current: { ...OVERVIEW.current, startTime: '9am' } }, recorded),
     );
 
-    await expect(client.getScheduleOverview(USER_TOKEN)).rejects.toThrow();
+    await expect(client.getScheduleOverview(USER)).rejects.toThrow();
   });
 });
 
 describe('WorkScheduleClient.createVersion', () => {
-  it('should post the version request to the work schedules route with the user token forwarded and no retry', async () => {
+  it('should post the version request to the work schedules route on behalf of the user and no retry', async () => {
     const recorded: RecordedRequest[] = [];
     const client = new WorkScheduleClient(createRecordingHttpClient(SAVED_VERSION, recorded));
 
-    const response = await client.createVersion(USER_TOKEN, VERSION_REQUEST);
+    const response = await client.createVersion(USER, VERSION_REQUEST);
 
     expect(response).toEqual(SAVED_VERSION);
     expect(recorded).toHaveLength(1);
@@ -138,8 +141,7 @@ describe('WorkScheduleClient.createVersion', () => {
       target: ServiceName.ATTENDANCE_SERVICE,
       path: '/api/v1/work-schedules',
       body: VERSION_REQUEST,
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
   });
 
@@ -148,16 +150,16 @@ describe('WorkScheduleClient.createVersion', () => {
       createRecordingHttpClient({ ...SAVED_VERSION, startTime: '9am' }, []),
     );
 
-    await expect(client.createVersion(USER_TOKEN, VERSION_REQUEST)).rejects.toThrow();
+    await expect(client.createVersion(USER, VERSION_REQUEST)).rejects.toThrow();
   });
 });
 
 describe('WorkScheduleClient.updateVersion', () => {
-  it('should put the version request to the version route with the user token forwarded and no retry', async () => {
+  it('should put the version request to the version route on behalf of the user and no retry', async () => {
     const recorded: RecordedRequest[] = [];
     const client = new WorkScheduleClient(createRecordingHttpClient(SAVED_VERSION, recorded));
 
-    const response = await client.updateVersion(USER_TOKEN, VERSION_ID, VERSION_REQUEST);
+    const response = await client.updateVersion(USER, VERSION_ID, VERSION_REQUEST);
 
     expect(response).toEqual(SAVED_VERSION);
     expect(recorded).toHaveLength(1);
@@ -165,8 +167,7 @@ describe('WorkScheduleClient.updateVersion', () => {
       target: ServiceName.ATTENDANCE_SERVICE,
       path: `/api/v1/work-schedules/${VERSION_ID}`,
       body: VERSION_REQUEST,
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
   });
 
@@ -174,7 +175,7 @@ describe('WorkScheduleClient.updateVersion', () => {
     const recorded: RecordedRequest[] = [];
     const client = new WorkScheduleClient(createRecordingHttpClient(SAVED_VERSION, recorded));
 
-    await client.updateVersion(USER_TOKEN, '../attendance/x', VERSION_REQUEST);
+    await client.updateVersion(USER, '../attendance/x', VERSION_REQUEST);
 
     expect(recorded[0]).toMatchObject({
       path: '/api/v1/work-schedules/..%2Fattendance%2Fx',

@@ -1,10 +1,4 @@
-import {
-  AccountStatusModule,
-  AuthModule,
-  HealthModule,
-  InternalHttpModule,
-  ServiceName,
-} from '@dexa/common';
+import { AuthModule, HealthModule, InternalHttpModule, ServiceName } from '@dexa/common';
 import { Module, type Type } from '@nestjs/common';
 import type { AttendanceServiceConfig } from './config/attendance-service-config.schema.js';
 import { ConfigModule } from './config/config.module.js';
@@ -27,12 +21,10 @@ export function createAppModule(config: AttendanceServiceConfig): Type<unknown> 
       AuthModule.forRoot(config),
       InternalHttpModule.forRoot({
         serviceBaseUrls: {
-          [ServiceName.AUTH_SERVICE]: config.AUTH_SERVICE_INTERNAL_URL,
           [ServiceName.EMPLOYEE_SERVICE]: config.EMPLOYEE_SERVICE_INTERNAL_URL,
         },
         authConfig: config,
       }),
-      AccountStatusModule.forRemote(),
       ClockModule,
       DatabaseModule,
       SchedulesModule,

@@ -22,12 +22,8 @@ import {
   masterEmployeeStatuses,
   masterPositions,
 } from '../src/infrastructure/db/schema.js';
-import {
-  USER_JWT_AUDIENCE,
-  USER_JWT_ISSUER,
-  servicePair,
-  type AuthKeySet,
-} from './auth-key-set.js';
+import { servicePair, type AuthKeySet } from './auth-key-set.js';
+import { signGatewayUserToken } from './gateway-user-token.js';
 import {
   employeeServiceAuthKeys,
   employeeServiceEnvironment,
@@ -68,27 +64,20 @@ function nowInSeconds(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-// Signs a user token with the test user key. Only auth-service holds that key in production.
+// Signs the token that api-gateway sends to this service for the user (D-51).
 function signUserToken(
   keys: AuthKeySet,
   accountId: string,
   role: Role,
   expiresAtSeconds: number,
 ): string {
-  const signingInput = [
-    encodeJsonSegment({ alg: 'RS256', typ: 'JWT' }),
-    encodeJsonSegment({
-      sub: accountId,
-      role,
-      iss: USER_JWT_ISSUER,
-      aud: USER_JWT_AUDIENCE,
-      exp: expiresAtSeconds,
-    }),
-  ].join('.');
-  const signature = createSign('RSA-SHA256')
-    .update(signingInput)
-    .sign(keys.user.privateKeyPem, 'base64url');
-  return `${signingInput}.${signature}`;
+  return signGatewayUserToken(
+    keys,
+    ServiceName.EMPLOYEE_SERVICE,
+    accountId,
+    role,
+    expiresAtSeconds,
+  );
 }
 
 // Signs a service token the way a calling service does: the caller's key, its name as kid, issuer, and

@@ -42,12 +42,12 @@ describe('AuthServiceAccountStatusReader', () => {
     expect(requests[0]).toMatchObject({ target: ServiceName.AUTH_SERVICE, path: STATUS_PATH });
   });
 
-  it('should call auth-service with this service token, never a forwarded user token', async () => {
+  it('should call auth-service as this service, never on behalf of a user', async () => {
     const { client, requests } = recordingHttpClient(() => Promise.resolve({ isActive: true }));
 
     await new AuthServiceAccountStatusReader(client).findAccountStatus(ACCOUNT_ID);
 
-    expect(requests[0]?.forwardedUserToken).toBeUndefined();
+    expect(requests[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should encode the account ID as one path segment', async () => {

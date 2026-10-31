@@ -10,11 +10,8 @@ import {
  */
 export function loadEmployeeServiceConfig(): EmployeeServiceConfig {
   const serviceName = process.env.SERVICE_NAME || ServiceName.EMPLOYEE_SERVICE;
-  // Only auth-service signs user tokens. Clearing the private key here keeps it out of this process even
-  // when a shared .env file contains it, so this service cannot mint user tokens.
   return parseConfig(EmployeeServiceConfigSchema, {
     ...process.env,
     SERVICE_NAME: serviceName,
-    USER_JWT_PRIVATE_KEY: undefined,
   });
 }

@@ -90,7 +90,7 @@ const employeeServiceEnvironmentSchema = BaseConfigSchema.extend({
   RABBITMQ_URL: rabbitMqUrlSchema,
   EMPLOYEE_MASTER_DATA: z.preprocess(treatBlankAsUnset, z.string().optional()),
   EMPLOYEE_PHOTO_DIRECTORY: z.preprocess(treatBlankAsUnset, z.string().optional()),
-  // Every user-token request checks the account with auth-service (JwtAuthGuard), so the URL is required.
+  // Provisioning and account administration call auth-service's internal routes, so the URL is required.
   AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
   // The email must match AUTH_BOOTSTRAP_HR_EMAIL in auth-service. Each service reads only its own setting,
   // so the two cannot be checked against each other here.
@@ -121,8 +121,8 @@ const resolvedSettingsSchema = employeeServiceEnvironmentSchema
     };
   });
 
-// Token settings are shared with every service (libs/common/src/config/auth-config.schema.ts). The
-// user private key is refused by the loader, so this service only verifies user tokens.
+// Service key settings are shared with every service (libs/common/src/config/auth-config.schema.ts). The service
+// verifies the gateway's internal tokens, so it holds no user token setting (D-51).
 export const EmployeeServiceConfigSchema = z.intersection(resolvedSettingsSchema, AuthConfigSchema);
 
 export type EmployeeServiceConfig = z.infer<typeof EmployeeServiceConfigSchema>;

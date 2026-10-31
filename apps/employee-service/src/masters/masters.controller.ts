@@ -1,4 +1,4 @@
-import { JwtAuthGuard, Roles, RolesGuard } from '@dexa/common';
+import { GatewayUserAuthGuard, Roles, RolesGuard } from '@dexa/common';
 import { Role, type MasterOption } from '@dexa/contracts';
 import { Controller, Get, Inject, UseGuards } from '@nestjs/common';
 import {
@@ -12,7 +12,7 @@ import {
 // The gateway checks the role too. This service checks it again, so the route stays closed if the
 // gateway is bypassed.
 @Controller()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)
 export class MastersController {
   constructor(

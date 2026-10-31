@@ -10,6 +10,8 @@ import {
   encodeKeyForEnvironment,
   generateAuthKeySet,
   type AuthKeySet,
+  userJwtSigningEnvironmentFor,
+  userJwtVerifierEnvironmentFor,
 } from './auth-key-set.js';
 import {
   startAuthServiceProcess,
@@ -53,6 +55,7 @@ function authServiceProcessEnvironment(
     NODE_ENV: 'test',
     BUSINESS_TIMEZONE: 'Asia/Jakarta',
     ...authEnvironmentFor(keys, ServiceName.AUTH_SERVICE),
+    ...userJwtSigningEnvironmentFor(keys),
     USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(keys.user.privateKeyPem),
     RABBITMQ_URL: UNREACHABLE_BROKER_URL,
     AUTH_DATABASE_URL: databaseUrl,
@@ -76,6 +79,7 @@ describe('api-gateway sign-in through a running auth-service', () => {
     const config = parseConfig(ApiGatewayConfigSchema, {
       BUSINESS_TIMEZONE: 'Asia/Jakarta',
       ...authEnvironmentFor(keys, ServiceName.API_GATEWAY),
+      ...userJwtVerifierEnvironmentFor(keys),
       AUTH_SERVICE_INTERNAL_URL: authService.baseUrl,
       EMPLOYEE_SERVICE_INTERNAL_URL: 'http://employee-service:3000',
       ATTENDANCE_SERVICE_INTERNAL_URL: 'http://attendance-service:3000',
@@ -117,7 +121,7 @@ describe('api-gateway sign-in through a running auth-service', () => {
   );
 
   it(
-    'should return the signed-in account from /auth/me when the gateway forwards the user token',
+    'should return the signed-in account from /auth/me when the gateway acts for the user',
     async () => {
       const session = (await login(HR_EMAIL, HR_PASSWORD).expect(200)).body;
 

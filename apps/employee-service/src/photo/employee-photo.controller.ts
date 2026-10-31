@@ -1,4 +1,4 @@
-import { JwtAuthGuard, Roles, RolesGuard } from '@dexa/common';
+import { GatewayUserAuthGuard, Roles, RolesGuard } from '@dexa/common';
 import { accountIdSchema, PHOTO_CONTENT_TYPE, Role } from '@dexa/contracts';
 import { Controller, Get, Header, Inject, Param, StreamableFile, UseGuards } from '@nestjs/common';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
@@ -10,7 +10,7 @@ import {
 // The static `me/photo` route is declared in OwnPhotoController, which this module registers first, so `me`
 // never reaches the UUID check below. A spec covers that order.
 @Controller('employees')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)
 export class EmployeePhotoController {
   constructor(

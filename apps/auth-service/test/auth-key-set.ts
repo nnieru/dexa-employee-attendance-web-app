@@ -67,16 +67,13 @@ function serviceJwtPublicKeyVariable(serviceName: ServiceName): string {
   return `${serviceName.replaceAll('-', '_').toUpperCase()}_SERVICE_JWT_PUBLIC_KEY`;
 }
 
-/** The environment one service starts with: its own private key and every service's public key. */
+/** The service key settings one service starts with: its own private key and every service's public key. */
 export function authEnvironmentFor(
   keys: AuthKeySet,
   serviceName: ServiceName,
 ): Record<string, string> {
   const environment: Record<string, string> = {
     SERVICE_NAME: serviceName,
-    USER_JWT_ISSUER,
-    USER_JWT_AUDIENCE,
-    USER_JWT_PUBLIC_KEY: encodeKeyForEnvironment(keys.user.publicKeyPem),
     SERVICE_JWT_PRIVATE_KEY: encodeKeyForEnvironment(servicePair(keys, serviceName).privateKeyPem),
   };
   for (const name of Object.values(ServiceName)) {
@@ -87,13 +84,31 @@ export function authEnvironmentFor(
   return environment;
 }
 
+/** The user token settings that api-gateway verifies with. */
+export function userJwtVerifierEnvironmentFor(keys: AuthKeySet): Record<string, string> {
+  return {
+    USER_JWT_ISSUER,
+    USER_JWT_AUDIENCE,
+    USER_JWT_PUBLIC_KEY: encodeKeyForEnvironment(keys.user.publicKeyPem),
+  };
+}
+
+/** The user token settings that auth-service signs with. */
+export function userJwtSigningEnvironmentFor(keys: AuthKeySet): Record<string, string> {
+  return {
+    ...userJwtVerifierEnvironmentFor(keys),
+    USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(keys.user.privateKeyPem),
+  };
+}
+
 // The publisher connects on its first publish, so a URL that refuses connections is enough for a test that
 // asserts only the outbox row. A test that asserts delivery starts a real broker and passes its URL instead.
 export const UNREACHABLE_BROKER_URL = 'amqp://auth-service:unused-password@127.0.0.1:1';
 
 /**
- * The environment that auth-service starts with: the auth settings, the user private key that only this
- * service holds, the timezone, and the broker URL. Tests add the database URL and any bootstrap variables.
+ * The environment that auth-service starts with: the service key settings, the user token signing settings (only
+ * this service holds the user private key), the timezone, and the broker URL. Tests add the database URL and any
+ * bootstrap variables.
  */
 export function authServiceEnvironment(
   keys: AuthKeySet,
@@ -102,7 +117,7 @@ export function authServiceEnvironment(
   return {
     BUSINESS_TIMEZONE: 'Asia/Jakarta',
     ...authEnvironmentFor(keys, ServiceName.AUTH_SERVICE),
-    USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(keys.user.privateKeyPem),
+    ...userJwtSigningEnvironmentFor(keys),
     RABBITMQ_URL: UNREACHABLE_BROKER_URL,
     ...overrides,
   };

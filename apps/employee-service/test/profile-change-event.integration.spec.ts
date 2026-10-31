@@ -1,12 +1,7 @@
 import { Buffer } from 'node:buffer';
-import { createSign, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import {
-  ACCOUNT_STATUS_READER,
-  configureApp,
-  parseConfig,
-  type IAccountStatusReader,
-} from '@dexa/common';
+import { configureApp, parseConfig, ServiceName } from '@dexa/common';
 import {
   employeeProfileUpdatedPayloadSchema,
   eventEnvelopeSchema,
@@ -14,7 +9,6 @@ import {
   ProfileStatus,
   Role,
   type AccountLookupItem,
-  type AccountStatus,
   type EmployeeProfileUpdatedPayload,
 } from '@dexa/contracts';
 import type { Database } from '@dexa/db';
@@ -50,7 +44,8 @@ import {
   masterEmployeeStatuses,
   masterPositions,
 } from '../src/infrastructure/db/schema.js';
-import { USER_JWT_AUDIENCE, USER_JWT_ISSUER, type AuthKeySet } from './auth-key-set.js';
+import type { AuthKeySet } from './auth-key-set.js';
+import { signGatewayUserToken } from './gateway-user-token.js';
 import {
   employeeServiceAuthKeys,
   employeeServiceEnvironment,
@@ -67,7 +62,6 @@ const WAIT_INTERVAL_MS = 50;
 const EVENTS_EXCHANGE = 'app.events';
 const OWN_PROFILE_PATH = '/api/v1/employees/me';
 const OWN_PHOTO_PATH = '/api/v1/employees/me/photo';
-const TOKEN_LIFETIME_SECONDS = 300;
 const PHONE_NUMBER = '+6281234567890';
 const RESET_PASSWORD = 'Reset-Secret-4';
 const INTERNAL_ERROR_STATUS = 500;
@@ -96,11 +90,7 @@ type OutboxRow = typeof outboxEvents.$inferSelect;
 type AmqpConnection = Awaited<ReturnType<typeof connect>>;
 
 // Stands in for auth-service, which owns the accounts. An unknown ID has no status and no directory entry.
-const accountStatuses = new Map<string, AccountStatus>();
 const accountDirectory = new Map<string, AccountLookupItem>();
-const fakeAccountStatusReader: IAccountStatusReader = {
-  findAccountStatus: (accountId) => Promise.resolve(accountStatuses.get(accountId)),
-};
 const fakeAuthAccountClient: IAuthAccountClient = {
   findAccountById: (accountId) => Promise.resolve(accountDirectory.get(accountId)),
   lookupAccounts: (accountIds) =>
@@ -131,26 +121,9 @@ class FailOnceAfterStagingOutboxWriter implements IOutboxWriter {
   }
 }
 
-function encodeJsonSegment(value: object): string {
-  return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-
-// Signs a user token with the test user key. Only auth-service holds that key in production.
+// Signs the token that api-gateway sends to this service for the user (D-51).
 function signUserToken(keys: AuthKeySet, accountId: string, role: Role): string {
-  const signingInput = [
-    encodeJsonSegment({ alg: 'RS256', typ: 'JWT' }),
-    encodeJsonSegment({
-      sub: accountId,
-      role,
-      iss: USER_JWT_ISSUER,
-      aud: USER_JWT_AUDIENCE,
-      exp: Math.floor(Date.now() / 1000) + TOKEN_LIFETIME_SECONDS,
-    }),
-  ].join('.');
-  const signature = createSign('RSA-SHA256')
-    .update(signingInput)
-    .sign(keys.user.privateKeyPem, 'base64url');
-  return `${signingInput}.${signature}`;
+  return signGatewayUserToken(keys, ServiceName.EMPLOYEE_SERVICE, accountId, role);
 }
 
 function uniqueEmail(label: string): string {
@@ -208,8 +181,6 @@ describe('employee-service profile change events', () => {
       }),
     );
     let builder = Test.createTestingModule({ imports: [createAppModule(config)] })
-      .overrideProvider(ACCOUNT_STATUS_READER)
-      .useValue(fakeAccountStatusReader)
       .overrideProvider(AUTH_ACCOUNT_CLIENT)
       .useValue(fakeAuthAccountClient)
       .overrideProvider(AUTH_ACCOUNT_ADMINISTRATION_CLIENT)
@@ -270,7 +241,6 @@ describe('employee-service profile change events', () => {
   }): Promise<{ readonly accountId: string; readonly token: string }> {
     const role = options.role ?? Role.EMPLOYEE;
     const accountId = randomUUID();
-    accountStatuses.set(accountId, { isActive: true });
     accountDirectory.set(accountId, { id: accountId, email: uniqueEmail('employee'), role });
     const [position] = await database.db
       .select({ id: masterPositions.id })

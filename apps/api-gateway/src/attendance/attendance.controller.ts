@@ -1,4 +1,4 @@
-import { Roles } from '@dexa/common';
+import { CurrentUser, Roles, type AuthenticatedUser } from '@dexa/common';
 import {
   attendanceMonitoringQuerySchema,
   attendanceSummaryQuerySchema,
@@ -15,8 +15,7 @@ import {
   type ClockOutResponse,
   type TodayAttendanceResponse,
 } from '@dexa/contracts';
-import { Body, Controller, Get, Headers, Inject, Post, Query } from '@nestjs/common';
-import { readBearerToken } from '../auth/read-bearer-token.js';
+import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
 import {
   ATTENDANCE_SERVICE_CLIENT,
   type IAttendanceServiceClient,
@@ -35,36 +34,34 @@ export class AttendanceController {
   @Post('clock-in')
   clockIn(
     @Body(new ZodValidationPipe(clockInRequestSchema)) _request: ClockInRequest,
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<ClockInResponse> {
-    return this.attendanceService.clockIn(readBearerToken(authorization));
+    return this.attendanceService.clockIn(user);
   }
 
   @Roles(Role.EMPLOYEE, Role.HR)
   @Post('clock-out')
   clockOut(
     @Body(new ZodValidationPipe(clockOutRequestSchema)) _request: ClockOutRequest,
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<ClockOutResponse> {
-    return this.attendanceService.clockOut(readBearerToken(authorization));
+    return this.attendanceService.clockOut(user);
   }
 
   @Roles(Role.EMPLOYEE, Role.HR)
   @Get('me/today')
-  today(
-    @Headers('authorization') authorization: string | undefined,
-  ): Promise<TodayAttendanceResponse> {
-    return this.attendanceService.getToday(readBearerToken(authorization));
+  today(@CurrentUser() user: AuthenticatedUser): Promise<TodayAttendanceResponse> {
+    return this.attendanceService.getToday(user);
   }
 
   // The range and page are validated here and again by attendance-service. The defaults are filled there, from its clock.
   @Roles(Role.EMPLOYEE, Role.HR)
   @Get('me')
   listOwnSummary(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Query(new ZodValidationPipe(attendanceSummaryQuerySchema)) query: AttendanceSummaryQuery,
   ): Promise<AttendanceSummaryPage> {
-    return this.attendanceService.listOwnSummary(readBearerToken(authorization), query);
+    return this.attendanceService.listOwnSummary(user, query);
   }
 
   // HR monitoring of every account's days (ADM-4). The query is strict here and again in attendance-service. The
@@ -72,9 +69,9 @@ export class AttendanceController {
   @Roles(Role.HR)
   @Get()
   listAttendance(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Query(new ZodValidationPipe(attendanceMonitoringQuerySchema)) query: AttendanceMonitoringQuery,
   ): Promise<AttendanceMonitoringPage> {
-    return this.attendanceService.listAttendance(readBearerToken(authorization), query);
+    return this.attendanceService.listAttendance(user, query);
   }
 }

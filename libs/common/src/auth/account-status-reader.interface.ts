@@ -1,9 +1,9 @@
 import type { AccountStatus } from '@dexa/contracts';
 
 /**
- * Reads whether an account may still use its token. JwtAuthGuard calls it on every user-token request, so
- * a deactivated account loses access on its next call. Each service binds it: auth-service reads its own
- * table, and every other service calls auth-service over the internal API.
+ * Reads whether an account may still use its token. Only api-gateway binds it (D-51): JwtAuthGuard calls it on
+ * every user request, and the gateway's stream monitor calls it while a stream is open. It reads auth-service
+ * over the internal API, so no other service needs the reader.
  */
 export interface IAccountStatusReader {
   /** Resolves undefined when no account has the ID. Errors other than "not found" propagate to the caller. */

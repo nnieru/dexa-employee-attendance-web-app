@@ -31,8 +31,16 @@ export {
   readUniqueViolationConstraint,
   toConflictError,
 } from './errors/postgres-error.js';
-export { AuthConfigSchema, type AuthConfig } from './config/auth-config.schema.js';
+export {
+  AuthConfigSchema,
+  UserJwtSigningConfigSchema,
+  UserJwtVerifierConfigSchema,
+  type AuthConfig,
+  type UserJwtSigningConfig,
+  type UserJwtVerifierConfig,
+} from './config/auth-config.schema.js';
 export { AuthModule } from './auth/auth.module.js';
+export { UserTokenVerificationModule } from './auth/user-token-verification.module.js';
 export { CurrentUser } from './auth/current-user.decorator.js';
 export { IS_PUBLIC_KEY, Public, isPublicRoute } from './auth/public.decorator.js';
 export { JwtAuthGuard } from './auth/jwt-auth.guard.js';
@@ -44,6 +52,7 @@ export { AccountStatusModule } from './auth/account-status.module.js';
 export { Roles } from './auth/roles.decorator.js';
 export { RolesGuard } from './auth/roles.guard.js';
 export { ServiceAuthGuard } from './auth/service-auth.guard.js';
+export { GatewayUserAuthGuard } from './auth/gateway-user-auth.guard.js';
 export { ServiceName } from './auth/service-name.js';
 export {
   SERVICE_TOKEN_SIGNER,

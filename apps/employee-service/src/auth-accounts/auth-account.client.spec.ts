@@ -67,7 +67,7 @@ describe('AuthAccountClient', () => {
       path: '/api/v1/internal/accounts/lookup',
       body: { ids: [ACCOUNT_ID] },
     });
-    expect(recorded[0]?.forwardedUserToken).toBeUndefined();
+    expect(recorded[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should return the account when the lookup answers with it', async () => {
@@ -100,7 +100,7 @@ describe('AuthAccountClient.findAccountReferenceByEmail', () => {
       path: '/api/v1/internal/accounts/by-email',
       query: { email: ACCOUNT_EMAIL },
     });
-    expect(recorded[0]?.forwardedUserToken).toBeUndefined();
+    expect(recorded[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should return the account ID and role when Auth answers with them', async () => {
@@ -145,7 +145,7 @@ describe('AuthAccountClient.lookupAccounts', () => {
       path: '/api/v1/internal/accounts/lookup',
       body: { ids: [ACCOUNT_ID, OTHER_ACCOUNT_ID] },
     });
-    expect(recorded[0]?.forwardedUserToken).toBeUndefined();
+    expect(recorded[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should return every account that Auth answers with, and omit the rest', async () => {
@@ -174,7 +174,7 @@ describe('AuthAccountClient.searchAccountIdsByEmail', () => {
       path: '/api/v1/internal/accounts/search',
       query: { email: 'rahma' },
     });
-    expect(recorded[0]?.forwardedUserToken).toBeUndefined();
+    expect(recorded[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should return the matching account IDs when Auth answers with them', async () => {

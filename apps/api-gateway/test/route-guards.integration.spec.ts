@@ -6,6 +6,7 @@ import {
   parseConfig,
   Roles,
   ServiceName,
+  type AuthenticatedUser,
   type InternalBinaryResponse,
 } from '@dexa/common';
 import {
@@ -37,6 +38,7 @@ import { Controller, Get, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import request from 'supertest';
+import { verifyGatewayToken } from './gateway-token.js';
 import { z } from 'zod';
 import { createAppModule } from '../src/app.module.js';
 import {
@@ -58,9 +60,10 @@ import {
 import { ApiGatewayConfigSchema } from '../src/config/api-gateway-config.schema.js';
 import {
   authEnvironmentFor,
-  encodeKeyForEnvironment,
   generateAuthKeySet,
   servicePair,
+  userJwtSigningEnvironmentFor,
+  userJwtVerifierEnvironmentFor,
   USER_JWT_AUDIENCE,
   USER_JWT_ISSUER,
   type AuthKeySet,
@@ -131,7 +134,7 @@ class StubHrController {
 }
 
 // Stands in for employee-service, so these tests cover the gateway's own checks without starting it.
-// Each call records the token it was given, so a test can show the gateway forwarded the caller's token.
+// Each call records the user it was given, so a test can show the gateway acted for the caller.
 const POSITIONS: MasterOption[] = [
   { id: randomUUID(), code: 'DATA_ANALYST', name: 'Data Analyst', isActive: false },
   { id: randomUUID(), code: 'HR_OFFICER', name: 'HR Officer', isActive: true },
@@ -175,7 +178,8 @@ const INCOMPLETE_DETAILS: EmployeeProvisioningIncompleteDetails = {
 const DEFAULT_CREATE_OUTCOME = (): Promise<EmployeeDetail> => Promise.resolve(NEW_EMPLOYEE);
 // A test that needs another answer from employee-service replaces this, and the hook below restores it.
 let createEmployeeOutcome: () => Promise<EmployeeDetail> = DEFAULT_CREATE_OUTCOME;
-const forwardedTokens: string[] = [];
+const forwardedUsers: AuthenticatedUser[] = [];
+const forwardedAccountIds = (): string[] => forwardedUsers.map((user) => user.accountId);
 const createRequests: CreateEmployeeRequest[] = [];
 const profileUpdates: UpdateOwnProfileRequest[] = [];
 const photoUploads: Buffer[] = [];
@@ -234,49 +238,49 @@ const DEFAULT_UPDATE_OUTCOME = (): Promise<EmployeeDetail> => Promise.resolve(UP
 // A test that needs another answer from employee-service replaces this, and the afterEach hook restores it.
 let updateEmployeeOutcome: () => Promise<EmployeeDetail> = DEFAULT_UPDATE_OUTCOME;
 const employeeServiceFake: IEmployeeServiceClient = {
-  updateOwnPhoto: (accessToken: string, photo: Buffer) => {
-    forwardedTokens.push(accessToken);
+  updateOwnPhoto: (user: AuthenticatedUser, photo: Buffer) => {
+    forwardedUsers.push(user);
     photoUploads.push(photo);
     return Promise.resolve(OWN_PROFILE);
   },
-  getOwnPhoto: (accessToken: string) => {
-    forwardedTokens.push(accessToken);
+  getOwnPhoto: (user: AuthenticatedUser) => {
+    forwardedUsers.push(user);
     return Promise.resolve(OWN_PHOTO_FILE);
   },
-  getOwnProfile: (accessToken: string) => {
-    forwardedTokens.push(accessToken);
+  getOwnProfile: (user: AuthenticatedUser) => {
+    forwardedUsers.push(user);
     return Promise.resolve(OWN_PROFILE);
   },
-  updateOwnProfile: (accessToken: string, request: UpdateOwnProfileRequest) => {
-    forwardedTokens.push(accessToken);
+  updateOwnProfile: (user: AuthenticatedUser, request: UpdateOwnProfileRequest) => {
+    forwardedUsers.push(user);
     profileUpdates.push(request);
     return Promise.resolve({ ...OWN_PROFILE, phoneNumber: request.phoneNumber });
   },
-  listPositions: (accessToken: string) => {
-    forwardedTokens.push(accessToken);
+  listPositions: (user: AuthenticatedUser) => {
+    forwardedUsers.push(user);
     return Promise.resolve(POSITIONS);
   },
-  listEmployeeStatuses: (accessToken: string) => {
-    forwardedTokens.push(accessToken);
+  listEmployeeStatuses: (user: AuthenticatedUser) => {
+    forwardedUsers.push(user);
     return Promise.resolve(EMPLOYEE_STATUSES);
   },
-  createEmployee: (accessToken: string, request: CreateEmployeeRequest) => {
-    forwardedTokens.push(accessToken);
+  createEmployee: (user: AuthenticatedUser, request: CreateEmployeeRequest) => {
+    forwardedUsers.push(user);
     createRequests.push(request);
     return createEmployeeOutcome();
   },
-  updateEmployee: (accessToken: string, accountId: string, request: UpdateEmployeeRequest) => {
-    forwardedTokens.push(accessToken);
+  updateEmployee: (user: AuthenticatedUser, accountId: string, request: UpdateEmployeeRequest) => {
+    forwardedUsers.push(user);
     updateRequests.push({ accountId, request });
     return updateEmployeeOutcome();
   },
-  listEmployees: (accessToken: string, query: EmployeeListQuery) => {
-    forwardedTokens.push(accessToken);
+  listEmployees: (user: AuthenticatedUser, query: EmployeeListQuery) => {
+    forwardedUsers.push(user);
     listQueries.push(query);
     return Promise.resolve(EMPLOYEE_LIST_PAGE);
   },
-  getEmployeePhoto: (accessToken: string, accountId: string) => {
-    forwardedTokens.push(accessToken);
+  getEmployeePhoto: (user: AuthenticatedUser, accountId: string) => {
+    forwardedUsers.push(user);
     requestedPhotoAccountIds.push(accountId);
     return Promise.resolve(EMPLOYEE_PHOTO_FILE);
   },
@@ -307,8 +311,8 @@ const attendanceServiceFake: IAttendanceServiceClient = {
   getToday: () => Promise.reject(new Error('The route guard tests never read today.')),
   listOwnSummary: () =>
     Promise.reject(new Error('The route guard tests never list the own summary.')),
-  listAttendance: (accessToken: string, query: AttendanceMonitoringQuery) => {
-    forwardedTokens.push(accessToken);
+  listAttendance: (user: AuthenticatedUser, query: AttendanceMonitoringQuery) => {
+    forwardedUsers.push(user);
     attendanceListQueries.push(query);
     return Promise.resolve(ATTENDANCE_PAGE);
   },
@@ -345,13 +349,17 @@ const scheduleVersionUpdateRequests: {
 const workScheduleClientFake: IWorkScheduleClient = {
   getScheduleOverview: () =>
     Promise.reject(new Error('The route guard tests never read the schedule overview.')),
-  createVersion: (accessToken: string, request: WorkScheduleVersionRequest) => {
-    forwardedTokens.push(accessToken);
+  createVersion: (user: AuthenticatedUser, request: WorkScheduleVersionRequest) => {
+    forwardedUsers.push(user);
     scheduleVersionCreateRequests.push(request);
     return Promise.resolve(SAVED_SCHEDULE_VERSION);
   },
-  updateVersion: (accessToken: string, versionId: string, request: WorkScheduleVersionRequest) => {
-    forwardedTokens.push(accessToken);
+  updateVersion: (
+    user: AuthenticatedUser,
+    versionId: string,
+    request: WorkScheduleVersionRequest,
+  ) => {
+    forwardedUsers.push(user);
     scheduleVersionUpdateRequests.push({ versionId, request });
     return Promise.resolve(SAVED_SCHEDULE_VERSION);
   },
@@ -376,18 +384,18 @@ const calendarDateUpserts: { readonly date: string; readonly request: WorkCalend
   [];
 const calendarDateDeletes: string[] = [];
 const workCalendarDateClientFake: IWorkCalendarDateClient = {
-  listDates: (accessToken: string, query: WorkCalendarDateListQuery) => {
-    forwardedTokens.push(accessToken);
+  listDates: (user: AuthenticatedUser, query: WorkCalendarDateListQuery) => {
+    forwardedUsers.push(user);
     calendarDateListQueries.push(query);
     return Promise.resolve(CALENDAR_DATE_PAGE);
   },
-  upsertDate: (accessToken: string, date: string, request: WorkCalendarDateRequest) => {
-    forwardedTokens.push(accessToken);
+  upsertDate: (user: AuthenticatedUser, date: string, request: WorkCalendarDateRequest) => {
+    forwardedUsers.push(user);
     calendarDateUpserts.push({ date, request });
     return Promise.resolve(CALENDAR_DATE);
   },
-  deleteDate: (accessToken: string, date: string) => {
-    forwardedTokens.push(accessToken);
+  deleteDate: (user: AuthenticatedUser, date: string) => {
+    forwardedUsers.push(user);
     calendarDateDeletes.push(date);
     return Promise.resolve();
   },
@@ -459,7 +467,7 @@ function authServiceProcessEnvironment(
     NODE_ENV: 'test',
     BUSINESS_TIMEZONE: 'Asia/Jakarta',
     ...authEnvironmentFor(keys, ServiceName.AUTH_SERVICE),
-    USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(keys.user.privateKeyPem),
+    ...userJwtSigningEnvironmentFor(keys),
     RABBITMQ_URL: UNREACHABLE_BROKER_URL,
     AUTH_DATABASE_URL: databaseUrl,
     AUTH_BOOTSTRAP_HR_EMAIL: HR_EMAIL,
@@ -547,6 +555,7 @@ describe('api-gateway route guards through a running auth-service', () => {
     const config = parseConfig(ApiGatewayConfigSchema, {
       BUSINESS_TIMEZONE: 'Asia/Jakarta',
       ...authEnvironmentFor(keys, ServiceName.API_GATEWAY),
+      ...userJwtVerifierEnvironmentFor(keys),
       AUTH_SERVICE_INTERNAL_URL: authService.baseUrl,
       EMPLOYEE_SERVICE_INTERNAL_URL: 'http://employee-service:3000',
       ATTENDANCE_SERVICE_INTERNAL_URL: 'http://attendance-service:3000',
@@ -749,12 +758,12 @@ describe('api-gateway route guards through a running auth-service', () => {
   it.each([POSITIONS_PATH, EMPLOYEE_STATUSES_PATH])(
     'should return 401 UNAUTHORIZED on %s when no bearer token is sent, without calling employee-service',
     async (path) => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await request(app.getHttpServer()).get(path).expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -762,7 +771,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it.each([POSITIONS_PATH, EMPLOYEE_STATUSES_PATH])(
     'should return 403 FORBIDDEN on %s when an employee token is sent, without calling employee-service',
     async (path) => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await getWithToken(path, employeeToken).expect(403);
 
@@ -771,7 +780,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         code: 'FORBIDDEN',
         message: 'Your role cannot use this action.',
       });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -779,7 +788,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 201 with the version and forward the HR token when an HR token creates a schedule version',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       scheduleVersionCreateRequests.length = 0;
 
       const response = await postWithToken(
@@ -789,7 +798,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       ).expect(201);
 
       expect(response.body).toEqual(SAVED_SCHEDULE_VERSION);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
       expect(scheduleVersionCreateRequests).toEqual([SCHEDULE_VERSION_REQUEST]);
     },
     TEST_TIMEOUT_MS,
@@ -798,7 +807,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 403 FORBIDDEN without calling attendance-service when an employee token creates a schedule version',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       scheduleVersionCreateRequests.length = 0;
 
       const response = await postWithToken(
@@ -812,7 +821,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         code: 'FORBIDDEN',
         message: 'Your role cannot use this action.',
       });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(scheduleVersionCreateRequests).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -821,7 +830,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 401 UNAUTHORIZED without calling attendance-service when no token creates a schedule version',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       scheduleVersionCreateRequests.length = 0;
 
       const response = await request(app.getHttpServer())
@@ -830,7 +839,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         .expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(scheduleVersionCreateRequests).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -839,7 +848,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 400 VALIDATION_FAILED without calling attendance-service when the create carries effectiveUntil',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       scheduleVersionCreateRequests.length = 0;
 
       const response = await postWithToken(WORK_SCHEDULES_PATH, hrToken, {
@@ -848,7 +857,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       }).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(scheduleVersionCreateRequests).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -857,7 +866,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 200 with the version and forward the HR token when an HR token edits a schedule version',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       scheduleVersionUpdateRequests.length = 0;
 
       const response = await putWithToken(
@@ -867,7 +876,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       ).expect(200);
 
       expect(response.body).toEqual(SAVED_SCHEDULE_VERSION);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
       expect(scheduleVersionUpdateRequests).toEqual([
         { versionId: SAVED_SCHEDULE_VERSION.id, request: SCHEDULE_VERSION_REQUEST },
       ]);
@@ -878,7 +887,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 403 FORBIDDEN without calling attendance-service when an employee token edits a schedule version',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       scheduleVersionUpdateRequests.length = 0;
 
       await putWithToken(
@@ -887,7 +896,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         SCHEDULE_VERSION_REQUEST,
       ).expect(403);
 
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(scheduleVersionUpdateRequests).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -896,12 +905,12 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return the positions and forward the HR token when an HR token calls the positions route',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await getWithToken(POSITIONS_PATH, hrToken).expect(200);
 
       expect(response.body).toEqual(POSITIONS);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -909,12 +918,12 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return the employee statuses and forward the HR token when an HR token calls the statuses route',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await getWithToken(EMPLOYEE_STATUSES_PATH, hrToken).expect(200);
 
       expect(response.body).toEqual(EMPLOYEE_STATUSES);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -925,12 +934,12 @@ describe('api-gateway route guards through a running auth-service', () => {
   ])(
     'should return the own profile and forward the caller token when $caller calls the own profile route',
     async ({ token }) => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await getWithToken(OWN_PROFILE_PATH, token()).expect(200);
 
       expect(response.body).toEqual(OWN_PROFILE);
-      expect(forwardedTokens).toEqual([token()]);
+      expect(forwardedAccountIds()).toEqual([token()].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -938,12 +947,12 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 401 UNAUTHORIZED on the own profile route when no bearer token is sent, without calling employee-service',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await request(app.getHttpServer()).get(OWN_PROFILE_PATH).expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -954,7 +963,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   ])(
     'should return the updated profile and forward the caller token when $caller updates the phone number',
     async ({ token }) => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       profileUpdates.length = 0;
 
       const response = await patchWithToken(OWN_PROFILE_PATH, token(), {
@@ -963,7 +972,7 @@ describe('api-gateway route guards through a running auth-service', () => {
 
       expect(response.body).toEqual({ ...OWN_PROFILE, phoneNumber: '+6281234567890' });
       expect(profileUpdates).toEqual([{ phoneNumber: '+6281234567890' }]);
-      expect(forwardedTokens).toEqual([token()]);
+      expect(forwardedAccountIds()).toEqual([token()].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -986,13 +995,13 @@ describe('api-gateway route guards through a running auth-service', () => {
   ])(
     'should return 400 VALIDATION_FAILED without calling employee-service when $condition',
     async ({ body }) => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       profileUpdates.length = 0;
 
       const response = await patchWithToken(OWN_PROFILE_PATH, employeeToken, body).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(profileUpdates).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1001,7 +1010,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 401 UNAUTHORIZED on the phone update route when no bearer token is sent, without calling employee-service',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await request(app.getHttpServer())
         .patch(OWN_PROFILE_PATH)
@@ -1009,7 +1018,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         .expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -1017,14 +1026,14 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should store the uploaded bytes and forward the employee token when the employee uploads a photo',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       photoUploads.length = 0;
       const upload = Buffer.from('uploaded photo bytes');
 
       const response = await putPhotoWithToken(employeeToken, upload).expect(200);
 
       expect(response.body).toEqual(OWN_PROFILE);
-      expect(forwardedTokens).toEqual([employeeToken]);
+      expect(forwardedAccountIds()).toEqual([employeeToken].map(accountIdOf));
       expect(photoUploads).toHaveLength(1);
       expect(photoUploads[0]?.equals(upload)).toBe(true);
     },
@@ -1034,14 +1043,14 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 413 PHOTO_TOO_LARGE without calling employee-service when the declared length is over the limit',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       photoUploads.length = 0;
       const oversized = Buffer.alloc(MAX_PHOTO_BYTES + PHOTO_MULTIPART_OVERHEAD_BYTES + 1, 0x61);
 
       const response = await putPhotoWithToken(employeeToken, oversized).expect(413);
 
       expect(response.body).toMatchObject({ statusCode: 413, code: 'PHOTO_TOO_LARGE' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(photoUploads).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1050,7 +1059,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 401 UNAUTHORIZED on the photo upload route when no bearer token is sent, without calling employee-service',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       photoUploads.length = 0;
 
       const response = await request(app.getHttpServer())
@@ -1059,7 +1068,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         .expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(photoUploads).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1068,7 +1077,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return the stored bytes with the private photo headers and forward the employee token when the employee fetches the photo',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await getPhotoWithToken(employeeToken).expect(200);
 
@@ -1077,7 +1086,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       expect(response.headers['x-content-type-options']).toBe('nosniff');
       const body: unknown = response.body;
       expect(Buffer.isBuffer(body) && body.equals(STORED_PHOTO_BYTES)).toBe(true);
-      expect(forwardedTokens).toEqual([employeeToken]);
+      expect(forwardedAccountIds()).toEqual([employeeToken].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -1085,12 +1094,12 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 401 UNAUTHORIZED on the photo fetch route when no bearer token is sent, without calling employee-service',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await request(app.getHttpServer()).get(OWN_PHOTO_PATH).expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -1098,7 +1107,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 201 with the employee and forward the HR token when an HR token creates an employee',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       createRequests.length = 0;
 
       const response = await postWithToken(
@@ -1108,7 +1117,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       ).expect(201);
 
       expect(response.body).toEqual(NEW_EMPLOYEE);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
       expect(createRequests).toEqual([
         { ...CREATE_EMPLOYEE_BODY, name: 'Bima Saputra', email: 'bima.saputra@dexa.test' },
       ]);
@@ -1119,7 +1128,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 403 FORBIDDEN without calling employee-service when an employee token creates an employee',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       createRequests.length = 0;
 
       const response = await postWithToken(
@@ -1133,7 +1142,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         code: 'FORBIDDEN',
         message: 'Your role cannot use this action.',
       });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(createRequests).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1142,7 +1151,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 401 UNAUTHORIZED without calling employee-service when no bearer token is sent to the create route',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await request(app.getHttpServer())
         .post(CREATE_EMPLOYEE_PATH)
@@ -1150,7 +1159,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         .expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -1158,7 +1167,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 400 VALIDATION_FAILED without calling employee-service when the create body carries an extra field',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await postWithToken(CREATE_EMPLOYEE_PATH, hrToken, {
         ...CREATE_EMPLOYEE_BODY,
@@ -1166,7 +1175,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       }).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -1174,7 +1183,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 503 with the code, message, and details unchanged when employee-service cannot finish the create',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       const message =
         'Employee creation did not finish. Retry with the same operation ID to finish it.';
       createEmployeeOutcome = () =>
@@ -1196,7 +1205,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         message,
         details: INCOMPLETE_DETAILS,
       });
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -1204,7 +1213,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 200 with the employee and forward the HR token when HR updates an employee',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       updateRequests.length = 0;
 
       const response = await patchWithToken(`/api/v1/employees/${EMPLOYEE_ACCOUNT_ID}`, hrToken, {
@@ -1212,7 +1221,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       }).expect(200);
 
       expect(response.body).toEqual(UPDATED_EMPLOYEE);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
       expect(updateRequests).toEqual([
         { accountId: EMPLOYEE_ACCOUNT_ID, request: { name: 'Bima Saputra' } },
       ]);
@@ -1223,7 +1232,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 403 without calling employee-service when an employee token updates an employee',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       updateRequests.length = 0;
 
       const response = await patchWithToken(
@@ -1239,7 +1248,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         code: 'FORBIDDEN',
         message: 'Your role cannot use this action.',
       });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(updateRequests).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1248,7 +1257,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 401 without calling employee-service when no bearer token is sent to the update route',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
 
       const response = await request(app.getHttpServer())
         .patch(`/api/v1/employees/${EMPLOYEE_ACCOUNT_ID}`)
@@ -1256,7 +1265,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         .expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -1280,13 +1289,13 @@ describe('api-gateway route guards through a running auth-service', () => {
   ])(
     'should return 400 without calling employee-service when $condition',
     async ({ path, body }) => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       updateRequests.length = 0;
 
       const response = await patchWithToken(path, hrToken, body).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(updateRequests).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1295,7 +1304,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 503 with the code, message, and details unchanged when employee-service stops the update after a save',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       updateEmployeeOutcome = () =>
         Promise.reject(
           new DependencyUnavailableError(
@@ -1315,7 +1324,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         message: UPDATE_INCOMPLETE_MESSAGE,
         details: UPDATE_INCOMPLETE_DETAILS,
       });
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -1323,7 +1332,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should still route PATCH employees/me to the self-service phone update when an HR token calls it',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       profileUpdates.length = 0;
       updateRequests.length = 0;
 
@@ -1333,7 +1342,7 @@ describe('api-gateway route guards through a running auth-service', () => {
 
       expect(profileUpdates).toEqual([{ phoneNumber: '+6281234567890' }]);
       expect(updateRequests).toEqual([]);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -1418,7 +1427,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return the page and forward the query and the HR token when HR lists employees',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       listQueries.length = 0;
 
       const response = await getWithToken(
@@ -1427,7 +1436,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       ).expect(200);
 
       expect(response.body).toEqual(EMPLOYEE_LIST_PAGE);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
       expect(listQueries).toEqual([{ page: 2, pageSize: 5, q: 'Kusuma' }]);
     },
     TEST_TIMEOUT_MS,
@@ -1436,7 +1445,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 403 without calling employee-service when an employee token lists employees',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       listQueries.length = 0;
 
       const response = await getWithToken(EMPLOYEE_LIST_PATH, employeeToken).expect(403);
@@ -1446,7 +1455,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         code: 'FORBIDDEN',
         message: 'Your role cannot use this action.',
       });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(listQueries).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1455,13 +1464,13 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 400 without calling employee-service when the list query has an unknown key',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       listQueries.length = 0;
 
       const response = await getWithToken(`${EMPLOYEE_LIST_PATH}?sort=name`, hrToken).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(listQueries).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1470,7 +1479,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return the HR photo bytes with the private photo headers and forward the HR token',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       requestedPhotoAccountIds.length = 0;
 
       const response = await getPhotoWithToken(
@@ -1483,7 +1492,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       expect(response.headers['x-content-type-options']).toBe('nosniff');
       const body: unknown = response.body;
       expect(Buffer.isBuffer(body) && body.equals(LISTED_EMPLOYEE_PHOTO_BYTES)).toBe(true);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
       expect(requestedPhotoAccountIds).toEqual([LISTED_EMPLOYEE_ACCOUNT_ID]);
     },
     TEST_TIMEOUT_MS,
@@ -1492,7 +1501,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 403 without calling employee-service when an employee asks for another employee photo',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       requestedPhotoAccountIds.length = 0;
 
       const response = await getWithToken(
@@ -1501,7 +1510,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       ).expect(403);
 
       expect(response.body).toMatchObject({ statusCode: 403, code: 'FORBIDDEN' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(requestedPhotoAccountIds).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1510,13 +1519,13 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 400 without calling employee-service when the photo account ID is not a UUID',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       requestedPhotoAccountIds.length = 0;
 
       const response = await getWithToken(EMPLOYEE_PHOTO_PATH('not-a-uuid'), hrToken).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(requestedPhotoAccountIds).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1525,7 +1534,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should keep the static me routes on their own handlers when HR calls them',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       requestedPhotoAccountIds.length = 0;
 
       const profile = await getWithToken(OWN_PROFILE_PATH, hrToken).expect(200);
@@ -1535,7 +1544,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       const body: unknown = photo.body;
       expect(Buffer.isBuffer(body) && body.equals(STORED_PHOTO_BYTES)).toBe(true);
       expect(requestedPhotoAccountIds).toEqual([]);
-      expect(forwardedTokens).toEqual([hrToken, hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken, hrToken].map(accountIdOf));
     },
     TEST_TIMEOUT_MS,
   );
@@ -1543,7 +1552,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 204 and forward the HR token when an HR token deletes a calendar date',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       calendarDateDeletes.length = 0;
 
       const response = await deleteWithToken(
@@ -1552,7 +1561,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       ).expect(204);
 
       expect(response.text).toBe('');
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
       expect(calendarDateDeletes).toEqual(['2026-11-09']);
     },
     TEST_TIMEOUT_MS,
@@ -1561,7 +1570,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 403 FORBIDDEN without calling attendance-service when an employee token deletes a calendar date',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       calendarDateDeletes.length = 0;
 
       const response = await deleteWithToken(
@@ -1574,7 +1583,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         code: 'FORBIDDEN',
         message: 'Your role cannot use this action.',
       });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(calendarDateDeletes).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1583,7 +1592,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 400 VALIDATION_FAILED without calling attendance-service when the delete date is not an ISO date',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       calendarDateDeletes.length = 0;
 
       const response = await deleteWithToken(
@@ -1592,7 +1601,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       ).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(calendarDateDeletes).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1601,7 +1610,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return the page and forward the range, page and HR token when HR lists calendar dates',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       calendarDateListQueries.length = 0;
 
       const response = await getWithToken(
@@ -1610,7 +1619,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       ).expect(200);
 
       expect(response.body).toEqual(CALENDAR_DATE_PAGE);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
       expect(calendarDateListQueries).toEqual([
         { from: '2026-11-01', to: '2026-11-30', page: 1, pageSize: 20 },
       ]);
@@ -1621,7 +1630,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 403 FORBIDDEN without calling attendance-service when an employee token lists calendar dates',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       calendarDateListQueries.length = 0;
 
       const response = await getWithToken(
@@ -1634,7 +1643,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         code: 'FORBIDDEN',
         message: 'Your role cannot use this action.',
       });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(calendarDateListQueries).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1643,7 +1652,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 401 UNAUTHORIZED without calling attendance-service when no token lists calendar dates',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       calendarDateListQueries.length = 0;
 
       const response = await request(app.getHttpServer())
@@ -1651,7 +1660,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         .expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(calendarDateListQueries).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1660,7 +1669,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 400 VALIDATION_FAILED without calling attendance-service when the list has no from bound',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       calendarDateListQueries.length = 0;
 
       const response = await getWithToken(
@@ -1669,7 +1678,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       ).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(calendarDateListQueries).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1678,7 +1687,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 200 with the exception and forward the HR token when an HR token saves a calendar date',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       calendarDateUpserts.length = 0;
 
       const response = await putWithToken(`${WORK_CALENDAR_DATES_PATH}/2026-11-09`, hrToken, {
@@ -1687,7 +1696,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       }).expect(200);
 
       expect(response.body).toEqual(CALENDAR_DATE);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
       expect(calendarDateUpserts).toEqual([
         {
           date: '2026-11-09',
@@ -1701,7 +1710,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 403 FORBIDDEN without calling attendance-service when an employee token saves a calendar date',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       calendarDateUpserts.length = 0;
 
       const response = await putWithToken(`${WORK_CALENDAR_DATES_PATH}/2026-11-09`, employeeToken, {
@@ -1713,7 +1722,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         code: 'FORBIDDEN',
         message: 'Your role cannot use this action.',
       });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(calendarDateUpserts).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1722,7 +1731,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 400 VALIDATION_FAILED without calling attendance-service when the save carries the date in its body',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       calendarDateUpserts.length = 0;
 
       const response = await putWithToken(`${WORK_CALENDAR_DATES_PATH}/2026-11-09`, hrToken, {
@@ -1731,7 +1740,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       }).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(calendarDateUpserts).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1740,7 +1749,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return the page and forward the query and the HR token when HR lists attendance',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       attendanceListQueries.length = 0;
 
       const response = await getWithToken(
@@ -1749,7 +1758,7 @@ describe('api-gateway route guards through a running auth-service', () => {
       ).expect(200);
 
       expect(response.body).toEqual(ATTENDANCE_PAGE);
-      expect(forwardedTokens).toEqual([hrToken]);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
       expect(attendanceListQueries).toEqual([
         {
           from: '2026-11-01',
@@ -1766,7 +1775,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 403 without calling attendance-service when an employee token lists attendance',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       attendanceListQueries.length = 0;
 
       const response = await getWithToken(ATTENDANCE_LIST_PATH, employeeToken).expect(403);
@@ -1776,7 +1785,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         code: 'FORBIDDEN',
         message: 'Your role cannot use this action.',
       });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(attendanceListQueries).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1785,13 +1794,13 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 400 without calling attendance-service when the attendance query has an unknown key',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       attendanceListQueries.length = 0;
 
       const response = await getWithToken(`${ATTENDANCE_LIST_PATH}?sort=name`, hrToken).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(attendanceListQueries).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1800,14 +1809,14 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 404 without calling attendance-service when HR patches an attendance record',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       attendanceListQueries.length = 0;
 
       await patchWithToken(ATTENDANCE_RECORD_PATH, hrToken, {
         clockInAt: '2026-11-02T02:00:00Z',
       }).expect(404);
 
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(attendanceListQueries).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1816,7 +1825,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   it(
     'should return 404 without calling attendance-service when HR deletes an attendance record',
     async () => {
-      forwardedTokens.length = 0;
+      forwardedUsers.length = 0;
       attendanceListQueries.length = 0;
 
       await request(app.getHttpServer())
@@ -1824,7 +1833,7 @@ describe('api-gateway route guards through a running auth-service', () => {
         .set('Authorization', `Bearer ${hrToken}`)
         .expect(404);
 
-      expect(forwardedTokens).toEqual([]);
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(attendanceListQueries).toEqual([]);
     },
     TEST_TIMEOUT_MS,
@@ -1832,7 +1841,7 @@ describe('api-gateway route guards through a running auth-service', () => {
 
   describe('HR notification stream', () => {
     it(
-      'should relay each frame as soon as notification-service writes it, with the HR token forwarded',
+      'should relay each frame as soon as notification-service writes it, with a gateway token for the HR user',
       async () => {
         const response = await fetch(`${gatewayUrl}${NOTIFICATION_STREAM_PATH}`, {
           headers: { Authorization: `Bearer ${hrToken}` },
@@ -1844,7 +1853,12 @@ describe('api-gateway route guards through a running auth-service', () => {
         expect(response.headers.get('content-type')).toBe('text/event-stream; charset=utf-8');
         expect(response.headers.get('cache-control')).toBe('no-cache, no-transform');
         expect(response.headers.get('x-accel-buffering')).toBe('no');
-        expect(upstream.authorization).toBe(`Bearer ${hrToken}`);
+        expect(
+          verifyGatewayToken(keys, upstream.authorization, ServiceName.NOTIFICATION_SERVICE),
+        ).toEqual({
+          accountId: accountIdOf(hrToken),
+          role: Role.HR,
+        });
 
         // The second frame is written only after the first has reached the browser, so a gateway that buffers the
         // upstream answer would hold the first frame until the relay timeout.

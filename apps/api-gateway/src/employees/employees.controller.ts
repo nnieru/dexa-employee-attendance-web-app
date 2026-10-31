@@ -1,4 +1,4 @@
-import { Roles } from '@dexa/common';
+import { CurrentUser, Roles, type AuthenticatedUser } from '@dexa/common';
 import {
   accountIdSchema,
   createEmployeeRequestSchema,
@@ -20,7 +20,6 @@ import {
   Controller,
   Get,
   Header,
-  Headers,
   HttpCode,
   HttpStatus,
   Inject,
@@ -38,10 +37,9 @@ import {
   type IEmployeeServiceClient,
 } from './employee-service-client.interface.js';
 import { PhotoUploadInterceptor } from './photo-upload.interceptor.js';
-import { readBearerToken } from '../auth/read-bearer-token.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 
-// The gateway forwards the caller's token, and employee-service takes the account from that token, so no account
+// The gateway forwards the caller's identity, and employee-service takes the account from that identity, so no account
 // ID is read from the request here.
 @Controller('employees')
 export class EmployeesController {
@@ -51,18 +49,18 @@ export class EmployeesController {
 
   @Roles(Role.EMPLOYEE, Role.HR)
   @Get('me')
-  getOwnProfile(@Headers('authorization') authorization: string | undefined): Promise<OwnProfile> {
-    return this.employeeService.getOwnProfile(readBearerToken(authorization));
+  getOwnProfile(@CurrentUser() user: AuthenticatedUser): Promise<OwnProfile> {
+    return this.employeeService.getOwnProfile(user);
   }
 
   // HR's roster (ADM-3). The query is validated here and again by employee-service. HR accounts are listed too (D-14).
   @Roles(Role.HR)
   @Get()
   listEmployees(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Query(new ZodValidationPipe(employeeListQuerySchema)) query: EmployeeListQuery,
   ): Promise<EmployeeListPage> {
-    return this.employeeService.listEmployees(readBearerToken(authorization), query);
+    return this.employeeService.listEmployees(user, query);
   }
 
   // HR creates an employee (ADM-1). The body is validated strictly here and again by employee-service. The body holds
@@ -71,10 +69,10 @@ export class EmployeesController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   createEmployee(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(createEmployeeRequestSchema)) request: CreateEmployeeRequest,
   ): Promise<EmployeeDetail> {
-    return this.employeeService.createEmployee(readBearerToken(authorization), request);
+    return this.employeeService.createEmployee(user, request);
   }
 
   // The body is strict, so only the phone number can change here. Name, email, position, and status stay read only.
@@ -82,10 +80,10 @@ export class EmployeesController {
   @Roles(Role.EMPLOYEE, Role.HR)
   @Patch('me')
   updateOwnProfile(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(updateOwnProfileRequestSchema)) request: UpdateOwnProfileRequest,
   ): Promise<OwnProfile> {
-    return this.employeeService.updateOwnProfile(readBearerToken(authorization), request);
+    return this.employeeService.updateOwnProfile(user, request);
   }
 
   // HR updates an employee (ADM-2). The body is strict and validated here and again by employee-service. It can carry a
@@ -93,11 +91,11 @@ export class EmployeesController {
   @Roles(Role.HR)
   @Patch(':accountId')
   updateEmployee(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('accountId', new ZodValidationPipe(accountIdSchema)) accountId: string,
     @Body(new ZodValidationPipe(updateEmployeeRequestSchema)) request: UpdateEmployeeRequest,
   ): Promise<EmployeeDetail> {
-    return this.employeeService.updateEmployee(readBearerToken(authorization), accountId, request);
+    return this.employeeService.updateEmployee(user, accountId, request);
   }
 
   // The interceptor refuses an oversized upload before the body is buffered, so the file here is within the limit.
@@ -105,10 +103,10 @@ export class EmployeesController {
   @Put('me/photo')
   @UseInterceptors(PhotoUploadInterceptor)
   updateOwnPhoto(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() photo: Express.Multer.File,
   ): Promise<OwnProfile> {
-    return this.employeeService.updateOwnPhoto(readBearerToken(authorization), photo.buffer);
+    return this.employeeService.updateOwnPhoto(user, photo.buffer);
   }
 
   // The photo is private to its owner, so no cache may keep it, and its type is fixed so it cannot render as markup.
@@ -116,10 +114,8 @@ export class EmployeesController {
   @Get('me/photo')
   @Header('Cache-Control', 'private, no-store')
   @Header('X-Content-Type-Options', 'nosniff')
-  async getOwnPhoto(
-    @Headers('authorization') authorization: string | undefined,
-  ): Promise<StreamableFile> {
-    const photo = await this.employeeService.getOwnPhoto(readBearerToken(authorization));
+  async getOwnPhoto(@CurrentUser() user: AuthenticatedUser): Promise<StreamableFile> {
+    const photo = await this.employeeService.getOwnPhoto(user);
     return new StreamableFile(photo.body, { type: PHOTO_CONTENT_TYPE });
   }
 
@@ -130,13 +126,10 @@ export class EmployeesController {
   @Header('Cache-Control', 'private, no-store')
   @Header('X-Content-Type-Options', 'nosniff')
   async getEmployeePhoto(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('accountId', new ZodValidationPipe(accountIdSchema)) accountId: string,
   ): Promise<StreamableFile> {
-    const photo = await this.employeeService.getEmployeePhoto(
-      readBearerToken(authorization),
-      accountId,
-    );
+    const photo = await this.employeeService.getEmployeePhoto(user, accountId);
     return new StreamableFile(photo.body, { type: PHOTO_CONTENT_TYPE });
   }
 }

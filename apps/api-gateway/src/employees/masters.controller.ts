@@ -1,11 +1,10 @@
-import { Controller, Get, Headers, Inject } from '@nestjs/common';
-import { Roles } from '@dexa/common';
+import { Controller, Get, Inject } from '@nestjs/common';
+import { CurrentUser, Roles, type AuthenticatedUser } from '@dexa/common';
 import { Role, type MasterOption } from '@dexa/contracts';
 import {
   EMPLOYEE_SERVICE_CLIENT,
   type IEmployeeServiceClient,
 } from './employee-service-client.interface.js';
-import { readBearerToken } from '../auth/read-bearer-token.js';
 
 // The HR lookups that position and status pickers read. The global guards verify the token and the
 // role; employee-service checks the role again on these routes.
@@ -17,17 +16,13 @@ export class MastersController {
 
   @Roles(Role.HR)
   @Get('positions')
-  listPositions(
-    @Headers('authorization') authorization: string | undefined,
-  ): Promise<MasterOption[]> {
-    return this.employeeService.listPositions(readBearerToken(authorization));
+  listPositions(@CurrentUser() user: AuthenticatedUser): Promise<MasterOption[]> {
+    return this.employeeService.listPositions(user);
   }
 
   @Roles(Role.HR)
   @Get('employee-statuses')
-  listEmployeeStatuses(
-    @Headers('authorization') authorization: string | undefined,
-  ): Promise<MasterOption[]> {
-    return this.employeeService.listEmployeeStatuses(readBearerToken(authorization));
+  listEmployeeStatuses(@CurrentUser() user: AuthenticatedUser): Promise<MasterOption[]> {
+    return this.employeeService.listEmployeeStatuses(user);
   }
 }

@@ -1,22 +1,41 @@
 import { jest } from '@jest/globals';
-import { DependencyUnavailableError, ForbiddenError, UnauthorizedError } from '@dexa/common';
-import { ErrorCode } from '@dexa/contracts';
+import {
+  DependencyUnavailableError,
+  ForbiddenError,
+  ServiceName,
+  type AuthenticatedUser,
+  type IServiceTokenSigner,
+} from '@dexa/common';
+import { ErrorCode, Role } from '@dexa/contracts';
 import { NotificationStreamClient } from './notification-stream.client.js';
 import type { NotificationStreamRequest } from './notification-stream-client.interface.js';
 
 const BASE_URL = 'http://notification-service:3000';
 const STREAM_URL = `${BASE_URL}/api/v1/notifications/stream`;
-const ACCESS_TOKEN = 'hr-access-token-value';
+const USER: AuthenticatedUser = {
+  accountId: '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13',
+  role: Role.HR,
+};
+// The credential that the signer returns, so a test can see that the stream sends the signed token and nothing else.
+const CREDENTIAL = 'internal-token-for-notification-service';
 const CONNECT_TIMEOUT_MILLISECONDS = 20;
 const EVENT_FRAME = 'event: notification\ndata: {}\n\n';
 const OVERSIZED_BODY_BYTES = 8_192;
 
+const signedFor: Array<{ audience: string; onBehalfOf: AuthenticatedUser | undefined }> = [];
+const tokenSigner: IServiceTokenSigner = {
+  signFor: (audience, onBehalfOf) => {
+    signedFor.push({ audience, onBehalfOf });
+    return Promise.resolve(CREDENTIAL);
+  },
+};
+
 function clientWithShortTimeout(): NotificationStreamClient {
-  return new NotificationStreamClient(BASE_URL, CONNECT_TIMEOUT_MILLISECONDS);
+  return new NotificationStreamClient(BASE_URL, CONNECT_TIMEOUT_MILLISECONDS, tokenSigner);
 }
 
 function requestFor(signal: AbortSignal = new AbortController().signal): NotificationStreamRequest {
-  return { accessToken: ACCESS_TOKEN, signal };
+  return { user: USER, signal };
 }
 
 function jsonAnswer(status: number, body: unknown): Response {
@@ -49,9 +68,10 @@ function slowBodyFetch(delayMilliseconds: number): typeof fetch {
 describe('NotificationStreamClient', () => {
   afterEach(() => {
     jest.restoreAllMocks();
+    signedFor.length = 0;
   });
 
-  it('should request the stream path with the caller token and refuse redirects', async () => {
+  it('should request the stream path with a token signed for notification-service on behalf of the user', async () => {
     const fetchSpy = jest
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response('', { status: 200 }));
@@ -60,7 +80,8 @@ describe('NotificationStreamClient', () => {
 
     const [url, init] = fetchSpy.mock.calls[0] ?? [];
     expect(url).toBe(STREAM_URL);
-    expect(new Headers(init?.headers).get('authorization')).toBe(`Bearer ${ACCESS_TOKEN}`);
+    expect(new Headers(init?.headers).get('authorization')).toBe(`Bearer ${CREDENTIAL}`);
+    expect(signedFor).toEqual([{ audience: ServiceName.NOTIFICATION_SERVICE, onBehalfOf: USER }]);
     expect(init?.redirect).toBe('error');
   });
 
@@ -107,7 +128,8 @@ describe('NotificationStreamClient', () => {
     );
   });
 
-  it('should refuse with the account-disabled code when the upstream reports an inactive account', async () => {
+  it('should report dependency unavailable when the upstream refuses the gateway token, even with an account code', async () => {
+    // The account was checked by the gateway, so a 401 here is a refused token: a misconfiguration, never the user's.
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(
       jsonAnswer(401, {
         statusCode: 401,
@@ -116,12 +138,9 @@ describe('NotificationStreamClient', () => {
       }),
     );
 
-    const failure = await clientWithShortTimeout()
-      .openStream(requestFor())
-      .catch((error: unknown) => error);
-
-    expect(failure).toBeInstanceOf(UnauthorizedError);
-    expect(failure).toMatchObject({ code: ErrorCode.ACCOUNT_DISABLED });
+    await expect(clientWithShortTimeout().openStream(requestFor())).rejects.toBeInstanceOf(
+      DependencyUnavailableError,
+    );
   });
 
   it('should refuse with forbidden when the upstream answers 403 with the forbidden code', async () => {
@@ -179,6 +198,6 @@ describe('NotificationStreamClient', () => {
 
     expect(failure).toBeInstanceOf(DependencyUnavailableError);
     const cause = failure instanceof Error ? failure.cause : undefined;
-    expect(String(cause)).not.toContain(ACCESS_TOKEN);
+    expect(String(cause)).not.toContain(CREDENTIAL);
   });
 });

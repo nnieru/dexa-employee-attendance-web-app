@@ -1,4 +1,3 @@
-import { ACCOUNT_STATUS_READER, type IAccountStatusReader } from '@dexa/common';
 import { Inject, Injectable, Logger, type BeforeApplicationShutdown } from '@nestjs/common';
 import type { Response } from 'express';
 import { NOTIFICATION_HUB, type INotificationHub } from './notification-hub.interface.js';
@@ -18,8 +17,9 @@ const EVENT_STREAM_HEADERS = {
 
 /**
  * Opens the HR notification stream for one recipient. The stream carries the rows committed for that recipient and
- * heartbeat comments. It ends when the client leaves, when a heartbeat finds the account inactive (D-13), or when the
- * account check fails, because a stream that cannot be verified must not stay open.
+ * heartbeat comments. It ends when the client leaves. The account is not checked here: api-gateway checks it while it
+ * proxies the stream, and closes the connection when the account is deactivated (D-51). The token is checked once, at
+ * connect, by the guard on the route.
  */
 @Injectable()
 export class NotificationStreamService implements BeforeApplicationShutdown {
@@ -28,7 +28,6 @@ export class NotificationStreamService implements BeforeApplicationShutdown {
 
   constructor(
     @Inject(NOTIFICATION_HUB) private readonly hub: INotificationHub,
-    @Inject(ACCOUNT_STATUS_READER) private readonly accountStatuses: IAccountStatusReader,
     @Inject(NOTIFICATION_STREAM_HEARTBEAT) private readonly heartbeatMilliseconds: number,
   ) {}
 
@@ -39,8 +38,10 @@ export class NotificationStreamService implements BeforeApplicationShutdown {
     const unsubscribe = this.hub.subscribe(recipientAccountId, (notification) => {
       connection.send(formatNotificationFrame(notification));
     });
+    // A heartbeat keeps proxies from closing an idle connection. It is sent only while the stream is open,
+    // because onClose clears the timer.
     const heartbeat = setInterval(() => {
-      void this.beat(recipientAccountId, connection);
+      connection.send(HEARTBEAT_FRAME);
     }, this.heartbeatMilliseconds);
     this.openConnections.add(connection);
     connection.onClose(() => {
@@ -55,31 +56,6 @@ export class NotificationStreamService implements BeforeApplicationShutdown {
   beforeApplicationShutdown(): void {
     for (const connection of [...this.openConnections]) {
       connection.close();
-    }
-  }
-
-  private async beat(
-    recipientAccountId: string,
-    connection: NotificationStreamConnection,
-  ): Promise<void> {
-    if (connection.isClosed) return;
-    const isActive = await this.isAccountActive(recipientAccountId);
-    if (!isActive) {
-      connection.close();
-      return;
-    }
-    connection.send(HEARTBEAT_FRAME);
-  }
-
-  private async isAccountActive(accountId: string): Promise<boolean> {
-    try {
-      const status = await this.accountStatuses.findAccountStatus(accountId);
-      return status?.isActive === true;
-    } catch (error: unknown) {
-      // Fails closed. The client reconnects, and the gateway refuses the reconnect if the account is inactive.
-      const reason = error instanceof Error ? error.name : 'unknown error';
-      this.logger.warn(`Closing a notification stream after its account check failed (${reason}).`);
-      return false;
     }
   }
 }

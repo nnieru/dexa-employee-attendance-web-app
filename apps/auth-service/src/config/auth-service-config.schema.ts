@@ -1,4 +1,10 @@
-import { AuthConfigSchema, BaseConfigSchema, ServiceName, type BaseConfig } from '@dexa/common';
+import {
+  AuthConfigSchema,
+  BaseConfigSchema,
+  ServiceName,
+  UserJwtSigningConfigSchema,
+  type BaseConfig,
+} from '@dexa/common';
 import { passwordSchema } from '@dexa/contracts';
 import { z } from 'zod';
 
@@ -55,19 +61,22 @@ const serviceEnvironmentSchema = BaseConfigSchema.extend({
   AUTH_BOOTSTRAP_HR_PASSWORD: z.preprocess(treatBlankAsUnset, passwordSchema.optional()),
 }).superRefine(requireBootstrapHrPair);
 
-// auth-service is the only service that issues user tokens, so it alone must hold the private key.
-const tokenSettingsSchema = AuthConfigSchema.transform((tokenSettings, context) => {
-  const userPrivateKey = tokenSettings.USER_JWT_PRIVATE_KEY;
-  if (userPrivateKey === undefined) {
-    context.addIssue({
-      code: 'custom',
-      path: ['USER_JWT_PRIVATE_KEY'],
-      message: 'must be set for auth-service',
-    });
-    return z.NEVER;
-  }
-  return { ...tokenSettings, USER_JWT_PRIVATE_KEY: userPrivateKey };
-});
+// auth-service is the only service that issues user tokens, so it alone must hold the private key (D-51).
+// The shared schema checks the key pair; this step requires the private key that the shared schema leaves optional.
+const tokenSettingsSchema = z
+  .intersection(AuthConfigSchema, UserJwtSigningConfigSchema)
+  .transform((tokenSettings, context) => {
+    const userPrivateKey = tokenSettings.USER_JWT_PRIVATE_KEY;
+    if (userPrivateKey === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['USER_JWT_PRIVATE_KEY'],
+        message: 'must be set for auth-service',
+      });
+      return z.NEVER;
+    }
+    return { ...tokenSettings, USER_JWT_PRIVATE_KEY: userPrivateKey };
+  });
 
 export const AuthServiceConfigSchema = z.intersection(
   serviceEnvironmentSchema,

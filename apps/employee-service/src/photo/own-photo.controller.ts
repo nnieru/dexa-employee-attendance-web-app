@@ -1,4 +1,10 @@
-import { CurrentUser, JwtAuthGuard, Roles, RolesGuard, type AuthenticatedUser } from '@dexa/common';
+import {
+  CurrentUser,
+  GatewayUserAuthGuard,
+  Roles,
+  RolesGuard,
+  type AuthenticatedUser,
+} from '@dexa/common';
 import { PHOTO_CONTENT_TYPE, Role, type OwnProfile } from '@dexa/contracts';
 import {
   Controller,
@@ -21,7 +27,7 @@ import { PhotoUploadInterceptor } from './photo-upload.interceptor.js';
 // The identity comes only from the verified token. No route here takes an account parameter, so an employee
 // reaches only their own photo.
 @Controller('employees')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.EMPLOYEE, Role.HR)
 export class OwnPhotoController {
   constructor(

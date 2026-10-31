@@ -6,9 +6,6 @@ import { generateKeyPairSync } from 'node:crypto';
 // that this service's tests do not import another package's test folder. Test-only key material,
 // generated when a test asks for it, so no key is stored in the repository.
 
-export const USER_JWT_ISSUER = 'auth-service';
-export const USER_JWT_AUDIENCE = 'dexa-api';
-
 const RSA_MODULUS_BITS = 2048;
 const P256_CURVE_NAME = 'prime256v1';
 
@@ -67,16 +64,13 @@ function serviceJwtPublicKeyVariable(serviceName: ServiceName): string {
   return `${serviceName.replaceAll('-', '_').toUpperCase()}_SERVICE_JWT_PUBLIC_KEY`;
 }
 
-/** The environment one service starts with: its own private key and every service's public key. */
+/** The service key settings one service starts with: its own private key and every service's public key. */
 export function authEnvironmentFor(
   keys: AuthKeySet,
   serviceName: ServiceName,
 ): Record<string, string> {
   const environment: Record<string, string> = {
     SERVICE_NAME: serviceName,
-    USER_JWT_ISSUER,
-    USER_JWT_AUDIENCE,
-    USER_JWT_PUBLIC_KEY: encodeKeyForEnvironment(keys.user.publicKeyPem),
     SERVICE_JWT_PRIVATE_KEY: encodeKeyForEnvironment(servicePair(keys, serviceName).privateKeyPem),
   };
   for (const name of Object.values(ServiceName)) {

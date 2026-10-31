@@ -4,6 +4,7 @@ import {
   HealthModule,
   InternalHttpModule,
   ServiceName,
+  UserTokenVerificationModule,
 } from '@dexa/common';
 import { Module, type Type } from '@nestjs/common';
 import type { ApiGatewayConfig } from './config/api-gateway-config.schema.js';
@@ -23,6 +24,7 @@ export function createAppModule(config: ApiGatewayConfig): Type<unknown> {
   @Module({
     imports: [
       AuthModule.forRoot(config),
+      UserTokenVerificationModule.forRoot(config),
       InternalHttpModule.forRoot({
         serviceBaseUrls: {
           [ServiceName.AUTH_SERVICE]: config.AUTH_SERVICE_INTERNAL_URL,

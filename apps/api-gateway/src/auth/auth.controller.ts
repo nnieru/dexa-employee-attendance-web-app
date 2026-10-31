@@ -1,15 +1,5 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Headers,
-  HttpCode,
-  HttpStatus,
-  Inject,
-  Patch,
-  Post,
-} from '@nestjs/common';
-import { Public, Roles } from '@dexa/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Patch, Post } from '@nestjs/common';
+import { CurrentUser, Public, Roles, type AuthenticatedUser } from '@dexa/common';
 import {
   changePasswordRequestSchema,
   loginRequestSchema,
@@ -20,7 +10,6 @@ import {
   type LoginResponse,
 } from '@dexa/contracts';
 import { AUTH_SERVICE_CLIENT, type IAuthServiceClient } from './auth-service-client.interface.js';
-import { readBearerToken } from './read-bearer-token.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 
 // Only login is public. The global guards check the token and role of every other route.
@@ -39,19 +28,17 @@ export class AuthController {
 
   @Roles(Role.EMPLOYEE, Role.HR)
   @Get('me')
-  getCurrentAccount(
-    @Headers('authorization') authorization: string | undefined,
-  ): Promise<CurrentAccount> {
-    return this.authService.findCurrentAccount(readBearerToken(authorization));
+  getCurrentAccount(@CurrentUser() user: AuthenticatedUser): Promise<CurrentAccount> {
+    return this.authService.findCurrentAccount(user);
   }
 
   @Roles(Role.EMPLOYEE, Role.HR)
   @Patch('me/password')
   @HttpCode(HttpStatus.NO_CONTENT)
   changePassword(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(changePasswordRequestSchema)) request: ChangePasswordRequest,
   ): Promise<void> {
-    return this.authService.changePassword(readBearerToken(authorization), request);
+    return this.authService.changePassword(user, request);
   }
 }

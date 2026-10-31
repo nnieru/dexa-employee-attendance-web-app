@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { AuthenticatedUser } from '../auth/authenticated-principal.js';
 import type { ServiceName } from '../auth/service-name.js';
 
 /**
@@ -24,14 +25,15 @@ type InternalRequestTarget = {
   readonly path: string;
   readonly correlationId?: string;
   readonly timeoutMilliseconds?: number;
-  // The end user's token. When set, it replaces this service's token as the bearer credential, so the
-  // target authorizes the user (ARCHITECTURE §5).
-  readonly forwardedUserToken?: string;
+  // The end user that api-gateway acts for. The call still carries this service's token, which also names the
+  // user, so the target authorizes the same person without ever seeing the user's JWT (D-51). Only api-gateway
+  // may set it: the signer refuses any other service.
+  readonly onBehalfOf?: AuthenticatedUser;
   // Codes that a 401 answer carries when the target refused the credentials this call presents. Such
   // an answer reaches the caller as an UnauthorizedError with the target's code and message. Any other
-  // 401 means this service's own token was refused, a misconfiguration, so it stays a dependency
-  // failure. Never name UNAUTHORIZED for a call that sends this service's token: the target uses that
-  // code when it refuses the service token.
+  // 401 means a token was refused, a misconfiguration, so it stays a dependency failure. Never name
+  // UNAUTHORIZED here: the target uses that code when it refuses the token this service sends, and
+  // that refusal is never the caller's fault.
   readonly refusalCodes?: ReadonlyArray<string>;
   // Codes that a 503 answer carries when the target reports an outcome that it defines for this call, such as a
   // partial provisioning failure. Such an answer reaches the caller with the code, message, and details. Any

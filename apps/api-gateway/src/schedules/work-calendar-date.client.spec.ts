@@ -4,14 +4,18 @@ import {
   type InternalDeleteRequest,
   type InternalGetRequest,
   type InternalJsonPutRequest,
+  type AuthenticatedUser,
 } from '@dexa/common';
-import { ErrorCode, type WorkCalendarDate, type WorkCalendarDatePage } from '@dexa/contracts';
+import { type WorkCalendarDate, type WorkCalendarDatePage, Role } from '@dexa/contracts';
 import { WorkCalendarDateClient } from './work-calendar-date.client.js';
 
 type RecordedRequest =
   InternalGetRequest<unknown> | InternalJsonPutRequest<unknown> | InternalDeleteRequest<unknown>;
 
-const USER_TOKEN = 'user-access-token';
+const USER: AuthenticatedUser = {
+  accountId: '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13',
+  role: Role.EMPLOYEE,
+};
 const HOLIDAY: WorkCalendarDate = {
   date: '2026-11-09',
   isWorkingDay: false,
@@ -51,11 +55,11 @@ function createRecordingHttpClient(
 }
 
 describe('WorkCalendarDateClient.listDates', () => {
-  it('should get the calendar dates route with the range and page forwarded and the user token forwarded', async () => {
+  it('should get the calendar dates route with the range and page forwarded and on behalf of the user', async () => {
     const recorded: RecordedRequest[] = [];
     const client = new WorkCalendarDateClient(createRecordingHttpClient(DATE_PAGE, recorded));
 
-    const response = await client.listDates(USER_TOKEN, {
+    const response = await client.listDates(USER, {
       from: '2026-11-01',
       to: '2026-11-30',
       page: 2,
@@ -68,8 +72,7 @@ describe('WorkCalendarDateClient.listDates', () => {
       target: ServiceName.ATTENDANCE_SERVICE,
       path: '/api/v1/work-calendar-dates',
       query: { from: '2026-11-01', to: '2026-11-30', page: '2', pageSize: '10' },
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
     expect(recorded[0]).not.toHaveProperty('body');
   });
@@ -80,17 +83,17 @@ describe('WorkCalendarDateClient.listDates', () => {
     );
 
     await expect(
-      client.listDates(USER_TOKEN, { from: '2026-11-01', to: '2026-11-30', page: 1, pageSize: 20 }),
+      client.listDates(USER, { from: '2026-11-01', to: '2026-11-30', page: 1, pageSize: 20 }),
     ).rejects.toThrow();
   });
 });
 
 describe('WorkCalendarDateClient.upsertDate', () => {
-  it('should put the request to the date route with the user token forwarded and no retry', async () => {
+  it('should put the request to the date route on behalf of the user and no retry', async () => {
     const recorded: RecordedRequest[] = [];
     const client = new WorkCalendarDateClient(createRecordingHttpClient(HOLIDAY, recorded));
 
-    const response = await client.upsertDate(USER_TOKEN, '2026-11-09', {
+    const response = await client.upsertDate(USER, '2026-11-09', {
       isWorkingDay: false,
       description: 'Public holiday',
     });
@@ -101,8 +104,7 @@ describe('WorkCalendarDateClient.upsertDate', () => {
       target: ServiceName.ATTENDANCE_SERVICE,
       path: '/api/v1/work-calendar-dates/2026-11-09',
       body: { isWorkingDay: false, description: 'Public holiday' },
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
   });
 
@@ -110,7 +112,7 @@ describe('WorkCalendarDateClient.upsertDate', () => {
     const recorded: RecordedRequest[] = [];
     const client = new WorkCalendarDateClient(createRecordingHttpClient(HOLIDAY, recorded));
 
-    await client.upsertDate(USER_TOKEN, '../attendance/x', { isWorkingDay: true });
+    await client.upsertDate(USER, '../attendance/x', { isWorkingDay: true });
 
     expect(recorded[0]).toMatchObject({ path: '/api/v1/work-calendar-dates/..%2Fattendance%2Fx' });
   });
@@ -120,25 +122,22 @@ describe('WorkCalendarDateClient.upsertDate', () => {
       createRecordingHttpClient({ ...HOLIDAY, isWorkingDay: 'no' }, []),
     );
 
-    await expect(
-      client.upsertDate(USER_TOKEN, '2026-11-09', { isWorkingDay: false }),
-    ).rejects.toThrow();
+    await expect(client.upsertDate(USER, '2026-11-09', { isWorkingDay: false })).rejects.toThrow();
   });
 });
 
 describe('WorkCalendarDateClient.deleteDate', () => {
-  it('should delete the date route with the user token forwarded and no retry', async () => {
+  it('should delete the date route on behalf of the user and no retry', async () => {
     const recorded: RecordedRequest[] = [];
     const client = new WorkCalendarDateClient(createRecordingHttpClient(undefined, recorded));
 
-    await expect(client.deleteDate(USER_TOKEN, '2026-11-09')).resolves.toBeUndefined();
+    await expect(client.deleteDate(USER, '2026-11-09')).resolves.toBeUndefined();
 
     expect(recorded).toHaveLength(1);
     expect(recorded[0]).toMatchObject({
       target: ServiceName.ATTENDANCE_SERVICE,
       path: '/api/v1/work-calendar-dates/2026-11-09',
-      forwardedUserToken: USER_TOKEN,
-      refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      onBehalfOf: USER,
     });
     expect(recorded[0]).not.toHaveProperty('body');
   });
@@ -147,7 +146,7 @@ describe('WorkCalendarDateClient.deleteDate', () => {
     const recorded: RecordedRequest[] = [];
     const client = new WorkCalendarDateClient(createRecordingHttpClient(undefined, recorded));
 
-    await client.deleteDate(USER_TOKEN, '../attendance/x');
+    await client.deleteDate(USER, '../attendance/x');
 
     expect(recorded[0]).toMatchObject({ path: '/api/v1/work-calendar-dates/..%2Fattendance%2Fx' });
   });
@@ -155,6 +154,6 @@ describe('WorkCalendarDateClient.deleteDate', () => {
   it('should reject the call when attendance-service answers a body where the delete has none', async () => {
     const client = new WorkCalendarDateClient(createRecordingHttpClient({ removed: true }, []));
 
-    await expect(client.deleteDate(USER_TOKEN, '2026-11-09')).rejects.toThrow();
+    await expect(client.deleteDate(USER, '2026-11-09')).rejects.toThrow();
   });
 });

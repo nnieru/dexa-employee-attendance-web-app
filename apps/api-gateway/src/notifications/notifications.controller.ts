@@ -1,19 +1,25 @@
-import { Roles } from '@dexa/common';
+import {
+  ACCOUNT_STATUS_READER,
+  CurrentUser,
+  Roles,
+  type AuthenticatedUser,
+  type IAccountStatusReader,
+} from '@dexa/common';
 import { Role } from '@dexa/contracts';
 import {
   BeforeApplicationShutdown,
   Controller,
   Get,
-  Headers,
   HttpStatus,
   Inject,
   Logger,
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { readBearerToken } from '../auth/read-bearer-token.js';
+import { AccountStatusWatch } from './account-status-watch.js';
 import { relayEventStream, EVENT_STREAM_HEADERS } from './event-stream.relay.js';
 import {
+  NOTIFICATION_STREAM_ACCOUNT_CHECK_MILLISECONDS,
   NOTIFICATION_STREAM_CLIENT,
   type INotificationStreamClient,
 } from './notification-stream-client.interface.js';
@@ -21,7 +27,8 @@ import {
 /**
  * Proxies the HR notification stream (D-08, ADM-5). The global guards verify the token, the account, and the HR role
  * before this handler runs, so an employee is refused without any call to notification-service. The response is
- * written directly because a Nest return value cannot hold an open stream.
+ * written directly because a Nest return value cannot hold an open stream. While the stream is open, the account is
+ * checked again on a timer, so a deactivated HR account loses the stream (D-13).
  */
 @Controller('notifications')
 export class NotificationsController implements BeforeApplicationShutdown {
@@ -32,6 +39,9 @@ export class NotificationsController implements BeforeApplicationShutdown {
   constructor(
     @Inject(NOTIFICATION_STREAM_CLIENT)
     private readonly notificationStreams: INotificationStreamClient,
+    @Inject(ACCOUNT_STATUS_READER) private readonly accountStatuses: IAccountStatusReader,
+    @Inject(NOTIFICATION_STREAM_ACCOUNT_CHECK_MILLISECONDS)
+    private readonly accountCheckMilliseconds: number,
   ) {}
 
   // Nest closes the HTTP server after this hook, and the server waits for every open response. Aborting the relays
@@ -45,21 +55,30 @@ export class NotificationsController implements BeforeApplicationShutdown {
   @Roles(Role.HR)
   @Get('stream')
   async streamNotifications(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Res() response: Response,
   ): Promise<void> {
-    const accessToken = readBearerToken(authorization);
     const browserLeft = new AbortController();
     this.openRelays.add(browserLeft);
+    const accountWatch = new AccountStatusWatch({
+      accountId: user.accountId,
+      accountStatuses: this.accountStatuses,
+      intervalMilliseconds: this.accountCheckMilliseconds,
+      onInactive: () => {
+        this.logger.log('Closed a notification stream whose account is no longer active.');
+        this.closeRelay(browserLeft, response);
+      },
+    });
     response.once('close', () => {
+      accountWatch.stop();
       this.openRelays.delete(browserLeft);
       browserLeft.abort();
     });
 
-    let upstreamBody: ReadableStr eam<Uint8Array>;
+    let upstreamBody: ReadableStream<Uint8Array>;
     try {
       upstreamBody = await this.notificationStreams.openStream({
-        accessToken,
+        user,
         signal: browserLeft.signal,
       });
     } catch (error: unknown) {
@@ -70,6 +89,7 @@ export class NotificationsController implements BeforeApplicationShutdown {
 
     response.writeHead(HttpStatus.OK, EVENT_STREAM_HEADERS);
     response.flushHeaders();
+    accountWatch.start();
     try {
       await relayEventStream(upstreamBody, response);
     } catch (error: unknown) {
@@ -77,5 +97,12 @@ export class NotificationsController implements BeforeApplicationShutdown {
       const reason = error instanceof Error ? error.name : 'unknown error';
       this.logger.warn(`Notification stream ended early (${reason}).`);
     }
+  }
+
+  // Aborting the upstream request stops notification-service's side. Destroying the response ends the client's side
+  // at once, without waiting for the upstream to notice, so the browser sees the stream end and then gets a refusal.
+  private closeRelay(browserLeft: AbortController, response: Response): void {
+    browserLeft.abort();
+    response.destroy();
   }
 }

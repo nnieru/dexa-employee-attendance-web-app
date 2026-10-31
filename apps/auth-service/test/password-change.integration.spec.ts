@@ -31,10 +31,13 @@ import {
   authServiceEnvironment,
   generateAuthKeySet,
   servicePair,
-  USER_JWT_AUDIENCE,
-  USER_JWT_ISSUER,
   type AuthKeySet,
 } from './auth-key-set.js';
+import {
+  forgeGatewayUserToken,
+  signEndUserJwt,
+  signGatewayUserToken,
+} from './gateway-user-token.js';
 
 // Starting the container pulls an image on a cold machine, which exceeds Jest's 5 second default.
 const CONTAINER_TIMEOUT_MS = 120_000;
@@ -43,7 +46,6 @@ const TEST_TIMEOUT_MS = 60_000;
 const SESSIONS_PATH = '/api/v1/internal/sessions';
 const PASSWORD_PATH = '/api/v1/auth/me/password';
 const SERVICE_TOKEN_LIFETIME_SECONDS = 60;
-const USER_TOKEN_LIFETIME_SECONDS = 300;
 const ARGON2ID_PREFIX = '$argon2id$';
 const PASSWORD_CHANGED_EVENT_TYPE = 'account.password.changed';
 
@@ -83,20 +85,10 @@ function signServiceToken(caller: ServiceName, target: ServiceName): Promise<str
   );
 }
 
-// Signs a user token with the user private key that only auth-service holds in production. It lets a case
-// reach the change for an account that sign-in refuses, such as a deactivated or still-provisioning one.
-function signUserToken(accountId: string, role: Role): Promise<string> {
-  return jwtService.signAsync(
-    { role },
-    {
-      privateKey: TEST_KEYS.user.privateKeyPem,
-      algorithm: 'RS256',
-      issuer: USER_JWT_ISSUER,
-      audience: USER_JWT_AUDIENCE,
-      subject: accountId,
-      expiresIn: USER_TOKEN_LIFETIME_SECONDS,
-    },
-  );
+// The token api-gateway sends to this service for the user. It lets a case reach the change for an account that
+// sign-in refuses, such as a deactivated or still-provisioning one.
+function signUserToken(accountId: string, role: Role): string {
+  return signGatewayUserToken(TEST_KEYS, ServiceName.AUTH_SERVICE, accountId, role);
 }
 
 // Records what the modules log, so the test can check that no password or hash reaches a log.
@@ -215,12 +207,20 @@ describe('self-service password change', () => {
       .send(body);
   }
 
+  // Signs in, then returns the token that api-gateway sends to this service for the same user (D-51). The gateway
+  // checks the end-user JWT, so this service only ever receives its own token.
   async function signIn(email: string, password: string, portal: string): Promise<string> {
     const response = await postSession({ email, password, portal });
     if (response.status !== 200) {
       throw new Error(`Sign-in answered ${response.status}, expected 200.`);
     }
-    return loginResponseSchema.parse(response.body).accessToken;
+    const session = loginResponseSchema.parse(response.body);
+    return signGatewayUserToken(
+      TEST_KEYS,
+      ServiceName.AUTH_SERVICE,
+      session.account.id,
+      session.account.role,
+    );
   }
 
   function changePassword(accessToken: string, body: Record<string, string>) {
@@ -344,6 +344,47 @@ describe('self-service password change', () => {
     );
 
     it(
+      'should return 401 and change nothing when an end-user JWT is sent, because only the gateway verifies end-user tokens',
+      async () => {
+        const email = uniqueEmail('change.userjwt');
+        const accountId = await insertEmployee({ email, password: OLD_PASSWORD });
+        const endUserJwt = signEndUserJwt(TEST_KEYS, accountId, Role.EMPLOYEE);
+
+        const response = await changePassword(endUserJwt, {
+          currentPassword: OLD_PASSWORD,
+          newPassword: NEW_PASSWORD,
+        }).expect(401);
+
+        expect(response.body).toMatchObject({ code: ErrorCode.UNAUTHORIZED });
+        expect(await readPasswordChangedRows(accountId)).toHaveLength(0);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should return 401 and change nothing when a token names api-gateway but is signed with another service key',
+      async () => {
+        const email = uniqueEmail('change.forged');
+        const accountId = await insertEmployee({ email, password: OLD_PASSWORD });
+        const forged = forgeGatewayUserToken(
+          TEST_KEYS,
+          ServiceName.AUTH_SERVICE,
+          accountId,
+          Role.EMPLOYEE,
+        );
+
+        const response = await changePassword(forged, {
+          currentPassword: OLD_PASSWORD,
+          newPassword: NEW_PASSWORD,
+        }).expect(401);
+
+        expect(response.body).toMatchObject({ code: ErrorCode.UNAUTHORIZED });
+        expect(await readPasswordChangedRows(accountId)).toHaveLength(0);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
       'should return 401 UNAUTHORIZED when the account is still provisioning',
       async () => {
         const email = uniqueEmail('change.pending');
@@ -357,7 +398,7 @@ describe('self-service password change', () => {
           initialPasswordHash: await hasher.hash(OLD_PASSWORD),
           status: 'PENDING',
         });
-        const accessToken = await signUserToken(accountId, Role.EMPLOYEE);
+        const accessToken = signUserToken(accountId, Role.EMPLOYEE);
 
         const response = await changePassword(accessToken, {
           currentPassword: OLD_PASSWORD,
@@ -379,7 +420,7 @@ describe('self-service password change', () => {
           password: OLD_PASSWORD,
           isActive: false,
         });
-        const accessToken = await signUserToken(accountId, Role.EMPLOYEE);
+        const accessToken = signUserToken(accountId, Role.EMPLOYEE);
 
         const response = await changePassword(accessToken, {
           currentPassword: OLD_PASSWORD,

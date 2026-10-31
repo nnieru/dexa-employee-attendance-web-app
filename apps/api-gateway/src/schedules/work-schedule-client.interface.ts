@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '@dexa/common';
 import type {
   WorkScheduleOverview,
   WorkScheduleVersion,
@@ -6,13 +7,13 @@ import type {
 
 /** The gateway's calls into attendance-service for the company schedule. Controllers depend on this port. */
 export interface IWorkScheduleClient {
-  getScheduleOverview(accessToken: string): Promise<WorkScheduleOverview>;
+  getScheduleOverview(user: AuthenticatedUser): Promise<WorkScheduleOverview>;
   createVersion(
-    accessToken: string,
+    user: AuthenticatedUser,
     request: WorkScheduleVersionRequest,
   ): Promise<WorkScheduleVersion>;
   updateVersion(
-    accessToken: string,
+    user: AuthenticatedUser,
     versionId: string,
     request: WorkScheduleVersionRequest,
   ): Promise<WorkScheduleVersion>;

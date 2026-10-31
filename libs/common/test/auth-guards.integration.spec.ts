@@ -6,6 +6,8 @@ import request from 'supertest';
 import type { AuthenticatedUser } from '../src/auth/authenticated-principal.js';
 import { AuthModule } from '../src/auth/auth.module.js';
 import { CurrentUser } from '../src/auth/current-user.decorator.js';
+import { GatewayUserAuthGuard } from '../src/auth/gateway-user-auth.guard.js';
+import { UserTokenVerificationModule } from '../src/auth/user-token-verification.module.js';
 import {
   ACCOUNT_STATUS_READER,
   type IAccountStatusReader,
@@ -18,7 +20,7 @@ import {
   type IServiceTokenSigner,
 } from '../src/auth/service-token-signer.interface.js';
 import { configureApp } from '../src/bootstrap/configure-app.js';
-import { AuthConfigSchema } from '../src/config/auth-config.schema.js';
+import { AuthConfigSchema, UserJwtVerifierConfigSchema } from '../src/config/auth-config.schema.js';
 import { parseConfig } from '../src/config/parse-config.js';
 import {
   USER_JWT_AUDIENCE,
@@ -28,6 +30,7 @@ import {
   generateEcKeyPair,
   generateRsaKeyPair,
   servicePair,
+  userJwtVerifierEnvironmentFor,
   type AuthKeySet,
   type PemKeyPair,
 } from './auth-key-set.js';
@@ -44,6 +47,7 @@ const UNCONFIGURED_HMAC_SECRET = 'attacker-secret-not-configured-anywhere-0001';
 const UNAUTHORIZED_RESPONSE = { statusCode: 401, code: 'UNAUTHORIZED', message: 'Unauthorized' };
 const INTERNAL_PATH = '/api/v1/test-auth/internal';
 const USER_PATH = '/api/v1/test-auth/user';
+const GATEWAY_USER_PATH = '/api/v1/test-auth/gateway-user';
 const UNGUARDED_USER_PATH = '/api/v1/test-auth/unguarded-user';
 
 const GATEWAY = ServiceName.API_GATEWAY;
@@ -58,11 +62,23 @@ const VALID_USER_CLAIMS = {
   exp: FAR_FUTURE_EXPIRY_SECONDS,
 };
 
+// A token api-gateway signs for a forwarded call: the user is named by a claim, and the subject is the gateway.
+const VALID_GATEWAY_USER_CLAIMS = {
+  exp: FAR_FUTURE_EXPIRY_SECONDS,
+  user: { accountId: ACCOUNT_ID, role: Role.EMPLOYEE },
+};
+
 type RejectedToken = { readonly condition: string; readonly mintToken: () => Promise<string> };
 
-// Test-only routes: a user route, an internal route, and a user route that forgot its guard.
+// Test-only routes: a gateway user route, an end-user JWT route, an internal route, and a user route that forgot its guard.
 @Controller('test-auth')
 class AuthTestController {
+  @Get('gateway-user')
+  @UseGuards(GatewayUserAuthGuard)
+  gatewayUser(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
+    return user;
+  }
+
   @Get('user')
   @UseGuards(JwtAuthGuard)
   user(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
@@ -81,8 +97,8 @@ class AuthTestController {
   }
 }
 
-// The user-token cases here cover signatures and claims. Every account is active, so the status check
-// passes and only the token is under test. Status cases live in jwt-auth.guard.spec.ts.
+// The token cases here cover signatures and claims. Every account is active, so the status check passes and
+// only the token is under test. Status cases live in jwt-auth.guard.spec.ts.
 const activeAccountStatusReader: IAccountStatusReader = {
   findAccountStatus: () => Promise.resolve({ isActive: true }),
 };
@@ -114,6 +130,11 @@ function serviceSigning(
   };
 }
 
+// Signing options for a token api-gateway forwards to one target service.
+function gatewayUserSigning(keys: AuthKeySet, target: ServiceName): JwtSignOptions {
+  return serviceSigning(servicePair(keys, GATEWAY).privateKeyPem, GATEWAY, target);
+}
+
 function userSigning(privateKeyPem: string): JwtSignOptions {
   return {
     privateKey: privateKeyPem,
@@ -134,9 +155,13 @@ describe('auth guards', () => {
     keys = generateAuthKeySet();
     unconfiguredServiceKey = generateEcKeyPair();
     unconfiguredUserKey = generateRsaKeyPair();
-    const testConfig = parseConfig(AuthConfigSchema, authEnvironmentFor(keys, EMPLOYEE));
+    const serviceConfig = parseConfig(AuthConfigSchema, authEnvironmentFor(keys, EMPLOYEE));
+    const userConfig = parseConfig(
+      UserJwtVerifierConfigSchema,
+      userJwtVerifierEnvironmentFor(keys),
+    );
     const moduleRef = await Test.createTestingModule({
-      imports: [AuthModule.forRoot(testConfig)],
+      imports: [AuthModule.forRoot(serviceConfig), UserTokenVerificationModule.forRoot(userConfig)],
       controllers: [AuthTestController],
       providers: [{ provide: ACCOUNT_STATUS_READER, useValue: activeAccountStatusReader }],
     }).compile();
@@ -278,6 +303,129 @@ describe('auth guards', () => {
     },
   ];
 
+  // Tokens that api-gateway would sign for a forwarded user call. Each one breaks exactly one rule.
+  const rejectedGatewayUserTokens: ReadonlyArray<RejectedToken> = [
+    {
+      condition: 'the token has expired',
+      mintToken: () =>
+        jwtService.signAsync(
+          { ...VALID_GATEWAY_USER_CLAIMS, exp: PAST_EXPIRY_SECONDS },
+          gatewayUserSigning(keys, EMPLOYEE),
+        ),
+    },
+    {
+      condition: 'the token has no expiry claim',
+      mintToken: () =>
+        jwtService.signAsync(
+          { user: VALID_GATEWAY_USER_CLAIMS.user },
+          gatewayUserSigning(keys, EMPLOYEE),
+        ),
+    },
+    {
+      condition: 'the token has no user claim',
+      mintToken: () =>
+        jwtService.signAsync(
+          { exp: FAR_FUTURE_EXPIRY_SECONDS },
+          gatewayUserSigning(keys, EMPLOYEE),
+        ),
+    },
+    {
+      condition: 'the user role is not a known role',
+      mintToken: () =>
+        jwtService.signAsync(
+          { ...VALID_GATEWAY_USER_CLAIMS, user: { accountId: ACCOUNT_ID, role: 'ADMIN' } },
+          gatewayUserSigning(keys, EMPLOYEE),
+        ),
+    },
+    {
+      condition: 'the user account ID is not a UUID',
+      mintToken: () =>
+        jwtService.signAsync(
+          { ...VALID_GATEWAY_USER_CLAIMS, user: { accountId: 'not-a-uuid', role: Role.HR } },
+          gatewayUserSigning(keys, EMPLOYEE),
+        ),
+    },
+    {
+      condition: 'the token is addressed to another service',
+      mintToken: () =>
+        jwtService.signAsync(VALID_GATEWAY_USER_CLAIMS, gatewayUserSigning(keys, ATTENDANCE)),
+    },
+    {
+      condition: 'the token was signed by another service while naming the gateway',
+      mintToken: () =>
+        jwtService.signAsync(
+          VALID_GATEWAY_USER_CLAIMS,
+          serviceSigning(servicePair(keys, ATTENDANCE).privateKeyPem, GATEWAY, EMPLOYEE),
+        ),
+    },
+    {
+      condition: 'an employee-service token carries a user claim (issuer is not the gateway)',
+      mintToken: () =>
+        jwtService.signAsync(
+          VALID_GATEWAY_USER_CLAIMS,
+          serviceSigning(servicePair(keys, EMPLOYEE).privateKeyPem, EMPLOYEE, EMPLOYEE),
+        ),
+    },
+    {
+      condition: 'the subject names another service under the gateway kid',
+      mintToken: () =>
+        jwtService.signAsync(VALID_GATEWAY_USER_CLAIMS, {
+          ...gatewayUserSigning(keys, EMPLOYEE),
+          subject: ATTENDANCE,
+        }),
+    },
+    {
+      condition: 'the kid is missing from the header',
+      mintToken: () =>
+        jwtService.signAsync(VALID_GATEWAY_USER_CLAIMS, {
+          privateKey: servicePair(keys, GATEWAY).privateKeyPem,
+          algorithm: 'ES256',
+          issuer: GATEWAY,
+          subject: GATEWAY,
+          audience: EMPLOYEE,
+        }),
+    },
+    {
+      condition: 'it is signed with a key that is not configured',
+      mintToken: () =>
+        jwtService.signAsync(
+          VALID_GATEWAY_USER_CLAIMS,
+          serviceSigning(unconfiguredServiceKey.privateKeyPem, GATEWAY, EMPLOYEE),
+        ),
+    },
+    {
+      condition: 'it is a user JWT signed by auth-service',
+      mintToken: () =>
+        jwtService.signAsync(VALID_USER_CLAIMS, userSigning(keys.user.privateKeyPem)),
+    },
+    {
+      condition: 'it is HS256 with the gateway public key as the HMAC secret',
+      mintToken: () =>
+        jwtService.signAsync(VALID_GATEWAY_USER_CLAIMS, {
+          secret: servicePair(keys, GATEWAY).publicKeyPem,
+          algorithm: 'HS256',
+          keyid: GATEWAY,
+          issuer: GATEWAY,
+          subject: GATEWAY,
+          audience: EMPLOYEE,
+        }),
+    },
+    {
+      condition: 'it is unsigned with alg none',
+      mintToken: async () =>
+        craftUnsignedToken(
+          {
+            iss: GATEWAY,
+            sub: GATEWAY,
+            aud: EMPLOYEE,
+            exp: FAR_FUTURE_EXPIRY_SECONDS,
+            user: VALID_GATEWAY_USER_CLAIMS.user,
+          },
+          { alg: 'none', typ: 'JWT', kid: GATEWAY },
+        ),
+    },
+  ];
+
   const rejectedUserTokens: ReadonlyArray<RejectedToken> = [
     {
       condition: 'the token has expired',
@@ -397,27 +545,71 @@ describe('auth guards', () => {
         .expect(200, { accepted: true });
     });
 
+    it('should return 401 when api-gateway signs a user token for this service', async () => {
+      // A token that names a user is a user credential, so a service route does not accept it.
+      const token = await jwtService.signAsync(VALID_GATEWAY_USER_CLAIMS, gatewayToEmployee());
+
+      await expectUnauthorized(INTERNAL_PATH, token);
+    });
+
     it.each(rejectedServiceTokens)('should return 401 when $condition', async ({ mintToken }) => {
       await expectUnauthorized(INTERNAL_PATH, await mintToken());
     });
   });
 
+  describe('GatewayUserAuthGuard on a user route', () => {
+    it('should return 401 when the Authorization header is missing', async () => {
+      await expectUnauthorized(GATEWAY_USER_PATH);
+    });
+
+    it.each([Role.EMPLOYEE, Role.HR])(
+      'should return the account ID and role when api-gateway forwards the role %s',
+      async (role) => {
+        const token = await jwtService.signAsync(
+          { ...VALID_GATEWAY_USER_CLAIMS, user: { accountId: ACCOUNT_ID, role } },
+          gatewayUserSigning(keys, EMPLOYEE),
+        );
+
+        const response = await request(app.getHttpServer())
+          .get(GATEWAY_USER_PATH)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+
+        expect(response.body).toEqual({ accountId: ACCOUNT_ID, role });
+      },
+    );
+
+    it.each(rejectedGatewayUserTokens)(
+      'should return 401 when $condition',
+      async ({ mintToken }) => {
+        await expectUnauthorized(GATEWAY_USER_PATH, await mintToken());
+      },
+    );
+  });
+
   describe('JwtAuthGuard wiring', () => {
-    // A service that forgets to bind the reader must fail at startup. A guard that failed open here would
+    // A gateway that forgets to bind the reader must fail at startup. A guard that failed open here would
     // let a deactivated account through.
     it('should refuse to compile when no account status reader is bound', async () => {
-      const testConfig = parseConfig(AuthConfigSchema, authEnvironmentFor(keys, EMPLOYEE));
+      const serviceConfig = parseConfig(AuthConfigSchema, authEnvironmentFor(keys, EMPLOYEE));
+      const userConfig = parseConfig(
+        UserJwtVerifierConfigSchema,
+        userJwtVerifierEnvironmentFor(keys),
+      );
 
       await expect(
         Test.createTestingModule({
-          imports: [AuthModule.forRoot(testConfig)],
+          imports: [
+            AuthModule.forRoot(serviceConfig),
+            UserTokenVerificationModule.forRoot(userConfig),
+          ],
           controllers: [AuthTestController],
         }).compile(),
       ).rejects.toThrow(/IAccountStatusReader/);
     });
   });
 
-  describe('JwtAuthGuard and CurrentUser on a user route', () => {
+  describe('JwtAuthGuard and CurrentUser on an end-user route', () => {
     it('should return 401 when the Authorization header is missing', async () => {
       await expectUnauthorized(USER_PATH);
     });
@@ -443,7 +635,7 @@ describe('auth guards', () => {
       await expectUnauthorized(USER_PATH, await mintToken());
     });
 
-    it('should return 401 when a route reads @CurrentUser() without JwtAuthGuard', async () => {
+    it('should return 401 when a route reads @CurrentUser() without a guard', async () => {
       const token = await jwtService.signAsync(
         VALID_USER_CLAIMS,
         userSigning(keys.user.privateKeyPem),

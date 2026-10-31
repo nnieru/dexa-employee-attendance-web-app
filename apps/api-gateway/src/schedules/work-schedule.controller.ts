@@ -1,4 +1,4 @@
-import { Roles } from '@dexa/common';
+import { CurrentUser, Roles, type AuthenticatedUser } from '@dexa/common';
 import {
   Role,
   workScheduleIdSchema,
@@ -11,7 +11,6 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Inject,
@@ -19,7 +18,6 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
-import { readBearerToken } from '../auth/read-bearer-token.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 import {
   WORK_SCHEDULE_CLIENT,
@@ -33,10 +31,8 @@ export class WorkScheduleController {
 
   @Roles(Role.HR)
   @Get()
-  getScheduleOverview(
-    @Headers('authorization') authorization: string | undefined,
-  ): Promise<WorkScheduleOverview> {
-    return this.schedules.getScheduleOverview(readBearerToken(authorization));
+  getScheduleOverview(@CurrentUser() user: AuthenticatedUser): Promise<WorkScheduleOverview> {
+    return this.schedules.getScheduleOverview(user);
   }
 
   // The body is strict, so a client cannot send effectiveUntil, a timezone, or a name. attendance-service validates it
@@ -45,21 +41,21 @@ export class WorkScheduleController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   createVersion(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(workScheduleVersionRequestSchema))
     request: WorkScheduleVersionRequest,
   ): Promise<WorkScheduleVersion> {
-    return this.schedules.createVersion(readBearerToken(authorization), request);
+    return this.schedules.createVersion(user, request);
   }
 
   @Roles(Role.HR)
   @Put(':id')
   updateVersion(
-    @Headers('authorization') authorization: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id', new ZodValidationPipe(workScheduleIdSchema)) versionId: string,
     @Body(new ZodValidationPipe(workScheduleVersionRequestSchema))
     request: WorkScheduleVersionRequest,
   ): Promise<WorkScheduleVersion> {
-    return this.schedules.updateVersion(readBearerToken(authorization), versionId, request);
+    return this.schedules.updateVersion(user, versionId, request);
   }
 }

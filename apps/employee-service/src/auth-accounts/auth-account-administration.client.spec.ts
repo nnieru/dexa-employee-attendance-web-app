@@ -43,7 +43,7 @@ describe('AuthAccountAdministrationClient.resetPassword', () => {
       path: `/api/v1/internal/accounts/${ACCOUNT_ID}/password`,
       body: { actorAccountId: ACTOR_ID, newPassword: NEW_PASSWORD },
     });
-    expect(recorded[0]?.forwardedUserToken).toBeUndefined();
+    expect(recorded[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should resolve when Auth answers 204 with no body', async () => {
@@ -70,7 +70,7 @@ describe('AuthAccountAdministrationClient.setActiveStatus', () => {
       path: `/api/v1/internal/accounts/${ACCOUNT_ID}/active-status`,
       body: { actorAccountId: ACTOR_ID, isActive: false },
     });
-    expect(recorded[0]?.forwardedUserToken).toBeUndefined();
+    expect(recorded[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should return the stored flag that Auth answers with', async () => {

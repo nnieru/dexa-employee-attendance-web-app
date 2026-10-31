@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '@dexa/common';
 import type {
   ChangePasswordRequest,
   CurrentAccount,
@@ -8,8 +9,8 @@ import type {
 /** The gateway's calls into auth-service. Controllers depend on this port, not on the transport. */
 export interface IAuthServiceClient {
   createSession(request: LoginRequest): Promise<LoginResponse>;
-  findCurrentAccount(accessToken: string): Promise<CurrentAccount>;
-  changePassword(accessToken: string, request: ChangePasswordRequest): Promise<void>;
+  findCurrentAccount(user: AuthenticatedUser): Promise<CurrentAccount>;
+  changePassword(user: AuthenticatedUser, request: ChangePasswordRequest): Promise<void>;
 }
 
 export const AUTH_SERVICE_CLIENT = Symbol('IAuthServiceClient');

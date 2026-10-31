@@ -43,7 +43,7 @@ describe('EmployeeClient.lookupEmployees', () => {
       path: '/api/v1/internal/employees/lookup',
       body: { accountIds: [ACCOUNT_ID, OTHER_ACCOUNT_ID] },
     });
-    expect(recorded[0]?.forwardedUserToken).toBeUndefined();
+    expect(recorded[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should return the employees that Employee answers with', async () => {

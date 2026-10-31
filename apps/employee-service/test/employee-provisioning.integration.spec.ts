@@ -1,13 +1,11 @@
-import { Buffer } from 'node:buffer';
-import { createSign, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import {
-  ACCOUNT_STATUS_READER,
   ConflictError,
   DependencyUnavailableError,
   NotFoundError,
   configureApp,
   parseConfig,
-  type IAccountStatusReader,
+  ServiceName,
 } from '@dexa/common';
 import {
   AccountProvisioningStatus,
@@ -19,7 +17,6 @@ import {
   type AccountProvisioningOperation,
   type AccountProvisioningRequest,
   type AccountReference,
-  type AccountStatus,
   type CreateEmployeeRequest,
   type EmployeeDetail,
 } from '@dexa/contracts';
@@ -47,7 +44,8 @@ import {
   AUTH_PROVISIONING_CLIENT,
   type IAuthProvisioningClient,
 } from '../src/provisioning/auth-provisioning-client.interface.js';
-import { USER_JWT_AUDIENCE, USER_JWT_ISSUER, type AuthKeySet } from './auth-key-set.js';
+import type { AuthKeySet } from './auth-key-set.js';
+import { signGatewayUserToken } from './gateway-user-token.js';
 import {
   employeeServiceAuthKeys,
   employeeServiceEnvironment,
@@ -57,7 +55,6 @@ import {
 const CONTAINER_TIMEOUT_MS = 120_000;
 const TEST_TIMEOUT_MS = 30_000;
 const CREATE_PATH = '/api/v1/employees';
-const TOKEN_LIFETIME_SECONDS = 300;
 const INCOMPLETE_CODE = ErrorCode.EMPLOYEE_PROVISIONING_INCOMPLETE;
 const PASSWORD = 'initial-pass-1';
 const PHONE = '+6281234567890';
@@ -240,31 +237,9 @@ function isSameFakeRequest(
   );
 }
 
-const accountStatuses = new Map<string, AccountStatus>();
-const fakeAccountStatusReader: IAccountStatusReader = {
-  findAccountStatus: (accountId) => Promise.resolve(accountStatuses.get(accountId)),
-};
-
-function encodeJsonSegment(value: object): string {
-  return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-
-// Signs a user token with the test user key. Only auth-service holds that key in production.
+// Signs the token that api-gateway sends to this service for the user (D-51).
 function signUserToken(keys: AuthKeySet, accountId: string, role: Role): string {
-  const signingInput = [
-    encodeJsonSegment({ alg: 'RS256', typ: 'JWT' }),
-    encodeJsonSegment({
-      sub: accountId,
-      role,
-      iss: USER_JWT_ISSUER,
-      aud: USER_JWT_AUDIENCE,
-      exp: Math.floor(Date.now() / 1000) + TOKEN_LIFETIME_SECONDS,
-    }),
-  ].join('.');
-  const signature = createSign('RSA-SHA256')
-    .update(signingInput)
-    .sign(keys.user.privateKeyPem, 'base64url');
-  return `${signingInput}.${signature}`;
+  return signGatewayUserToken(keys, ServiceName.EMPLOYEE_SERVICE, accountId, role);
 }
 
 // Records every line that the modules log at any level, so a test can check what reached the log.
@@ -312,8 +287,6 @@ describe('employee-service HR create employee', () => {
       }),
     );
     const moduleRef = await Test.createTestingModule({ imports: [createAppModule(config)] })
-      .overrideProvider(ACCOUNT_STATUS_READER)
-      .useValue(fakeAccountStatusReader)
       .overrideProvider(AUTH_ACCOUNT_CLIENT)
       .useValue(auth)
       .overrideProvider(AUTH_PROVISIONING_CLIENT)
@@ -345,7 +318,6 @@ describe('employee-service HR create employee', () => {
 
   function registerActiveAccount(): string {
     const accountId = randomUUID();
-    accountStatuses.set(accountId, { isActive: true });
     return accountId;
   }
 

@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '@dexa/common';
 import type {
   AttendanceMonitoringPage,
   AttendanceMonitoringQuery,
@@ -10,15 +11,15 @@ import type {
 
 /** The gateway's calls into attendance-service. Controllers depend on this port, not on the transport. */
 export interface IAttendanceServiceClient {
-  clockIn(accessToken: string): Promise<ClockInResponse>;
-  clockOut(accessToken: string): Promise<ClockOutResponse>;
-  getToday(accessToken: string): Promise<TodayAttendanceResponse>;
+  clockIn(user: AuthenticatedUser): Promise<ClockInResponse>;
+  clockOut(user: AuthenticatedUser): Promise<ClockOutResponse>;
+  getToday(user: AuthenticatedUser): Promise<TodayAttendanceResponse>;
   listOwnSummary(
-    accessToken: string,
+    user: AuthenticatedUser,
     query: AttendanceSummaryQuery,
   ): Promise<AttendanceSummaryPage>;
   listAttendance(
-    accessToken: string,
+    user: AuthenticatedUser,
     query: AttendanceMonitoringQuery,
   ): Promise<AttendanceMonitoringPage>;
 }

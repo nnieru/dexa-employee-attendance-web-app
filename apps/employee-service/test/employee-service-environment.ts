@@ -17,7 +17,7 @@ let authKeys: AuthKeySet | undefined;
 // Photos written by specs that do not test the photo feature go to a temporary directory, never the source tree.
 let photoDirectory: string | undefined;
 
-/** The key set behind employeeServiceEnvironment, which tests use to sign user tokens. */
+/** The key set behind employeeServiceEnvironment, which tests use to sign gateway tokens. */
 export function employeeServiceAuthKeys(): AuthKeySet {
   authKeys ??= generateAuthKeySet();
   return authKeys;

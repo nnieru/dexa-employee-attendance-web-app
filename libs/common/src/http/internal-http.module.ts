@@ -40,7 +40,9 @@ export class InternalHttpModule {
         { provide: INTERNAL_SERVICE_BASE_URLS, useValue: serviceBaseUrls },
         { provide: INTERNAL_HTTP_CLIENT, useClass: InternalHttpClient },
       ],
-      exports: [INTERNAL_HTTP_CLIENT],
+      // The signer is exported too, for a caller that opens its own connection and still needs a token for it (the
+      // gateway's notification stream). The module is global, so every feature module can inject it.
+      exports: [INTERNAL_HTTP_CLIENT, SERVICE_TOKEN_SIGNER],
     };
   }
 }

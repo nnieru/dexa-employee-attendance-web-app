@@ -1,4 +1,10 @@
-import { CurrentUser, JwtAuthGuard, Roles, RolesGuard, type AuthenticatedUser } from '@dexa/common';
+import {
+  CurrentUser,
+  GatewayUserAuthGuard,
+  Roles,
+  RolesGuard,
+  type AuthenticatedUser,
+} from '@dexa/common';
 import {
   clockInRequestSchema,
   clockOutRequestSchema,
@@ -18,7 +24,7 @@ import { TODAY_STATE_SERVICE, type ITodayStateService } from './today-state.serv
 // The identity comes only from the verified token. The body is validated for its shape only: a strict empty object,
 // so a client timestamp, date, or account is refused before the service runs (ATT-3).
 @Controller('attendance')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.EMPLOYEE, Role.HR)
 export class PunchesController {
   constructor(

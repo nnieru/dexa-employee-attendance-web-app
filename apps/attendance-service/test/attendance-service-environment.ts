@@ -13,7 +13,7 @@ const TEST_EMPLOYEE_SERVICE_URL = 'http://employee-service:3000';
 // Test-only key material, never stored in the repository.
 let authKeys: AuthKeySet | undefined;
 
-/** The key set behind attendanceServiceEnvironment, which tests use to sign user tokens. */
+/** The key set behind attendanceServiceEnvironment, which tests use to sign gateway tokens. */
 export function attendanceServiceAuthKeys(): AuthKeySet {
   authKeys ??= generateAuthKeySet();
   return authKeys;

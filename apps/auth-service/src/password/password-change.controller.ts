@@ -1,4 +1,4 @@
-import { CurrentUser, JwtAuthGuard, type AuthenticatedUser } from '@dexa/common';
+import { CurrentUser, GatewayUserAuthGuard, type AuthenticatedUser } from '@dexa/common';
 import { changePasswordRequestSchema, type ChangePasswordRequest } from '@dexa/contracts';
 import { Body, Controller, HttpCode, HttpStatus, Inject, Patch, UseGuards } from '@nestjs/common';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
@@ -7,7 +7,7 @@ import {
   type IPasswordChangeService,
 } from './password-change-service.interface.js';
 
-// The gateway forwards the user's token here, so JwtAuthGuard verifies it on this service.
+// The gateway checks the user and forwards its own signed token here, so GatewayUserAuthGuard admits it (D-51).
 @Controller('auth')
 export class PasswordChangeController {
   constructor(
@@ -15,7 +15,7 @@ export class PasswordChangeController {
   ) {}
 
   @Patch('me/password')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(GatewayUserAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async changePassword(
     @CurrentUser() user: AuthenticatedUser,

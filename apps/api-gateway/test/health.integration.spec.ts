@@ -4,7 +4,11 @@ import { configureApp, parseConfig, ServiceName } from '@dexa/common';
 import request from 'supertest';
 import { createAppModule } from '../src/app.module.js';
 import { ApiGatewayConfigSchema } from '../src/config/api-gateway-config.schema.js';
-import { authEnvironmentFor, generateAuthKeySet } from './auth-key-set.js';
+import {
+  authEnvironmentFor,
+  generateAuthKeySet,
+  userJwtVerifierEnvironmentFor,
+} from './auth-key-set.js';
 
 describe('api-gateway health', () => {
   let app: INestApplication;
@@ -14,6 +18,7 @@ describe('api-gateway health', () => {
     const config = parseConfig(ApiGatewayConfigSchema, {
       BUSINESS_TIMEZONE: 'Asia/Jakarta',
       ...authEnvironmentFor(generateAuthKeySet(), ServiceName.API_GATEWAY),
+      ...userJwtVerifierEnvironmentFor(generateAuthKeySet()),
       AUTH_SERVICE_INTERNAL_URL: 'http://auth-service:3000',
       EMPLOYEE_SERVICE_INTERNAL_URL: 'http://employee-service:3000',
       ATTENDANCE_SERVICE_INTERNAL_URL: 'http://attendance-service:3000',

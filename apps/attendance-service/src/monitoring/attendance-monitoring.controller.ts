@@ -1,4 +1,4 @@
-import { JwtAuthGuard, Roles, RolesGuard } from '@dexa/common';
+import { GatewayUserAuthGuard, Roles, RolesGuard } from '@dexa/common';
 import {
   attendanceMonitoringQuerySchema,
   Role,
@@ -15,7 +15,7 @@ import {
 // HR only, checked here as well as at the gateway. The controller has only this GET: attendance records have no
 // PUT, PATCH, or DELETE route (PRD ADM-6).
 @Controller('attendance')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)
 export class AttendanceMonitoringController {
   constructor(

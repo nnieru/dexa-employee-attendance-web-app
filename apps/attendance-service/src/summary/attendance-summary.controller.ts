@@ -1,4 +1,10 @@
-import { CurrentUser, JwtAuthGuard, Roles, RolesGuard, type AuthenticatedUser } from '@dexa/common';
+import {
+  CurrentUser,
+  GatewayUserAuthGuard,
+  Roles,
+  RolesGuard,
+  type AuthenticatedUser,
+} from '@dexa/common';
 import {
   attendanceSummaryQuerySchema,
   Role,
@@ -15,7 +21,7 @@ import {
 // The identity comes only from the verified token. The query is validated for its shape and range here, and the
 // defaults are filled by the service with the clock.
 @Controller('attendance')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.EMPLOYEE, Role.HR)
 export class AttendanceSummaryController {
   constructor(

@@ -1,10 +1,4 @@
-import {
-  AccountStatusModule,
-  AuthModule,
-  HealthModule,
-  InternalHttpModule,
-  ServiceName,
-} from '@dexa/common';
+import { AuthModule, HealthModule, InternalHttpModule, ServiceName } from '@dexa/common';
 import { MessagingModule, OutboxModule } from '@dexa/messaging';
 import { Module, type Type } from '@nestjs/common';
 import { ConfigModule } from './config/config.module.js';
@@ -33,7 +27,6 @@ export function createAppModule(config: EmployeeServiceConfig): Type<unknown> {
         serviceBaseUrls: { [ServiceName.AUTH_SERVICE]: config.AUTH_SERVICE_INTERNAL_URL },
         authConfig: config,
       }),
-      AccountStatusModule.forRemote(),
       DatabaseModule,
       ClockModule,
       MessagingModule.forRoot({ url: config.RABBITMQ_URL }),

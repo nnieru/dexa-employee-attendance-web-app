@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { ErrorCode, Role } from '@dexa/contracts';
 import {
   Body,
@@ -15,7 +16,6 @@ import {
   type INestApplication,
   type LoggerService,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { createServer } from 'node:http';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -23,11 +23,7 @@ import { z } from 'zod';
 import type { AuthenticatedUser } from '../src/auth/authenticated-principal.js';
 import { AuthModule } from '../src/auth/auth.module.js';
 import { CurrentUser } from '../src/auth/current-user.decorator.js';
-import {
-  ACCOUNT_STATUS_READER,
-  type IAccountStatusReader,
-} from '../src/auth/account-status-reader.interface.js';
-import { JwtAuthGuard } from '../src/auth/jwt-auth.guard.js';
+import { GatewayUserAuthGuard } from '../src/auth/gateway-user-auth.guard.js';
 import { ServiceAuthGuard } from '../src/auth/service-auth.guard.js';
 import { ServiceName } from '../src/auth/service-name.js';
 import { configureApp } from '../src/bootstrap/configure-app.js';
@@ -45,13 +41,12 @@ import {
   type IInternalHttpClient,
 } from '../src/http/internal-http-client.interface.js';
 import { InternalHttpModule } from '../src/http/internal-http.module.js';
-import { MAX_GET_RETRIES } from '../src/http/internal-http.rules.js';
 import {
-  USER_JWT_AUDIENCE,
-  USER_JWT_ISSUER,
-  authEnvironmentFor,
-  generateAuthKeySet,
-} from './auth-key-set.js';
+  SERVICE_TOKEN_SIGNER,
+  type IServiceTokenSigner,
+} from '../src/auth/service-token-signer.interface.js';
+import { MAX_GET_RETRIES } from '../src/http/internal-http.rules.js';
+import { authEnvironmentFor, generateAuthKeySet } from './auth-key-set.js';
 
 const LOCALHOST = '127.0.0.1';
 
@@ -80,9 +75,6 @@ const SHORT_TIMEOUT_MILLISECONDS = 50;
 const SLOW_RESPONSE_MILLISECONDS = 400;
 // Stands for "every attempt fails", without a magic number.
 const ALWAYS_FAILING = Number.POSITIVE_INFINITY;
-// 2100-01-01T00:00:00Z, so a token minted for these tests does not expire while they run.
-const FAR_FUTURE_EXPIRY_SECONDS = 4_102_444_800;
-const EXPIRED_EXPIRY_SECONDS = 1;
 const INVALID_CREDENTIALS_CODE = 'INVALID_CREDENTIALS';
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password.';
 
@@ -92,13 +84,11 @@ const TARGET_SCRIPT = Symbol('TargetScript');
 // configuration and the caller signs them with its own private key.
 let targetConfig: AuthConfig;
 let callerConfig: AuthConfig;
-let userPrivateKeyPem: string;
 
 beforeAll(() => {
   const keys = generateAuthKeySet();
   targetConfig = parseConfig(AuthConfigSchema, authEnvironmentFor(keys, TARGET_SERVICE));
   callerConfig = parseConfig(AuthConfigSchema, authEnvironmentFor(keys, ServiceName.API_GATEWAY));
-  userPrivateKeyPem = keys.user.privateKeyPem;
 });
 
 const echoResponseSchema = z.object({
@@ -187,20 +177,15 @@ class InternalTargetController {
 }
 
 // Kept apart from InternalTargetController, whose class-level guard admits only service tokens. This
-// route admits only user tokens, so a service token sent here is refused.
+// route admits only tokens that api-gateway signed on behalf of a user.
 @Controller('test-internal')
 class UserTargetController {
   @Get('user-echo')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(GatewayUserAuthGuard)
   userEcho(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
     return user;
   }
 }
-
-// The target's user route is about forwarded tokens, so every account is active here.
-const activeAccountStatusReader: IAccountStatusReader = {
-  findAccountStatus: () => Promise.resolve({ isActive: true }),
-};
 
 const userEchoResponseSchema = z.object({ accountId: z.string(), role: z.string() });
 
@@ -210,10 +195,7 @@ async function startTarget(script: TargetScript): Promise<RunningTarget> {
   const moduleRef = await Test.createTestingModule({
     imports: [AuthModule.forRoot(targetConfig)],
     controllers: [InternalTargetController, UserTargetController],
-    providers: [
-      { provide: TARGET_SCRIPT, useValue: script },
-      { provide: ACCOUNT_STATUS_READER, useValue: activeAccountStatusReader },
-    ],
+    providers: [{ provide: TARGET_SCRIPT, useValue: script }],
   }).compile();
   const app = moduleRef.createNestApplication();
   configureApp(app, { CORS_ORIGINS: [] });
@@ -254,6 +236,7 @@ async function captureRejection(action: () => Promise<unknown>): Promise<unknown
 
 type Harness = {
   readonly client: IInternalHttpClient;
+  readonly signer: IServiceTokenSigner;
   readonly script: TargetScript;
   readonly logs: string[];
   readonly close: () => Promise<void>;
@@ -287,6 +270,7 @@ async function startHarness(): Promise<Harness> {
 
   return {
     client: moduleRef.get<IInternalHttpClient>(INTERNAL_HTTP_CLIENT),
+    signer: moduleRef.get<IServiceTokenSigner>(SERVICE_TOKEN_SIGNER),
     script,
     logs,
     close: async () => {
@@ -528,65 +512,53 @@ describe('InternalHttpClient against a running target', () => {
     });
   });
 
-  describe('forwardedUserToken', () => {
-    it('should return the identity of the user when the user token is forwarded', async () => {
-      const token = await signUserToken(Role.HR, FAR_FUTURE_EXPIRY_SECONDS);
+  describe('onBehalfOf', () => {
+    const onBehalfOf: AuthenticatedUser = { accountId: ACCOUNT_ID, role: Role.HR };
 
+    it('should return the identity of the user when the call acts on behalf of the user', async () => {
       const response = await harness.client.get({
         target: TARGET_SERVICE,
         path: USER_ECHO_PATH,
-        forwardedUserToken: token,
+        onBehalfOf,
         responseSchema: userEchoResponseSchema,
       });
 
       expect(response).toEqual({ accountId: ACCOUNT_ID, role: Role.HR });
     });
 
-    it('should throw UnauthorizedError with the remote code when the forwarded token is refused and its 401 code is listed', async () => {
-      const token = await signUserToken(Role.HR, EXPIRED_EXPIRY_SECONDS);
-
+    it('should throw DependencyUnavailableError when the target refuses the signed token', async () => {
+      // A user token is refused by ServiceAuthGuard. The refusal is this service's own token being rejected, a
+      // misconfiguration, so it is never passed on to the browser. The caller lists no refusal codes here.
       const error = await captureRejection(() =>
         harness.client.get({
           target: TARGET_SERVICE,
-          path: USER_ECHO_PATH,
-          forwardedUserToken: token,
-          refusalCodes: [ErrorCode.UNAUTHORIZED],
-          responseSchema: userEchoResponseSchema,
-        }),
-      );
-
-      expect(error).toBeInstanceOf(UnauthorizedError);
-      expect(error).toMatchObject({ code: ErrorCode.UNAUTHORIZED, message: 'Unauthorized' });
-    });
-
-    it('should throw DependencyUnavailableError when the forwarded token is refused and no refusal code is listed', async () => {
-      const token = await signUserToken(Role.HR, EXPIRED_EXPIRY_SECONDS);
-
-      const error = await captureRejection(() =>
-        harness.client.get({
-          target: TARGET_SERVICE,
-          path: USER_ECHO_PATH,
-          forwardedUserToken: token,
-          responseSchema: userEchoResponseSchema,
+          path: ECHO_PATH,
+          onBehalfOf,
+          responseSchema: echoResponseSchema,
         }),
       );
 
       expect(error).toBeInstanceOf(DependencyUnavailableError);
     });
 
-    it('should not log the forwarded token when the target refuses it', async () => {
-      const token = await signUserToken(Role.HR, EXPIRED_EXPIRY_SECONDS);
+    it('should not log the signed token when the target refuses it', async () => {
+      const signFor = jest.spyOn(harness.signer, 'signFor');
 
       await captureRejection(() =>
         harness.client.get({
           target: TARGET_SERVICE,
-          path: USER_ECHO_PATH,
-          forwardedUserToken: token,
-          responseSchema: userEchoResponseSchema,
+          path: ECHO_PATH,
+          onBehalfOf,
+          responseSchema: echoResponseSchema,
         }),
       );
 
-      expect(harness.logs.join('\n')).not.toContain(token);
+      const signedTokens = await Promise.all(signFor.mock.results.map((result) => result.value));
+      expect(signedTokens.length).toBeGreaterThan(0);
+      for (const token of signedTokens) {
+        expect(harness.logs.join('\n')).not.toContain(token);
+      }
+      signFor.mockRestore();
     });
   });
 
@@ -653,19 +625,6 @@ describe('InternalHttpClient against a running target', () => {
     });
   });
 });
-
-async function signUserToken(role: Role, expirySeconds: number): Promise<string> {
-  return new JwtService().signAsync(
-    { role, exp: expirySeconds },
-    {
-      privateKey: userPrivateKeyPem,
-      algorithm: 'RS256',
-      issuer: USER_JWT_ISSUER,
-      audience: USER_JWT_AUDIENCE,
-      subject: ACCOUNT_ID,
-    },
-  );
-}
 
 describe('InternalHttpModule.forRoot', () => {
   it('should name the field without echoing the URL when a base URL is not http or https', () => {

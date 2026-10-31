@@ -1,13 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import {
-  ACCOUNT_STATUS_READER,
-  CLOCK,
-  configureApp,
-  parseConfig,
-  type IAccountStatusReader,
-  type IClock,
-} from '@dexa/common';
+import { CLOCK, configureApp, parseConfig, type IClock } from '@dexa/common';
 import { connectEventConsumer } from '@dexa/messaging';
 import { createAppModule } from '../src/app.module.js';
 import { NotificationServiceConfigSchema } from '../src/config/notification-service-config.schema.js';
@@ -33,8 +26,7 @@ export type NotificationConsumerAppOptions = {
   readonly authClient: IAuthClient;
   readonly employeeClient: IEmployeeClient;
   readonly notificationWriter?: INotificationWriter;
-  // The stream specs replace the account reader, so a test can deactivate an account, and shorten the heartbeat.
-  readonly accountStatusReader?: IAccountStatusReader;
+  // The stream specs shorten the heartbeat, so a test can observe heartbeats within a fraction of a second.
   readonly heartbeatMilliseconds?: number;
 };
 
@@ -66,11 +58,6 @@ export async function startNotificationConsumerApp(
     moduleBuilder = moduleBuilder
       .overrideProvider(NOTIFICATION_WRITER)
       .useValue(options.notificationWriter);
-  }
-  if (options.accountStatusReader !== undefined) {
-    moduleBuilder = moduleBuilder
-      .overrideProvider(ACCOUNT_STATUS_READER)
-      .useValue(options.accountStatusReader);
   }
   if (options.heartbeatMilliseconds !== undefined) {
     moduleBuilder = moduleBuilder

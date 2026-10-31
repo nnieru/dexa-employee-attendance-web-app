@@ -7,7 +7,7 @@ import { ApiGatewayConfigSchema, type ApiGatewayConfig } from './api-gateway-con
  */
 export function loadApiGatewayConfig(): ApiGatewayConfig {
   const serviceName = process.env.SERVICE_NAME || ServiceName.API_GATEWAY;
-  // The gateway checks user tokens with the public key only. Clearing the private key here keeps it out
+  // The gateway verifies user tokens with the public key only. Clearing the private key here keeps it out
   // of this process even when a shared .env file contains it, so the gateway cannot mint user tokens.
   return parseConfig(ApiGatewayConfigSchema, {
     ...process.env,

@@ -1,6 +1,8 @@
+import type { AuthenticatedUser } from '@dexa/common';
+
 export type NotificationStreamRequest = {
-  // The end user's token. notification-service verifies it, so the gateway forwards it as it arrived.
-  readonly accessToken: string;
+  // The end user that api-gateway acts for. The stream is opened with a token that names this user (D-51).
+  readonly user: AuthenticatedUser;
   // Aborts the upstream request when the browser leaves, so notification-service stops the stream too.
   readonly signal: AbortSignal;
 };
@@ -18,3 +20,7 @@ export interface INotificationStreamClient {
 export const NOTIFICATION_STREAM_CLIENT = Symbol('INotificationStreamClient');
 export const NOTIFICATION_SERVICE_BASE_URL = Symbol('NotificationServiceBaseUrl');
 export const NOTIFICATION_STREAM_CONNECT_TIMEOUT = Symbol('NotificationStreamConnectTimeout');
+// How often the gateway re-checks the account of an open stream (D-13). Injected so tests can use a short interval.
+export const NOTIFICATION_STREAM_ACCOUNT_CHECK_MILLISECONDS = Symbol(
+  'NotificationStreamAccountCheckMilliseconds',
+);

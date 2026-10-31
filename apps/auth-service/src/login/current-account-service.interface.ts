@@ -1,6 +1,6 @@
 import type { CurrentAccount } from '@dexa/contracts';
 
-/** Looks up the account that a user token belongs to, and refuses the token when that account is not usable. */
+/** Looks up the account that a forwarded call names, and refuses the call when that account is not usable. */
 export interface ICurrentAccountService {
   getCurrentAccount(accountId: string): Promise<CurrentAccount>;
 }

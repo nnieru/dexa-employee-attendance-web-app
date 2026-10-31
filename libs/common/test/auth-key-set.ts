@@ -63,16 +63,13 @@ export function encodeKeyForEnvironment(pem: string): string {
   return Buffer.from(pem, 'utf8').toString('base64');
 }
 
-/** The environment one service starts with: its own private key and every service's public key. */
+/** The service key settings one service starts with: its own private key and every service's public key. */
 export function authEnvironmentFor(
   keys: AuthKeySet,
   serviceName: ServiceName,
 ): Record<string, string> {
   const environment: Record<string, string> = {
     SERVICE_NAME: serviceName,
-    USER_JWT_ISSUER,
-    USER_JWT_AUDIENCE,
-    USER_JWT_PUBLIC_KEY: encodeKeyForEnvironment(keys.user.publicKeyPem),
     SERVICE_JWT_PRIVATE_KEY: encodeKeyForEnvironment(servicePair(keys, serviceName).privateKeyPem),
   };
   for (const name of Object.values(ServiceName)) {
@@ -81,4 +78,21 @@ export function authEnvironmentFor(
     );
   }
   return environment;
+}
+
+/** The user token settings that api-gateway verifies with. */
+export function userJwtVerifierEnvironmentFor(keys: AuthKeySet): Record<string, string> {
+  return {
+    USER_JWT_ISSUER,
+    USER_JWT_AUDIENCE,
+    USER_JWT_PUBLIC_KEY: encodeKeyForEnvironment(keys.user.publicKeyPem),
+  };
+}
+
+/** The user token settings that auth-service signs with. */
+export function userJwtSigningEnvironmentFor(keys: AuthKeySet): Record<string, string> {
+  return {
+    ...userJwtVerifierEnvironmentFor(keys),
+    USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(keys.user.privateKeyPem),
+  };
 }

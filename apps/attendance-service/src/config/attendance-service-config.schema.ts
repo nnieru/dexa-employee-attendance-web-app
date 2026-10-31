@@ -46,16 +46,14 @@ const attendanceEnvironmentSchema = z.intersection(
   BaseConfigSchema.extend({
     SERVICE_NAME: ownServiceNameSchema,
     ATTENDANCE_DATABASE_URL: postgresUrlSchema,
-    // Every user-token request checks the account with auth-service (JwtAuthGuard), so the URL is required.
-    AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
     // The HR attendance list resolves names through employee-service's batched lookup (PRD ADM-4).
     EMPLOYEE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
   }),
   defaultScheduleSettingsSchema,
 );
 
-// Token settings are shared with every service (libs/common/src/config/auth-config.schema.ts). The user private key
-// is refused by the loader, so this service only verifies user tokens.
+// Service key settings are shared with every service (libs/common/src/config/auth-config.schema.ts). The service
+// verifies the gateway's internal tokens, so it holds no user token setting (D-51).
 export const AttendanceServiceConfigSchema = z.intersection(
   attendanceEnvironmentSchema,
   AuthConfigSchema,

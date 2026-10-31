@@ -70,7 +70,7 @@ describe('AuthClient.listHrRecipientIds', () => {
       path: '/api/v1/internal/accounts/hr-recipients',
       query: { page: '1', pageSize: String(MAX_PAGE_SIZE) },
     });
-    expect(recorded[0]?.forwardedUserToken).toBeUndefined();
+    expect(recorded[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should read every page in order and return all recipient IDs', async () => {

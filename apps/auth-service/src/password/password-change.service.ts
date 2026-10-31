@@ -19,7 +19,8 @@ import {
 } from './password-change.repository.interface.js';
 
 const SESSION_NOT_FOUND_MESSAGE = 'Your session is no longer valid. Sign in again.';
-const ACCOUNT_DISABLED_MESSAGE = 'This account has been deactivated.';
+// The same text as the gateway's answer, so a client sees one message for a deactivated account.
+const ACCOUNT_DISABLED_MESSAGE = 'This account is no longer active.';
 const CURRENT_PASSWORD_INCORRECT_MESSAGE = 'The current password is incorrect.';
 const PASSWORD_CHANGED_BY_ANOTHER_REQUEST_MESSAGE =
   'The password was changed by another request. Try again.';

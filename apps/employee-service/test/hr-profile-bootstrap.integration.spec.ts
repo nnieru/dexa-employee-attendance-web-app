@@ -1,16 +1,10 @@
-import {
-  ACCOUNT_STATUS_READER,
-  DependencyUnavailableError,
-  parseConfig,
-  type IAccountStatusReader,
-} from '@dexa/common';
+import { DependencyUnavailableError, parseConfig } from '@dexa/common';
 import {
   ErrorCode,
   ProfileStatus,
   Role,
   type AccountLookupItem,
   type AccountReference,
-  type AccountStatus,
 } from '@dexa/contracts';
 import { createDatabase, type Database } from '@dexa/db';
 import type { LoggerService } from '@nestjs/common';
@@ -112,10 +106,6 @@ class FakeAuthAccountClient implements IAuthAccountClient {
   }
 }
 
-const fakeAccountStatusReader: IAccountStatusReader = {
-  findAccountStatus: (): Promise<AccountStatus | undefined> => Promise.resolve(undefined),
-};
-
 function bootstrapVariables(overrides: BootstrapVariables = {}): BootstrapVariables {
   return {
     EMPLOYEE_BOOTSTRAP_HR_EMAIL: CONFIGURED_EMAIL,
@@ -204,8 +194,6 @@ describe('HR profile bootstrap', () => {
       }),
     );
     const moduleRef = await Test.createTestingModule({ imports: [createAppModule(config)] })
-      .overrideProvider(ACCOUNT_STATUS_READER)
-      .useValue(fakeAccountStatusReader)
       .overrideProvider(AUTH_ACCOUNT_CLIENT)
       .useValue(auth)
       .overrideProvider(HR_BOOTSTRAP_RETRY_POLICY)

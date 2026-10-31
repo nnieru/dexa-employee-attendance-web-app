@@ -15,6 +15,8 @@ import {
   USER_JWT_AUDIENCE,
   USER_JWT_ISSUER,
   type AuthKeySet,
+  userJwtSigningEnvironmentFor,
+  userJwtVerifierEnvironmentFor,
 } from './auth-key-set.js';
 import {
   startAuthServiceProcess,
@@ -68,6 +70,7 @@ function authServiceProcessEnvironment(
     NODE_ENV: 'test',
     BUSINESS_TIMEZONE: 'Asia/Jakarta',
     ...authEnvironmentFor(keys, ServiceName.AUTH_SERVICE),
+    ...userJwtSigningEnvironmentFor(keys),
     USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(keys.user.privateKeyPem),
     RABBITMQ_URL: UNREACHABLE_BROKER_URL,
     AUTH_DATABASE_URL: databaseUrl,
@@ -103,6 +106,7 @@ describe('api-gateway self-service password change through a running auth-servic
     const config = parseConfig(ApiGatewayConfigSchema, {
       BUSINESS_TIMEZONE: 'Asia/Jakarta',
       ...authEnvironmentFor(keys, ServiceName.API_GATEWAY),
+      ...userJwtVerifierEnvironmentFor(keys),
       AUTH_SERVICE_INTERNAL_URL: authService.baseUrl,
       EMPLOYEE_SERVICE_INTERNAL_URL: 'http://employee-service:3000',
       ATTENDANCE_SERVICE_INTERNAL_URL: 'http://attendance-service:3000',

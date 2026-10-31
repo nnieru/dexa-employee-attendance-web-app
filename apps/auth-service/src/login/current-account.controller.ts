@@ -1,4 +1,4 @@
-import { CurrentUser, JwtAuthGuard, type AuthenticatedUser } from '@dexa/common';
+import { CurrentUser, GatewayUserAuthGuard, type AuthenticatedUser } from '@dexa/common';
 import type { CurrentAccount } from '@dexa/contracts';
 import { Controller, Get, Inject, UseGuards } from '@nestjs/common';
 import {
@@ -6,7 +6,7 @@ import {
   type ICurrentAccountService,
 } from './current-account-service.interface.js';
 
-// The gateway forwards the user's token here, so JwtAuthGuard verifies it on this service.
+// The gateway checks the user and forwards its own signed token here, so GatewayUserAuthGuard admits it (D-51).
 @Controller('auth')
 export class CurrentAccountController {
   constructor(
@@ -14,7 +14,7 @@ export class CurrentAccountController {
   ) {}
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(GatewayUserAuthGuard)
   getCurrentAccount(@CurrentUser() user: AuthenticatedUser): Promise<CurrentAccount> {
     return this.currentAccounts.getCurrentAccount(user.accountId);
   }

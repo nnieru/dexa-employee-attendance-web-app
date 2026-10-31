@@ -3,6 +3,7 @@ import {
   BaseConfigSchema,
   internalBaseUrlSchema,
   ServiceName,
+  UserJwtVerifierConfigSchema,
 } from '@dexa/common';
 import { z } from 'zod';
 
@@ -12,16 +13,21 @@ const ownServiceNameSchema = z.literal(ServiceName.API_GATEWAY, {
   error: `must be ${ServiceName.API_GATEWAY}`,
 });
 
+// The gateway verifies end-user tokens (UserJwtVerifierConfigSchema) and signs the internal tokens it forwards
+// with its own service key (AuthConfigSchema). It alone reads the user token settings (D-51).
 export const ApiGatewayConfigSchema = z.intersection(
-  BaseConfigSchema.extend({
-    SERVICE_NAME: ownServiceNameSchema,
-    AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
-    EMPLOYEE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
-    ATTENDANCE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
-    // The HR notification stream is proxied to notification-service (D-08). Only the stream uses this URL.
-    NOTIFICATION_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
-  }),
-  AuthConfigSchema,
+  z.intersection(
+    BaseConfigSchema.extend({
+      SERVICE_NAME: ownServiceNameSchema,
+      AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
+      EMPLOYEE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
+      ATTENDANCE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
+      // The HR notification stream is proxied to notification-service (D-08). Only the stream uses this URL.
+      NOTIFICATION_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
+    }),
+    AuthConfigSchema,
+  ),
+  UserJwtVerifierConfigSchema,
 );
 
 export type ApiGatewayConfig = z.infer<typeof ApiGatewayConfigSchema>;

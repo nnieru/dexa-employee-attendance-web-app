@@ -1,5 +1,9 @@
 import { parseConfig, ServiceName } from '@dexa/common';
-import { authEnvironmentFor, generateAuthKeySet } from '../../test/auth-key-set.js';
+import {
+  authEnvironmentFor,
+  generateAuthKeySet,
+  userJwtVerifierEnvironmentFor,
+} from '../../test/auth-key-set.js';
 import { ApiGatewayConfigSchema } from './api-gateway-config.schema.js';
 
 const AUTH_SERVICE_URL = 'http://auth-service:3000';
@@ -24,6 +28,7 @@ const TEST_KEYS = generateAuthKeySet();
 const BASE_SOURCE = {
   BUSINESS_TIMEZONE: 'Asia/Jakarta',
   ...authEnvironmentFor(TEST_KEYS, ServiceName.API_GATEWAY),
+  ...userJwtVerifierEnvironmentFor(TEST_KEYS),
   AUTH_SERVICE_INTERNAL_URL: AUTH_SERVICE_URL,
   EMPLOYEE_SERVICE_INTERNAL_URL: EMPLOYEE_SERVICE_URL,
   ATTENDANCE_SERVICE_INTERNAL_URL: ATTENDANCE_SERVICE_URL,

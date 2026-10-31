@@ -34,8 +34,8 @@ const ownServiceNameSchema = z.literal(ServiceName.NOTIFICATION_SERVICE, {
 });
 
 // The notification service consumes the event queue, writes the inbox, and resolves recipients and names through
-// the internal routes of auth-service and employee-service. Its service token is signed with its own key.
-// The user token settings come from the shared auth schema; this service verifies none of them yet.
+// the internal routes of auth-service and employee-service. Its service token is signed with its own key. It holds
+// no user token setting: the gateway checks users and forwards only its own signed token (D-51).
 export const NotificationServiceConfigSchema = z.intersection(
   AuthConfigSchema,
   BaseConfigSchema.extend({

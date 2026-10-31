@@ -3,6 +3,7 @@ import {
   ServiceName,
   type IInternalHttpClient,
   type InternalBinaryResponse,
+  type AuthenticatedUser,
 } from '@dexa/common';
 import {
   API_PREFIX,
@@ -24,9 +25,6 @@ import {
 import { Inject, Injectable } from '@nestjs/common';
 import type { IEmployeeServiceClient } from './employee-service-client.interface.js';
 
-// The gateway forwards the user's token on these calls, so a 401 means that token was refused. The
-// employee-service does not check account status itself; the gateway's status check ran before this call.
-const USER_TOKEN_REFUSAL_CODES = [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED];
 // A photo is at most 5 MiB, so its transfer needs more than the default timeout of the internal calls.
 const PHOTO_TIMEOUT_MILLISECONDS = 10_000;
 const PHOTO_PATH = `/${API_PREFIX}/employees/me/photo`;
@@ -41,45 +39,41 @@ const PASS_THROUGH_UPDATE_CODES = [ErrorCode.EMPLOYEE_UPDATE_INCOMPLETE];
 export class EmployeeServiceClient implements IEmployeeServiceClient {
   constructor(@Inject(INTERNAL_HTTP_CLIENT) private readonly httpClient: IInternalHttpClient) {}
 
-  listPositions(accessToken: string): Promise<MasterOption[]> {
+  listPositions(user: AuthenticatedUser): Promise<MasterOption[]> {
     return this.httpClient.get({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: `/${API_PREFIX}/positions`,
-      forwardedUserToken: accessToken,
-      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      onBehalfOf: user,
       responseSchema: masterOptionListSchema,
     });
   }
 
-  listEmployeeStatuses(accessToken: string): Promise<MasterOption[]> {
+  listEmployeeStatuses(user: AuthenticatedUser): Promise<MasterOption[]> {
     return this.httpClient.get({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: `/${API_PREFIX}/employee-statuses`,
-      forwardedUserToken: accessToken,
-      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      onBehalfOf: user,
       responseSchema: masterOptionListSchema,
     });
   }
 
-  // The employee-service derives the identity from this token, so the gateway forwards it unchanged.
-  getOwnProfile(accessToken: string): Promise<OwnProfile> {
+  // The employee-service derives the identity from the forwarded user, which the gateway's token names (D-51).
+  getOwnProfile(user: AuthenticatedUser): Promise<OwnProfile> {
     return this.httpClient.get({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: `/${API_PREFIX}/employees/me`,
-      forwardedUserToken: accessToken,
-      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      onBehalfOf: user,
       responseSchema: ownProfileSchema,
     });
   }
 
   // The create is not retried: a lost answer is replayed by HR with the same operation ID, never by the gateway.
-  createEmployee(accessToken: string, request: CreateEmployeeRequest): Promise<EmployeeDetail> {
+  createEmployee(user: AuthenticatedUser, request: CreateEmployeeRequest): Promise<EmployeeDetail> {
     return this.httpClient.post({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: EMPLOYEES_PATH,
       body: request,
-      forwardedUserToken: accessToken,
-      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      onBehalfOf: user,
       passThroughErrorCodes: PASS_THROUGH_CREATE_CODES,
       responseSchema: employeeDetailSchema,
     });
@@ -87,7 +81,7 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
 
   // The update is not retried: a lost answer may hide a change that already saved, so HR decides whether to save again.
   updateEmployee(
-    accessToken: string,
+    user: AuthenticatedUser,
     accountId: string,
     request: UpdateEmployeeRequest,
   ): Promise<EmployeeDetail> {
@@ -95,68 +89,62 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
       target: ServiceName.EMPLOYEE_SERVICE,
       path: `${EMPLOYEES_PATH}/${encodeURIComponent(accountId)}`,
       body: request,
-      forwardedUserToken: accessToken,
-      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      onBehalfOf: user,
       passThroughErrorCodes: PASS_THROUGH_UPDATE_CODES,
       responseSchema: employeeDetailSchema,
     });
   }
 
-  // The employee-service writes only the caller's own phone, so the gateway forwards the caller's token unchanged.
-  updateOwnProfile(accessToken: string, request: UpdateOwnProfileRequest): Promise<OwnProfile> {
+  // The employee-service writes only the caller's own phone, so the call acts on behalf of the caller.
+  updateOwnProfile(user: AuthenticatedUser, request: UpdateOwnProfileRequest): Promise<OwnProfile> {
     return this.httpClient.patch({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: `/${API_PREFIX}/employees/me`,
       body: request,
-      forwardedUserToken: accessToken,
-      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      onBehalfOf: user,
       responseSchema: ownProfileSchema,
     });
   }
 
   // The bytes were size-limited at the edge. employee-service decides what they are from their content, so the
   // part carries no client-declared type. A PUT is never retried, so a lost answer is not replayed.
-  updateOwnPhoto(accessToken: string, photo: Buffer): Promise<OwnProfile> {
+  updateOwnPhoto(user: AuthenticatedUser, photo: Buffer): Promise<OwnProfile> {
     return this.httpClient.put({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: PHOTO_PATH,
       file: { fieldName: PHOTO_FIELD_NAME, fileName: 'photo', content: photo },
-      forwardedUserToken: accessToken,
-      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      onBehalfOf: user,
       timeoutMilliseconds: PHOTO_TIMEOUT_MILLISECONDS,
       responseSchema: ownProfileSchema,
     });
   }
 
-  getOwnPhoto(accessToken: string): Promise<InternalBinaryResponse> {
+  getOwnPhoto(user: AuthenticatedUser): Promise<InternalBinaryResponse> {
     return this.httpClient.getBinary({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: PHOTO_PATH,
-      forwardedUserToken: accessToken,
-      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      onBehalfOf: user,
       timeoutMilliseconds: PHOTO_TIMEOUT_MILLISECONDS,
     });
   }
 
   // The query is forwarded as the caller sent it, after the gateway's own validation, so employee-service applies the
-  // same paging and search. The caller's token is forwarded, so employee-service still decides whether HR may list.
-  listEmployees(accessToken: string, query: EmployeeListQuery): Promise<EmployeeListPage> {
+  // same paging and search. The call acts for the caller, so employee-service still decides whether HR may list.
+  listEmployees(user: AuthenticatedUser, query: EmployeeListQuery): Promise<EmployeeListPage> {
     return this.httpClient.get({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: EMPLOYEES_PATH,
       query: toListQueryParameters(query),
-      forwardedUserToken: accessToken,
-      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      onBehalfOf: user,
       responseSchema: employeeListPageSchema,
     });
   }
 
-  getEmployeePhoto(accessToken: string, accountId: string): Promise<InternalBinaryResponse> {
+  getEmployeePhoto(user: AuthenticatedUser, accountId: string): Promise<InternalBinaryResponse> {
     return this.httpClient.getBinary({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: `${EMPLOYEES_PATH}/${encodeURIComponent(accountId)}/photo`,
-      forwardedUserToken: accessToken,
-      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      onBehalfOf: user,
       timeoutMilliseconds: PHOTO_TIMEOUT_MILLISECONDS,
     });
   }

@@ -1,10 +1,4 @@
-import {
-  AccountStatusModule,
-  AuthModule,
-  HealthModule,
-  InternalHttpModule,
-  ServiceName,
-} from '@dexa/common';
+import { AuthModule, HealthModule, InternalHttpModule, ServiceName } from '@dexa/common';
 import { Module, type Type } from '@nestjs/common';
 import { ConfigModule } from './config/config.module.js';
 import type { NotificationServiceConfig } from './config/notification-service-config.schema.js';
@@ -29,7 +23,6 @@ export function createAppModule(config: NotificationServiceConfig): Type<unknown
         },
         authConfig: config,
       }),
-      AccountStatusModule.forRemote(),
       ClockModule,
       DatabaseModule,
       IngestionModule,

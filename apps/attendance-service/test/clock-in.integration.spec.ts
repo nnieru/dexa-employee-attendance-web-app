@@ -1,14 +1,6 @@
-import { Buffer } from 'node:buffer';
-import { createSign, randomUUID } from 'node:crypto';
-import {
-  ACCOUNT_STATUS_READER,
-  CLOCK,
-  configureApp,
-  parseConfig,
-  type IAccountStatusReader,
-  type IClock,
-} from '@dexa/common';
-import { clockInResponseSchema, Role, type AccountStatus } from '@dexa/contracts';
+import { randomUUID } from 'node:crypto';
+import { CLOCK, configureApp, parseConfig, type IClock, ServiceName } from '@dexa/common';
+import { clockInResponseSchema, Role } from '@dexa/contracts';
 import type { Database } from '@dexa/db';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -23,25 +15,24 @@ import {
   attendanceEntries,
   workCalendarDates,
 } from '../src/infrastructure/db/schema.js';
-import { USER_JWT_AUDIENCE, USER_JWT_ISSUER, type AuthKeySet } from './auth-key-set.js';
+import type { AuthKeySet } from './auth-key-set.js';
+import { signGatewayUserToken } from './gateway-user-token.js';
 import {
   attendanceServiceAuthKeys,
   attendanceServiceEnvironment,
 } from './attendance-service-environment.js';
 import { CONTAINER_TIMEOUT_MS, TEST_TIMEOUT_MS, createEmptyDatabaseUri } from './test-database.js';
 
+// The lifetime of the token api-gateway sends for a call (D-51).
+const TOKEN_LIFETIME_SECONDS = 60;
+
 const CLOCK_IN_PATH = '/api/v1/attendance/clock-in';
-const TOKEN_LIFETIME_SECONDS = 300;
 // The default schedule is seeded from the first start, so the seed takes effect on this Monday (WIB).
 const FIRST_START_INSTANT = new Date('2026-11-02T01:00:00Z');
 const HOLIDAY_DATE = '2026-11-03';
 const SCHEDULE_START_DATE = '2026-11-02';
 
 // Stands in for auth-service. The clock is shared across tests, so each test sets the instant it needs.
-const accountStatuses = new Map<string, AccountStatus>();
-const fakeAccountStatusReader: IAccountStatusReader = {
-  findAccountStatus: (accountId) => Promise.resolve(accountStatuses.get(accountId)),
-};
 const mutableClock: { current: Date } = { current: FIRST_START_INSTANT };
 const fixedClock: IClock = { now: () => new Date(mutableClock.current) };
 
@@ -50,26 +41,15 @@ let app: INestApplication;
 let database: Database;
 let keys: AuthKeySet;
 
-function encodeJsonSegment(value: object): string {
-  return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-
-// Signs a user token with the test user key. Only auth-service holds that key in production.
+// Signs the token that api-gateway sends to this service for the user (D-51).
 function signUserToken(accountId: string, role: Role, expiresAtSeconds: number): string {
-  const signingInput = [
-    encodeJsonSegment({ alg: 'RS256', typ: 'JWT' }),
-    encodeJsonSegment({
-      sub: accountId,
-      role,
-      iss: USER_JWT_ISSUER,
-      aud: USER_JWT_AUDIENCE,
-      exp: expiresAtSeconds,
-    }),
-  ].join('.');
-  const signature = createSign('RSA-SHA256')
-    .update(signingInput)
-    .sign(keys.user.privateKeyPem, 'base64url');
-  return `${signingInput}.${signature}`;
+  return signGatewayUserToken(
+    keys,
+    ServiceName.ATTENDANCE_SERVICE,
+    accountId,
+    role,
+    expiresAtSeconds,
+  );
 }
 
 function tokenFor(accountId: string, role: Role = Role.EMPLOYEE): string {
@@ -77,9 +57,8 @@ function tokenFor(accountId: string, role: Role = Role.EMPLOYEE): string {
   return signUserToken(accountId, role, expiresAt);
 }
 
-function registerAccount(options: { readonly isActive?: boolean } = {}): string {
+function registerAccount(): string {
   const accountId = randomUUID();
-  accountStatuses.set(accountId, { isActive: options.isActive ?? true });
   return accountId;
 }
 
@@ -109,8 +88,6 @@ async function startApp(databaseUrl: string): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({ imports: [createAppModule(config)] })
     .overrideProvider(CLOCK)
     .useValue(fixedClock)
-    .overrideProvider(ACCOUNT_STATUS_READER)
-    .useValue(fakeAccountStatusReader)
     .compile();
   const nestApp = moduleRef.createNestApplication();
   configureApp(nestApp, { CORS_ORIGINS: [] });
@@ -296,19 +273,6 @@ describe('attendance clock in', () => {
       const response = await postClockIn(undefined).expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
-    },
-    TEST_TIMEOUT_MS,
-  );
-
-  it(
-    'should return 401 ACCOUNT_DISABLED and write nothing when the account is deactivated',
-    async () => {
-      const accountId = registerAccount({ isActive: false });
-
-      const response = await postClockIn(tokenFor(accountId)).expect(401);
-
-      expect(response.body).toMatchObject({ statusCode: 401, code: 'ACCOUNT_DISABLED' });
-      expect(await readDays(accountId)).toEqual([]);
     },
     TEST_TIMEOUT_MS,
   );

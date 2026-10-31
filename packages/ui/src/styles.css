@@ -183,3 +183,119 @@ body {
     animation: none;
   }
 }
+
+.dexa-field {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.dexa-field__label {
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-body);
+}
+
+.dexa-field__hint,
+.dexa-field__error {
+  margin: 0;
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+.dexa-field__hint {
+  color: var(--color-text-muted);
+}
+
+.dexa-field__error {
+  color: var(--color-error);
+  font-weight: var(--font-weight-semibold);
+}
+
+.dexa-field__input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: var(--color-surface);
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.dexa-field__input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.dexa-field__input[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
+.dexa-field__input:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.dexa-field__input[readonly] {
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+}
+
+.dexa-field__input:disabled {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+  cursor: not-allowed;
+}
+
+.dexa-alert {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.dexa-alert__message {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.dexa-alert__action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dexa-alert--neutral {
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.dexa-alert--success {
+  color: var(--color-success);
+  background: var(--color-success-surface);
+  border-color: var(--color-success);
+}
+
+.dexa-alert--warning {
+  color: var(--color-warning);
+  background: var(--color-warning-surface);
+  border-color: var(--color-warning);
+}
+
+.dexa-alert--error {
+  color: var(--color-error);
+  background: var(--color-error-surface);
+  border-color: var(--color-error);
+}

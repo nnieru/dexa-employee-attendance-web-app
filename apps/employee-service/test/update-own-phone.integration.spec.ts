@@ -1,17 +1,10 @@
-import { Buffer } from 'node:buffer';
-import { createSign, randomUUID } from 'node:crypto';
-import {
-  ACCOUNT_STATUS_READER,
-  configureApp,
-  parseConfig,
-  type IAccountStatusReader,
-} from '@dexa/common';
+import { randomUUID } from 'node:crypto';
+import { configureApp, parseConfig, ServiceName } from '@dexa/common';
 import {
   ownProfileSchema,
   ProfileStatus,
   Role,
   type AccountLookupItem,
-  type AccountStatus,
   type OwnProfile,
 } from '@dexa/contracts';
 import type { Database } from '@dexa/db';
@@ -36,17 +29,20 @@ import {
   OWN_PHONE_SERVICE,
   type IOwnPhoneService,
 } from '../src/profile/own-phone.service.interface.js';
-import { USER_JWT_AUDIENCE, USER_JWT_ISSUER, type AuthKeySet } from './auth-key-set.js';
+import type { AuthKeySet } from './auth-key-set.js';
+import { signGatewayUserToken } from './gateway-user-token.js';
 import {
   employeeServiceAuthKeys,
   employeeServiceEnvironment,
 } from './employee-service-environment.js';
 
+// The lifetime of the token api-gateway sends for a call (D-51).
+const TOKEN_LIFETIME_SECONDS = 60;
+
 // Starting the container pulls an image on a cold machine, which exceeds Jest's 5 second default.
 const CONTAINER_TIMEOUT_MS = 120_000;
 const TEST_TIMEOUT_MS = 30_000;
 const OWN_PROFILE_PATH = '/api/v1/employees/me';
-const TOKEN_LIFETIME_SECONDS = 300;
 const PHONE_NUMBER = '+6281234567890';
 const PHOTO_KEY = '3f1b2c4d-0a9e-4b8f-8c7d-6e5f4a3b2c1d.jpg';
 const PROFILE_NOT_FOUND_BODY = {
@@ -69,10 +65,6 @@ const SEED_DOCUMENT = {
 
 // Stands in for auth-service, which owns the accounts. An ID missing from the directory has no email, and an
 // ID missing from the status map is an unknown account for the guard.
-const accountStatuses = new Map<string, AccountStatus>();
-const fakeAccountStatusReader: IAccountStatusReader = {
-  findAccountStatus: (accountId) => Promise.resolve(accountStatuses.get(accountId)),
-};
 const accountDirectory = new Map<string, AccountLookupItem>();
 const fakeAuthAccountClient: IAuthAccountClient = {
   findAccountById: (accountId) => Promise.resolve(accountDirectory.get(accountId)),
@@ -83,31 +75,20 @@ const fakeAuthAccountClient: IAuthAccountClient = {
   findAccountReferenceByEmail: () => Promise.resolve(undefined),
 };
 
-function encodeJsonSegment(value: object): string {
-  return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-
-// Signs a user token with the test user key. Only auth-service holds that key in production.
+// Signs the token that api-gateway sends to this service for the user (D-51).
 function signUserToken(
   keys: AuthKeySet,
   accountId: string,
   role: Role,
   expiresAtSeconds: number,
 ): string {
-  const signingInput = [
-    encodeJsonSegment({ alg: 'RS256', typ: 'JWT' }),
-    encodeJsonSegment({
-      sub: accountId,
-      role,
-      iss: USER_JWT_ISSUER,
-      aud: USER_JWT_AUDIENCE,
-      exp: expiresAtSeconds,
-    }),
-  ].join('.');
-  const signature = createSign('RSA-SHA256')
-    .update(signingInput)
-    .sign(keys.user.privateKeyPem, 'base64url');
-  return `${signingInput}.${signature}`;
+  return signGatewayUserToken(
+    keys,
+    ServiceName.EMPLOYEE_SERVICE,
+    accountId,
+    role,
+    expiresAtSeconds,
+  );
 }
 
 function nowInSeconds(): number {
@@ -151,8 +132,6 @@ describe('employee-service own phone update', () => {
     moduleRef = await Test.createTestingModule({
       imports: [createAppModule(config)],
     })
-      .overrideProvider(ACCOUNT_STATUS_READER)
-      .useValue(fakeAccountStatusReader)
       .overrideProvider(AUTH_ACCOUNT_CLIENT)
       .useValue(fakeAuthAccountClient)
       .compile();
@@ -212,7 +191,6 @@ describe('employee-service own phone update', () => {
 
   function registerAccount(options: { email: string; role: Role }): string {
     const accountId = randomUUID();
-    accountStatuses.set(accountId, { isActive: true });
     accountDirectory.set(accountId, { id: accountId, email: options.email, role: options.role });
     return accountId;
   }

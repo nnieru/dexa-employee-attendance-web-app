@@ -1,5 +1,5 @@
-import { DependencyUnavailableError, type IAccountStatusReader } from '@dexa/common';
-import { ErrorCode, type AccountStatus, type EmployeeLookupItem } from '@dexa/contracts';
+import { DependencyUnavailableError } from '@dexa/common';
+import { ErrorCode, type EmployeeLookupItem } from '@dexa/contracts';
 import type { IAuthClient } from '../src/ingestion/auth-client.interface.js';
 import type { IEmployeeClient } from '../src/ingestion/employee-client.interface.js';
 import type { NotificationDraft } from '../src/ingestion/notification-row.rules.js';
@@ -75,22 +75,5 @@ export class CountingNotificationWriter implements INotificationWriter {
     const inserted = await this.delegate.insertForRecipients(drafts);
     this.commits += 1;
     return inserted;
-  }
-}
-
-/**
- * Stands in for the account status reader that JwtAuthGuard and the stream heartbeat use. A test flips an account
- * inactive to simulate a deactivation. An account that was never set is unknown, as in auth-service.
- */
-export class ScriptedAccountStatusReader implements IAccountStatusReader {
-  private readonly isActiveByAccountId = new Map<string, boolean>();
-
-  setActive(accountId: string, isActive: boolean): void {
-    this.isActiveByAccountId.set(accountId, isActive);
-  }
-
-  async findAccountStatus(accountId: string): Promise<AccountStatus | undefined> {
-    const isActive = this.isActiveByAccountId.get(accountId);
-    return isActive === undefined ? undefined : { isActive };
   }
 }

@@ -1,6 +1,8 @@
 import { ServiceName } from '../auth/service-name.js';
 import {
   authEnvironmentFor,
+  userJwtSigningEnvironmentFor,
+  userJwtVerifierEnvironmentFor,
   encodeKeyForEnvironment,
   generateAuthKeySet,
   generateEcKeyPair,
@@ -8,7 +10,12 @@ import {
   servicePair,
   type AuthKeySet,
 } from '../../test/auth-key-set.js';
-import { AuthConfigSchema, serviceJwtPublicKeyVariable } from './auth-config.schema.js';
+import {
+  AuthConfigSchema,
+  UserJwtSigningConfigSchema,
+  UserJwtVerifierConfigSchema,
+  serviceJwtPublicKeyVariable,
+} from './auth-config.schema.js';
 import { parseConfig } from './parse-config.js';
 
 const USER_PUBLIC_KEY_MESSAGE = 'must be a base64-encoded PEM RSA public key of at least 2048 bits';
@@ -40,7 +47,6 @@ describe('AuthConfigSchema', () => {
     const config = parseConfig(AuthConfigSchema, validSource);
 
     expect(config.SERVICE_NAME).toBe(ServiceName.EMPLOYEE_SERVICE);
-    expect(config.USER_JWT_PUBLIC_KEY).toBe(keys.user.publicKeyPem);
     expect(config.SERVICE_JWT_PRIVATE_KEY).toBe(
       servicePair(keys, ServiceName.EMPLOYEE_SERVICE).privateKeyPem,
     );
@@ -57,38 +63,6 @@ describe('AuthConfigSchema', () => {
       expect(config.SERVICE_NAME).toBe(name);
     },
   );
-
-  it('should return no user private key when USER_JWT_PRIVATE_KEY is absent', () => {
-    expect(parseConfig(AuthConfigSchema, validSource).USER_JWT_PRIVATE_KEY).toBeUndefined();
-  });
-
-  it('should return no user private key when USER_JWT_PRIVATE_KEY is blank', () => {
-    const config = parseConfig(AuthConfigSchema, { ...validSource, USER_JWT_PRIVATE_KEY: '' });
-
-    expect(config.USER_JWT_PRIVATE_KEY).toBeUndefined();
-  });
-
-  it('should return the user private key when it is the pair of USER_JWT_PUBLIC_KEY', () => {
-    const source = {
-      ...validSource,
-      USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(keys.user.privateKeyPem),
-    };
-
-    expect(parseConfig(AuthConfigSchema, source).USER_JWT_PRIVATE_KEY).toBe(
-      keys.user.privateKeyPem,
-    );
-  });
-
-  it('should reject the config when USER_JWT_PRIVATE_KEY does not match USER_JWT_PUBLIC_KEY', () => {
-    const source = {
-      ...validSource,
-      USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(generateRsaKeyPair().privateKeyPem),
-    };
-
-    expect(() => parseConfig(AuthConfigSchema, source)).toThrow(
-      new Error('Invalid configuration: USER_JWT_PRIVATE_KEY: must match USER_JWT_PUBLIC_KEY'),
-    );
-  });
 
   it('should reject the config when SERVICE_JWT_PRIVATE_KEY is another service key', () => {
     const source = {
@@ -141,55 +115,6 @@ describe('AuthConfigSchema', () => {
   );
 
   const keyRejections: ReadonlyArray<KeyRejection> = [
-    {
-      condition: 'USER_JWT_PUBLIC_KEY is an EC key, which is the wrong key type',
-      variable: 'USER_JWT_PUBLIC_KEY',
-      value: () => encodeKeyForEnvironment(generateEcKeyPair().publicKeyPem),
-      message: USER_PUBLIC_KEY_MESSAGE,
-    },
-    {
-      condition: 'USER_JWT_PUBLIC_KEY is an RSA key below 2048 bits',
-      variable: 'USER_JWT_PUBLIC_KEY',
-      value: () => encodeKeyForEnvironment(generateRsaKeyPair(SMALL_RSA_MODULUS_BITS).publicKeyPem),
-      message: USER_PUBLIC_KEY_MESSAGE,
-    },
-    {
-      condition: 'USER_JWT_PUBLIC_KEY holds a private key',
-      variable: 'USER_JWT_PUBLIC_KEY',
-      value: () => encodeKeyForEnvironment(keys.user.privateKeyPem),
-      message: USER_PUBLIC_KEY_MESSAGE,
-    },
-    {
-      condition: 'USER_JWT_PUBLIC_KEY is not base64',
-      variable: 'USER_JWT_PUBLIC_KEY',
-      value: () => 'not base64!!',
-      message: USER_PUBLIC_KEY_MESSAGE,
-    },
-    {
-      condition: 'USER_JWT_PUBLIC_KEY is missing',
-      variable: 'USER_JWT_PUBLIC_KEY',
-      value: () => undefined,
-      message: USER_PUBLIC_KEY_MESSAGE,
-    },
-    {
-      condition: 'USER_JWT_PRIVATE_KEY is an RSA key below 2048 bits',
-      variable: 'USER_JWT_PRIVATE_KEY',
-      value: () =>
-        encodeKeyForEnvironment(generateRsaKeyPair(SMALL_RSA_MODULUS_BITS).privateKeyPem),
-      message: USER_PRIVATE_KEY_MESSAGE,
-    },
-    {
-      condition: 'USER_JWT_PRIVATE_KEY is an EC key, which is the wrong key type',
-      variable: 'USER_JWT_PRIVATE_KEY',
-      value: () => encodeKeyForEnvironment(generateEcKeyPair().privateKeyPem),
-      message: USER_PRIVATE_KEY_MESSAGE,
-    },
-    {
-      condition: 'USER_JWT_PRIVATE_KEY holds a public key',
-      variable: 'USER_JWT_PRIVATE_KEY',
-      value: () => encodeKeyForEnvironment(keys.user.publicKeyPem),
-      message: USER_PRIVATE_KEY_MESSAGE,
-    },
     {
       condition: 'SERVICE_JWT_PRIVATE_KEY is an RSA key, which is the wrong key type',
       variable: 'SERVICE_JWT_PRIVATE_KEY',
@@ -255,7 +180,8 @@ describe('AuthConfigSchema', () => {
 
   it('should not echo a rejected key value into the error message', () => {
     const rejectedValue = 'secret-marker-that-must-not-be-echoed';
-    const source = { ...validSource, USER_JWT_PUBLIC_KEY: rejectedValue };
+    const variable = serviceJwtPublicKeyVariable(ServiceName.AUTH_SERVICE);
+    const source = { ...validSource, [variable]: rejectedValue };
 
     let message = '';
     try {
@@ -264,7 +190,7 @@ describe('AuthConfigSchema', () => {
       message = error instanceof Error ? error.message : '';
     }
 
-    expect(message).toContain('USER_JWT_PUBLIC_KEY');
+    expect(message).toContain(variable);
     expect(message).not.toContain(rejectedValue);
   });
 
@@ -276,12 +202,154 @@ describe('AuthConfigSchema', () => {
       );
     },
   );
+});
+
+describe('UserJwtVerifierConfigSchema', () => {
+  let keys: AuthKeySet;
+  let validSource: Record<string, string>;
+
+  beforeAll(() => {
+    keys = generateAuthKeySet();
+    validSource = userJwtVerifierEnvironmentFor(keys);
+  });
+
+  it('should return the decoded user public key with the issuer and audience', () => {
+    const config = parseConfig(UserJwtVerifierConfigSchema, validSource);
+
+    expect(config).toEqual({
+      USER_JWT_ISSUER: validSource.USER_JWT_ISSUER,
+      USER_JWT_AUDIENCE: validSource.USER_JWT_AUDIENCE,
+      USER_JWT_PUBLIC_KEY: keys.user.publicKeyPem,
+    });
+  });
 
   it.each(['USER_JWT_ISSUER', 'USER_JWT_AUDIENCE'] as const)(
     'should reject the config when %s is empty',
     (field) => {
-      expect(() => parseConfig(AuthConfigSchema, { ...validSource, [field]: '' })).toThrow(
-        new Error(`Invalid configuration: ${field}: must not be empty`),
+      expect(() =>
+        parseConfig(UserJwtVerifierConfigSchema, { ...validSource, [field]: '' }),
+      ).toThrow(new Error(`Invalid configuration: ${field}: must not be empty`));
+    },
+  );
+
+  it.each([
+    {
+      condition: 'USER_JWT_PUBLIC_KEY is an EC key, which is the wrong key type',
+      variable: 'USER_JWT_PUBLIC_KEY',
+      value: () => encodeKeyForEnvironment(generateEcKeyPair().publicKeyPem),
+      message: USER_PUBLIC_KEY_MESSAGE,
+    },
+    {
+      condition: 'USER_JWT_PUBLIC_KEY is an RSA key below 2048 bits',
+      variable: 'USER_JWT_PUBLIC_KEY',
+      value: () => encodeKeyForEnvironment(generateRsaKeyPair(SMALL_RSA_MODULUS_BITS).publicKeyPem),
+      message: USER_PUBLIC_KEY_MESSAGE,
+    },
+    {
+      condition: 'USER_JWT_PUBLIC_KEY holds a private key',
+      variable: 'USER_JWT_PUBLIC_KEY',
+      value: () => encodeKeyForEnvironment(keys.user.privateKeyPem),
+      message: USER_PUBLIC_KEY_MESSAGE,
+    },
+    {
+      condition: 'USER_JWT_PUBLIC_KEY is not base64',
+      variable: 'USER_JWT_PUBLIC_KEY',
+      value: () => 'not base64!!',
+      message: USER_PUBLIC_KEY_MESSAGE,
+    },
+    {
+      condition: 'USER_JWT_PUBLIC_KEY is missing',
+      variable: 'USER_JWT_PUBLIC_KEY',
+      value: () => undefined,
+      message: USER_PUBLIC_KEY_MESSAGE,
+    },
+  ])(
+    'should reject the config and name only the variable when $condition',
+    ({ variable, value, message }) => {
+      const source: Record<string, string | undefined> = { ...validSource, [variable]: value() };
+
+      expect(() => parseConfig(UserJwtVerifierConfigSchema, source)).toThrow(
+        new Error(`Invalid configuration: ${variable}: ${message}`),
+      );
+    },
+  );
+});
+
+describe('UserJwtSigningConfigSchema', () => {
+  let keys: AuthKeySet;
+  let validSource: Record<string, string>;
+
+  beforeAll(() => {
+    keys = generateAuthKeySet();
+    validSource = userJwtSigningEnvironmentFor(keys);
+  });
+
+  it('should return no user private key when USER_JWT_PRIVATE_KEY is absent', () => {
+    const verifierOnly = userJwtVerifierEnvironmentFor(keys);
+
+    expect(
+      parseConfig(UserJwtSigningConfigSchema, verifierOnly).USER_JWT_PRIVATE_KEY,
+    ).toBeUndefined();
+  });
+
+  it('should return no user private key when USER_JWT_PRIVATE_KEY is blank', () => {
+    const config = parseConfig(UserJwtSigningConfigSchema, {
+      ...validSource,
+      USER_JWT_PRIVATE_KEY: '',
+    });
+
+    expect(config.USER_JWT_PRIVATE_KEY).toBeUndefined();
+  });
+
+  it('should return the user private key when it is the pair of USER_JWT_PUBLIC_KEY', () => {
+    const source = {
+      ...validSource,
+      USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(keys.user.privateKeyPem),
+    };
+
+    expect(parseConfig(UserJwtSigningConfigSchema, source).USER_JWT_PRIVATE_KEY).toBe(
+      keys.user.privateKeyPem,
+    );
+  });
+
+  it('should reject the config when USER_JWT_PRIVATE_KEY does not match USER_JWT_PUBLIC_KEY', () => {
+    const source = {
+      ...validSource,
+      USER_JWT_PRIVATE_KEY: encodeKeyForEnvironment(generateRsaKeyPair().privateKeyPem),
+    };
+
+    expect(() => parseConfig(UserJwtSigningConfigSchema, source)).toThrow(
+      new Error('Invalid configuration: USER_JWT_PRIVATE_KEY: must match USER_JWT_PUBLIC_KEY'),
+    );
+  });
+
+  it.each([
+    {
+      condition: 'USER_JWT_PRIVATE_KEY is an RSA key below 2048 bits',
+      variable: 'USER_JWT_PRIVATE_KEY',
+      value: () =>
+        encodeKeyForEnvironment(generateRsaKeyPair(SMALL_RSA_MODULUS_BITS).privateKeyPem),
+      message: USER_PRIVATE_KEY_MESSAGE,
+    },
+    {
+      condition: 'USER_JWT_PRIVATE_KEY is an EC key, which is the wrong key type',
+      variable: 'USER_JWT_PRIVATE_KEY',
+      value: () => encodeKeyForEnvironment(generateEcKeyPair().privateKeyPem),
+      message: USER_PRIVATE_KEY_MESSAGE,
+    },
+    {
+      condition: 'USER_JWT_PRIVATE_KEY holds a public key',
+      variable: 'USER_JWT_PRIVATE_KEY',
+      value: () => encodeKeyForEnvironment(keys.user.publicKeyPem),
+      message: USER_PRIVATE_KEY_MESSAGE,
+    },
+  ])(
+    'should reject the config and name only the variable when $condition',
+    ({ variable, value, message }) => {
+      const source: Record<string, string | undefined> = { ...validSource, [variable]: value() };
+
+      expect(() => parseConfig(UserJwtSigningConfigSchema, source)).toThrow(
+        new Error(`Invalid configuration: ${variable}: ${message}`),
       );
     },
   );

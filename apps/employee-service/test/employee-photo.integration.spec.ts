@@ -1,15 +1,10 @@
 import { Buffer } from 'node:buffer';
-import { createSign, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  ACCOUNT_STATUS_READER,
-  configureApp,
-  parseConfig,
-  type IAccountStatusReader,
-} from '@dexa/common';
-import { PHOTO_CONTENT_TYPE, ProfileStatus, Role, type AccountStatus } from '@dexa/contracts';
+import { configureApp, parseConfig, ServiceName } from '@dexa/common';
+import { PHOTO_CONTENT_TYPE, ProfileStatus, Role } from '@dexa/contracts';
 import type { Database } from '@dexa/db';
 import type { INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -28,7 +23,8 @@ import {
   masterEmployeeStatuses,
   masterPositions,
 } from '../src/infrastructure/db/schema.js';
-import { USER_JWT_AUDIENCE, USER_JWT_ISSUER, type AuthKeySet } from './auth-key-set.js';
+import type { AuthKeySet } from './auth-key-set.js';
+import { signGatewayUserToken } from './gateway-user-token.js';
 import {
   employeeServiceAuthKeys,
   employeeServiceEnvironment,
@@ -37,7 +33,6 @@ import {
 // Starting the container pulls an image on a cold machine, which exceeds Jest's 5 second default.
 const CONTAINER_TIMEOUT_MS = 120_000;
 const TEST_TIMEOUT_MS = 30_000;
-const TOKEN_LIFETIME_SECONDS = 300;
 const OWN_PHOTO_PATH = '/api/v1/employees/me/photo';
 const EMPLOYEE_PHOTO_PATH = (accountId: string) => `/api/v1/employees/${accountId}/photo`;
 const PHOTO_NOT_FOUND_BODY = {
@@ -62,10 +57,6 @@ const PHONE_NUMBER = '081234567890';
 const HR_PHOTO_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x48, 0x52]);
 const EMPLOYEE_PHOTO_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x45, 0x4d]);
 
-const accountStatuses = new Map<string, AccountStatus>();
-const fakeAccountStatusReader: IAccountStatusReader = {
-  findAccountStatus: (accountId) => Promise.resolve(accountStatuses.get(accountId)),
-};
 // The photo routes never reach Auth, so any call here is a bug in the route under test.
 const unexpectedAuthClient: IAuthAccountClient = {
   findAccountById: () => Promise.reject(new Error('The photo routes do not read Auth.')),
@@ -75,26 +66,9 @@ const unexpectedAuthClient: IAuthAccountClient = {
     Promise.reject(new Error('The photo routes do not read Auth.')),
 };
 
-function encodeJsonSegment(value: object): string {
-  return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-
-// Signs a user token with the test user key. Only auth-service holds that key in production.
+// Signs the token that api-gateway sends to this service for the user (D-51).
 function signUserToken(keys: AuthKeySet, accountId: string, role: Role): string {
-  const signingInput = [
-    encodeJsonSegment({ alg: 'RS256', typ: 'JWT' }),
-    encodeJsonSegment({
-      sub: accountId,
-      role,
-      iss: USER_JWT_ISSUER,
-      aud: USER_JWT_AUDIENCE,
-      exp: Math.floor(Date.now() / 1000) + TOKEN_LIFETIME_SECONDS,
-    }),
-  ].join('.');
-  const signature = createSign('RSA-SHA256')
-    .update(signingInput)
-    .sign(keys.user.privateKeyPem, 'base64url');
-  return `${signingInput}.${signature}`;
+  return signGatewayUserToken(keys, ServiceName.EMPLOYEE_SERVICE, accountId, role);
 }
 
 describe('employee-service employee photo for HR', () => {
@@ -129,8 +103,6 @@ describe('employee-service employee photo for HR', () => {
     moduleRef = await Test.createTestingModule({
       imports: [createAppModule(config)],
     })
-      .overrideProvider(ACCOUNT_STATUS_READER)
-      .useValue(fakeAccountStatusReader)
       .overrideProvider(AUTH_ACCOUNT_CLIENT)
       .useValue(unexpectedAuthClient)
       .compile();
@@ -160,7 +132,6 @@ describe('employee-service employee photo for HR', () => {
 
   function registerAccount(): string {
     const accountId = randomUUID();
-    accountStatuses.set(accountId, { isActive: true });
     return accountId;
   }
 

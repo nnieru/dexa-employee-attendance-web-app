@@ -2,11 +2,12 @@ import { Buffer } from 'node:buffer';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { HttpService } from '@nestjs/axios';
-import { ErrorCode } from '@dexa/contracts';
+import { ErrorCode, Role } from '@dexa/contracts';
 import axios from 'axios';
 import { z } from 'zod';
 import { ServiceName } from '../auth/service-name.js';
 import type { IServiceTokenSigner } from '../auth/service-token-signer.interface.js';
+import type { AuthenticatedUser } from '../auth/authenticated-principal.js';
 import {
   DependencyUnavailableError,
   NotFoundError,
@@ -17,7 +18,12 @@ import { InternalHttpClient } from './internal-http.client.js';
 
 const PHOTO_PATH = '/api/v1/employees/me/photo';
 const SERVICE_TOKEN = 'service-token-for-employee-service';
-const USER_TOKEN = 'user-access-token';
+// The signer answers with a different token for a call that acts for a user, so a test can tell the two apart.
+const USER_TOKEN = 'service-token-on-behalf-of-user';
+const ON_BEHALF_OF: AuthenticatedUser = {
+  accountId: '6c1e2f4a-3b5d-4e7f-8a9b-0c1d2e3f4a5b',
+  role: Role.EMPLOYEE,
+};
 const PHOTO_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
 const ANSWER_SCHEMA = z.object({ accountId: z.string() });
 const OVER_BOUND_BYTES = 6 * 1_048_576 + 1;
@@ -87,7 +93,10 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   response.end(answer.body);
 }
 
-const tokenSigner: IServiceTokenSigner = { signFor: () => Promise.resolve(SERVICE_TOKEN) };
+const tokenSigner: IServiceTokenSigner = {
+  signFor: (_audience, onBehalfOf) =>
+    Promise.resolve(onBehalfOf === undefined ? SERVICE_TOKEN : USER_TOKEN),
+};
 
 function createClient(): InternalHttpClient {
   const httpService = new HttpService(axios.create());
@@ -105,7 +114,7 @@ function jsonError(status: number, code: string, message: string): ScriptedAnswe
 }
 
 describe('InternalHttpClient.put', () => {
-  it('should send the file as a multipart part named by its field with the forwarded user token', async () => {
+  it('should send the file as a multipart part named by its field on behalf of the user', async () => {
     const client = createClient();
 
     await client.put({
@@ -113,7 +122,7 @@ describe('InternalHttpClient.put', () => {
       path: PHOTO_PATH,
       responseSchema: ANSWER_SCHEMA,
       file: { fieldName: 'photo', fileName: 'photo', content: PHOTO_BYTES },
-      forwardedUserToken: USER_TOKEN,
+      onBehalfOf: ON_BEHALF_OF,
     });
 
     expect(recorded).toHaveLength(1);
@@ -134,7 +143,7 @@ describe('InternalHttpClient.put', () => {
       path: PHOTO_PATH,
       responseSchema: ANSWER_SCHEMA,
       file: { fieldName: 'photo', fileName: 'photo', content: PHOTO_BYTES },
-      forwardedUserToken: USER_TOKEN,
+      onBehalfOf: ON_BEHALF_OF,
     });
 
     expect(answer).toEqual({ accountId: 'a' });
@@ -150,7 +159,7 @@ describe('InternalHttpClient.put', () => {
         path: PHOTO_PATH,
         responseSchema: ANSWER_SCHEMA,
         file: { fieldName: 'photo', fileName: 'photo', content: PHOTO_BYTES },
-        forwardedUserToken: USER_TOKEN,
+        onBehalfOf: ON_BEHALF_OF,
       }),
     ).rejects.toBeInstanceOf(DependencyUnavailableError);
 
@@ -167,7 +176,7 @@ describe('InternalHttpClient.put', () => {
         path: PHOTO_PATH,
         responseSchema: ANSWER_SCHEMA,
         file: { fieldName: 'photo', fileName: 'photo', content: PHOTO_BYTES },
-        forwardedUserToken: USER_TOKEN,
+        onBehalfOf: ON_BEHALF_OF,
       })
       .catch((error: unknown) => error);
 
@@ -227,7 +236,7 @@ describe('InternalHttpClient.post pass-through answers', () => {
         path: CREATE_PATH,
         body: { initialPassword },
         responseSchema: ANSWER_SCHEMA,
-        forwardedUserToken: USER_TOKEN,
+        onBehalfOf: ON_BEHALF_OF,
       })
       .catch((error: unknown) => error);
 
@@ -275,7 +284,7 @@ describe('InternalHttpClient.getBinary', () => {
     const answer = await client.getBinary({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: PHOTO_PATH,
-      forwardedUserToken: USER_TOKEN,
+      onBehalfOf: ON_BEHALF_OF,
     });
 
     expect(answer.contentType).toBe('image/jpeg');
@@ -294,7 +303,7 @@ describe('InternalHttpClient.getBinary', () => {
     const answer = await client.getBinary({
       target: ServiceName.EMPLOYEE_SERVICE,
       path: PHOTO_PATH,
-      forwardedUserToken: USER_TOKEN,
+      onBehalfOf: ON_BEHALF_OF,
     });
 
     expect(answer.body.equals(PHOTO_BYTES)).toBe(true);
@@ -309,7 +318,7 @@ describe('InternalHttpClient.getBinary', () => {
       .getBinary({
         target: ServiceName.EMPLOYEE_SERVICE,
         path: PHOTO_PATH,
-        forwardedUserToken: USER_TOKEN,
+        onBehalfOf: ON_BEHALF_OF,
       })
       .catch((error: unknown) => error);
 
@@ -326,7 +335,7 @@ describe('InternalHttpClient.getBinary', () => {
       .getBinary({
         target: ServiceName.EMPLOYEE_SERVICE,
         path: PHOTO_PATH,
-        forwardedUserToken: USER_TOKEN,
+        onBehalfOf: ON_BEHALF_OF,
         refusalCodes: [ErrorCode.ACCOUNT_DISABLED],
       })
       .catch((error: unknown) => error);
@@ -343,7 +352,7 @@ describe('InternalHttpClient.getBinary', () => {
       client.getBinary({
         target: ServiceName.EMPLOYEE_SERVICE,
         path: PHOTO_PATH,
-        forwardedUserToken: USER_TOKEN,
+        onBehalfOf: ON_BEHALF_OF,
       }),
     ).rejects.toBeInstanceOf(DependencyUnavailableError);
   });
@@ -360,7 +369,7 @@ describe('InternalHttpClient.getBinary', () => {
       client.getBinary({
         target: ServiceName.EMPLOYEE_SERVICE,
         path: PHOTO_PATH,
-        forwardedUserToken: USER_TOKEN,
+        onBehalfOf: ON_BEHALF_OF,
       }),
     ).rejects.toBeInstanceOf(DependencyUnavailableError);
   });
@@ -444,5 +453,62 @@ describe('InternalHttpClient.delete', () => {
 
     expect(recorded).toHaveLength(1);
     expect(recorded[0]?.method).toBe('DELETE');
+  });
+});
+
+describe('InternalHttpClient onBehalfOf', () => {
+  it('should ask the signer for the user and the target on every attempt of a call that acts for a user', async () => {
+    script.respond = (_request, attempt) =>
+      attempt === 1
+        ? jsonError(503, 'UNAVAILABLE', 'Busy.')
+        : { status: 200, contentType: 'application/json', body: '{"accountId":"a"}' };
+    const signed: Array<{ audience: string; onBehalfOf: AuthenticatedUser | undefined }> = [];
+    const recordingSigner: IServiceTokenSigner = {
+      signFor: (audience, onBehalfOf) => {
+        signed.push({ audience, onBehalfOf });
+        return Promise.resolve(onBehalfOf === undefined ? SERVICE_TOKEN : USER_TOKEN);
+      },
+    };
+    const client = new InternalHttpClient(new HttpService(axios.create()), recordingSigner, {
+      [ServiceName.EMPLOYEE_SERVICE]: baseUrl,
+    });
+
+    await client.get({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: PHOTO_PATH,
+      responseSchema: ANSWER_SCHEMA,
+      onBehalfOf: ON_BEHALF_OF,
+    });
+
+    expect(signed).toEqual([
+      { audience: ServiceName.EMPLOYEE_SERVICE, onBehalfOf: ON_BEHALF_OF },
+      { audience: ServiceName.EMPLOYEE_SERVICE, onBehalfOf: ON_BEHALF_OF },
+    ]);
+    expect(recorded.map((request) => request.authorization)).toEqual([
+      `Bearer ${USER_TOKEN}`,
+      `Bearer ${USER_TOKEN}`,
+    ]);
+  });
+
+  it('should ask the signer without a user when the call acts for the service itself', async () => {
+    const signed: Array<AuthenticatedUser | undefined> = [];
+    const recordingSigner: IServiceTokenSigner = {
+      signFor: (_audience, onBehalfOf) => {
+        signed.push(onBehalfOf);
+        return Promise.resolve(SERVICE_TOKEN);
+      },
+    };
+    const client = new InternalHttpClient(new HttpService(axios.create()), recordingSigner, {
+      [ServiceName.EMPLOYEE_SERVICE]: baseUrl,
+    });
+
+    await client.get({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: PHOTO_PATH,
+      responseSchema: ANSWER_SCHEMA,
+    });
+
+    expect(signed).toEqual([undefined]);
+    expect(recorded[recorded.length - 1]?.authorization).toBe(`Bearer ${SERVICE_TOKEN}`);
   });
 });

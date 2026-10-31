@@ -1,17 +1,6 @@
-import { Buffer } from 'node:buffer';
-import { createSign, randomUUID } from 'node:crypto';
-import {
-  ACCOUNT_STATUS_READER,
-  configureApp,
-  parseConfig,
-  type IAccountStatusReader,
-} from '@dexa/common';
-import {
-  masterOptionListSchema,
-  Role,
-  type AccountStatus,
-  type MasterOption,
-} from '@dexa/contracts';
+import { randomUUID } from 'node:crypto';
+import { configureApp, parseConfig, ServiceName } from '@dexa/common';
+import { masterOptionListSchema, Role, type MasterOption } from '@dexa/contracts';
 import type { Database } from '@dexa/db';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -22,18 +11,25 @@ import { createAppModule } from '../src/app.module.js';
 import { EmployeeServiceConfigSchema } from '../src/config/employee-service-config.schema.js';
 import { DATABASE } from '../src/infrastructure/db/database.token.js';
 import { masterEmployeeStatuses, masterPositions } from '../src/infrastructure/db/schema.js';
-import { USER_JWT_AUDIENCE, USER_JWT_ISSUER, type AuthKeySet } from './auth-key-set.js';
+import type { AuthKeySet } from './auth-key-set.js';
+import {
+  forgeGatewayUserToken,
+  signEndUserJwt,
+  signGatewayUserToken,
+} from './gateway-user-token.js';
 import {
   employeeServiceAuthKeys,
   employeeServiceEnvironment,
 } from './employee-service-environment.js';
+
+// The lifetime of the token api-gateway sends for a call (D-51).
+const TOKEN_LIFETIME_SECONDS = 60;
 
 // Starting the container pulls an image on a cold machine, which exceeds Jest's 5 second default.
 const CONTAINER_TIMEOUT_MS = 120_000;
 const TEST_TIMEOUT_MS = 30_000;
 const POSITIONS_PATH = '/api/v1/positions';
 const EMPLOYEE_STATUSES_PATH = '/api/v1/employee-statuses';
-const TOKEN_LIFETIME_SECONDS = 300;
 
 // The seed lists the rows out of code order, and each catalog has one inactive row. The expected lists
 // below therefore show both the code ordering and the inclusion of inactive rows.
@@ -51,17 +47,6 @@ const SEED_DOCUMENT = {
 };
 const INACTIVE_POSITION_CODE = 'DATA_ANALYST';
 const INACTIVE_STATUS_CODE = 'ON_LEAVE';
-const ACCOUNT_DISABLED_BODY = {
-  statusCode: 401,
-  code: 'ACCOUNT_DISABLED',
-  message: 'This account is no longer active.',
-};
-
-// Stands in for auth-service, which owns the accounts. An ID that is not registered has no account.
-const accountStatuses = new Map<string, AccountStatus>();
-const fakeAccountStatusReader: IAccountStatusReader = {
-  findAccountStatus: (accountId) => Promise.resolve(accountStatuses.get(accountId)),
-};
 
 const EXPECTED_POSITIONS = [
   { code: 'DATA_ANALYST', name: 'Data Analyst', isActive: false },
@@ -74,32 +59,21 @@ const EXPECTED_EMPLOYEE_STATUSES = [
   { code: 'ON_LEAVE', name: 'On Leave', isActive: false },
 ];
 
-function encodeJsonSegment(value: object): string {
-  return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-
-// Signs a user token with the test user key. Only auth-service holds that key in production, so this
-// helper stands in for it. The claims are the ones the user token verifier checks.
+// Signs the token that api-gateway sends to this service for the user (D-51). The claims are the ones the
+// service's guard checks.
 function signUserToken(
   keys: AuthKeySet,
   accountId: string,
   role: Role,
   expiresAtSeconds: number,
 ): string {
-  const signingInput = [
-    encodeJsonSegment({ alg: 'RS256', typ: 'JWT' }),
-    encodeJsonSegment({
-      sub: accountId,
-      role,
-      iss: USER_JWT_ISSUER,
-      aud: USER_JWT_AUDIENCE,
-      exp: expiresAtSeconds,
-    }),
-  ].join('.');
-  const signature = createSign('RSA-SHA256')
-    .update(signingInput)
-    .sign(keys.user.privateKeyPem, 'base64url');
-  return `${signingInput}.${signature}`;
+  return signGatewayUserToken(
+    keys,
+    ServiceName.EMPLOYEE_SERVICE,
+    accountId,
+    role,
+    expiresAtSeconds,
+  );
 }
 
 function nowInSeconds(): number {
@@ -117,8 +91,6 @@ describe('employee-service master lookups', () => {
   let hrToken: string;
   let employeeToken: string;
   let expiredHrToken: string;
-  let deactivatedHrToken: string;
-  let unknownAccountHrToken: string;
 
   // Teardown still stops each resource when setup failed partway through.
   afterAll(async () => {
@@ -137,10 +109,7 @@ describe('employee-service master lookups', () => {
     );
     const moduleRef = await Test.createTestingModule({
       imports: [createAppModule(config)],
-    })
-      .overrideProvider(ACCOUNT_STATUS_READER)
-      .useValue(fakeAccountStatusReader)
-      .compile();
+    }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app, { CORS_ORIGINS: [] });
     await app.init();
@@ -148,22 +117,12 @@ describe('employee-service master lookups', () => {
 
     const keys = employeeServiceAuthKeys();
     const expiresLater = nowInSeconds() + TOKEN_LIFETIME_SECONDS;
-    const hrAccountId = registerAccount({ isActive: true });
-    const employeeAccountId = registerAccount({ isActive: true });
-    const deactivatedHrAccountId = registerAccount({ isActive: false });
+    const hrAccountId = randomUUID();
+    const employeeAccountId = randomUUID();
     hrToken = signUserToken(keys, hrAccountId, Role.HR, expiresLater);
     employeeToken = signUserToken(keys, employeeAccountId, Role.EMPLOYEE, expiresLater);
     expiredHrToken = signUserToken(keys, hrAccountId, Role.HR, nowInSeconds() - 60);
-    deactivatedHrToken = signUserToken(keys, deactivatedHrAccountId, Role.HR, expiresLater);
-    // Signed for an ID that auth-service does not know, so the status read finds no account.
-    unknownAccountHrToken = signUserToken(keys, randomUUID(), Role.HR, expiresLater);
   }, CONTAINER_TIMEOUT_MS);
-
-  function registerAccount(status: AccountStatus): string {
-    const accountId = randomUUID();
-    accountStatuses.set(accountId, status);
-    return accountId;
-  }
 
   async function deactivateMasterRows(database: Database): Promise<void> {
     await database.db
@@ -224,20 +183,30 @@ describe('employee-service master lookups', () => {
     TEST_TIMEOUT_MS,
   );
 
+  // Only api-gateway verifies end-user tokens and the account status (D-51), so these routes refuse anything else.
   it.each([POSITIONS_PATH, EMPLOYEE_STATUSES_PATH])(
-    'should return 401 ACCOUNT_DISABLED on %s when the HR account has been deactivated',
+    'should return 401 UNAUTHORIZED on %s when an end-user JWT is sent instead of a gateway token',
     async (path) => {
-      const response = await getWithToken(path, deactivatedHrToken).expect(401);
+      const endUserJwt = signEndUserJwt(employeeServiceAuthKeys(), randomUUID(), Role.HR);
 
-      expect(response.body).toEqual(ACCOUNT_DISABLED_BODY);
+      const response = await getWithToken(path, endUserJwt).expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
     },
     TEST_TIMEOUT_MS,
   );
 
   it.each([POSITIONS_PATH, EMPLOYEE_STATUSES_PATH])(
-    'should return 401 UNAUTHORIZED on %s when the token names an account that does not exist',
+    'should return 401 UNAUTHORIZED on %s when a token names api-gateway but another service key signs it',
     async (path) => {
-      const response = await getWithToken(path, unknownAccountHrToken).expect(401);
+      const forged = forgeGatewayUserToken(
+        employeeServiceAuthKeys(),
+        ServiceName.EMPLOYEE_SERVICE,
+        randomUUID(),
+        Role.HR,
+      );
+
+      const response = await getWithToken(path, forged).expect(401);
 
       expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
     },

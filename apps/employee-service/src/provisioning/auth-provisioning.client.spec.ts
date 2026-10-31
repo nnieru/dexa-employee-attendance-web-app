@@ -64,7 +64,7 @@ describe('AuthProvisioningClient', () => {
       path: OPERATIONS_PATH,
       body: CREATE_REQUEST,
     });
-    expect(posts[0]?.forwardedUserToken).toBeUndefined();
+    expect(posts[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should post to the activation route of the operation', async () => {
@@ -78,7 +78,7 @@ describe('AuthProvisioningClient', () => {
       target: ServiceName.AUTH_SERVICE,
       path: `${OPERATIONS_PATH}/${OPERATION_ID}/activation`,
     });
-    expect(posts[0]?.forwardedUserToken).toBeUndefined();
+    expect(posts[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should get the operation by its ID with this service token and no user token', async () => {
@@ -92,7 +92,7 @@ describe('AuthProvisioningClient', () => {
       target: ServiceName.AUTH_SERVICE,
       path: `${OPERATIONS_PATH}/${OPERATION_ID}`,
     });
-    expect(gets[0]?.forwardedUserToken).toBeUndefined();
+    expect(gets[0]?.onBehalfOf).toBeUndefined();
   });
 
   it('should reject with the dependency error when the call fails with it', async () => {

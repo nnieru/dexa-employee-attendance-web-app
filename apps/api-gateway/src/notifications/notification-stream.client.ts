@@ -1,8 +1,10 @@
 import {
   DependencyUnavailableError,
   ForbiddenError,
-  UnauthorizedError,
+  SERVICE_TOKEN_SIGNER,
+  ServiceName,
   type DomainError,
+  type IServiceTokenSigner,
 } from '@dexa/common';
 import { API_PREFIX, ErrorCode, errorResponseSchema } from '@dexa/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
@@ -15,18 +17,14 @@ import {
 
 const STREAM_PATH = `/${API_PREFIX}/notifications/stream`;
 const DEPENDENCY_UNAVAILABLE_MESSAGE = 'A dependent service is unavailable. Try again shortly.';
-// The codes that mean notification-service refused the user's token. Any other 401 is not the caller's problem.
-const USER_TOKEN_REFUSAL_CODES: ReadonlyArray<string> = [
-  ErrorCode.UNAUTHORIZED,
-  ErrorCode.ACCOUNT_DISABLED,
-];
+
 // An error answer is a short JSON object. A longer body is not read, so a broken upstream cannot fill memory.
 const MAX_ERROR_BODY_BYTES = 4_096;
 
 /**
- * Opens the HR notification stream on notification-service with the caller's own token. It uses fetch rather than the
- * shared internal client, because that client buffers its answers and bounds the whole call, which would end a stream
- * that is meant to stay open. The connect timeout covers only the wait for the answer's headers.
+ * Opens the HR notification stream on notification-service with a token that names the user (D-51). It uses fetch
+ * rather than the shared internal client, because that client buffers its answers and bounds the whole call, which
+ * would end a stream that is meant to stay open. The connect timeout covers only the wait for the answer's headers.
  */
 @Injectable()
 export class NotificationStreamClient implements INotificationStreamClient {
@@ -34,10 +32,15 @@ export class NotificationStreamClient implements INotificationStreamClient {
     @Inject(NOTIFICATION_SERVICE_BASE_URL) private readonly baseUrl: string,
     @Inject(NOTIFICATION_STREAM_CONNECT_TIMEOUT)
     private readonly connectTimeoutMilliseconds: number,
+    @Inject(SERVICE_TOKEN_SIGNER) private readonly tokenSigner: IServiceTokenSigner,
   ) {}
 
   async openStream(request: NotificationStreamRequest): Promise<ReadableStream<Uint8Array>> {
-    const response = await this.connect(request);
+    const credential = await this.tokenSigner.signFor(
+      ServiceName.NOTIFICATION_SERVICE,
+      request.user,
+    );
+    const response = await this.connect(request, credential);
     if (response.status === HttpStatus.OK && response.body !== null) {
       return response.body;
     }
@@ -47,7 +50,7 @@ export class NotificationStreamClient implements INotificationStreamClient {
     throw await this.toUpstreamError(response);
   }
 
-  private async connect(request: NotificationStreamRequest): Promise<Response> {
+  private async connect(request: NotificationStreamRequest, credential: string): Promise<Response> {
     const connection = new AbortController();
     const abortConnection = (): void => connection.abort();
     request.signal.addEventListener('abort', abortConnection, { once: true });
@@ -57,7 +60,7 @@ export class NotificationStreamClient implements INotificationStreamClient {
       return await fetch(`${this.baseUrl}${STREAM_PATH}`, {
         headers: {
           Accept: 'text/event-stream',
-          Authorization: `Bearer ${request.accessToken}`,
+          Authorization: `Bearer ${credential}`,
         },
         // The token must not follow a redirect to another host, the same rule as the internal client.
         redirect: 'error',
@@ -72,15 +75,13 @@ export class NotificationStreamClient implements INotificationStreamClient {
     }
   }
 
+  // A 401 is never passed on: the token is the gateway's, and a refusal of it is a misconfiguration, not the user's
+  // fault. The account was checked by the gateway before this call (D-13).
   private async toUpstreamError(response: Response): Promise<DomainError> {
     const cause = new Error(`Notification stream answered with HTTP ${response.status}.`);
     const remoteError = errorResponseSchema.safeParse(await readErrorBody(response));
     if (!remoteError.success) return createUnavailableError(cause);
-
     const { code, message, details } = remoteError.data;
-    if (response.status === HttpStatus.UNAUTHORIZED && USER_TOKEN_REFUSAL_CODES.includes(code)) {
-      return new UnauthorizedError(code, message, { cause, details });
-    }
     if (response.status === HttpStatus.FORBIDDEN && code === ErrorCode.FORBIDDEN) {
       return new ForbiddenError(code, message, { cause, details });
     }

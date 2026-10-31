@@ -12,17 +12,25 @@ import {
 } from './jwt-key.rules.js';
 
 /**
- * Token settings after validation. Keys are decoded PEM text, which passport-jwt and @nestjs/jwt
- * accept as they are, so no strategy or signer parses the environment again.
+ * Service key settings after validation, read by every service. Keys are decoded PEM text, which
+ * passport-jwt and @nestjs/jwt accept as they are, so no strategy or signer parses the environment again.
  */
 export type AuthConfig = {
   readonly SERVICE_NAME: ServiceName;
+  readonly SERVICE_JWT_PRIVATE_KEY: string;
+  readonly SERVICE_JWT_PUBLIC_KEYS: ReadonlyMap<ServiceName, string>;
+};
+
+/** User token settings for verifying tokens. Only api-gateway reads them (D-51). */
+export type UserJwtVerifierConfig = {
   readonly USER_JWT_ISSUER: string;
   readonly USER_JWT_AUDIENCE: string;
   readonly USER_JWT_PUBLIC_KEY: string;
+};
+
+/** User token settings for signing tokens. Only auth-service reads them (D-51). */
+export type UserJwtSigningConfig = UserJwtVerifierConfig & {
   readonly USER_JWT_PRIVATE_KEY: string | undefined;
-  readonly SERVICE_JWT_PRIVATE_KEY: string;
-  readonly SERVICE_JWT_PUBLIC_KEYS: ReadonlyMap<ServiceName, string>;
 };
 
 /**
@@ -33,8 +41,7 @@ export function serviceJwtPublicKeyVariable(serviceName: ServiceName): string {
   return `${serviceName.replaceAll('-', '_').toUpperCase()}_SERVICE_JWT_PUBLIC_KEY`;
 }
 
-// A blank variable counts as unset, so a copied .env file still starts a service that only verifies
-// user tokens.
+// A blank variable counts as unset, so a copied .env file still starts a service that does not use it.
 function treatBlankAsUnset(value: unknown): unknown {
   return value === '' ? undefined : value;
 }
@@ -50,41 +57,34 @@ function pemField(requirement: KeyRequirement) {
   });
 }
 
-const authEnvironmentSchema = z.looseObject({
+function readPemValue(value: unknown, requirement: KeyRequirement): string | undefined {
+  return typeof value === 'string' ? readKeyPem(value, requirement) : undefined;
+}
+
+const serviceKeyEnvironmentSchema = z.looseObject({
   SERVICE_NAME: serviceNameSchema,
-  USER_JWT_ISSUER: z.string().min(1, 'must not be empty'),
-  USER_JWT_AUDIENCE: z.string().min(1, 'must not be empty'),
-  USER_JWT_PUBLIC_KEY: pemField(USER_PUBLIC_KEY_REQUIREMENT),
-  USER_JWT_PRIVATE_KEY: z.preprocess(
-    treatBlankAsUnset,
-    pemField(USER_PRIVATE_KEY_REQUIREMENT).optional(),
-  ),
   SERVICE_JWT_PRIVATE_KEY: pemField(SERVICE_PRIVATE_KEY_REQUIREMENT),
 });
 
-type AuthEnvironment = z.infer<typeof authEnvironmentSchema>;
+type ServiceKeyEnvironment = z.infer<typeof serviceKeyEnvironmentSchema>;
 
-// The per-service public keys and the key-pair checks run here, not in the shape, because the
+// The per-service public keys and the key-pair check run here, not in the shape, because the
 // service public key variables are derived from the service list. This step runs only after the
 // fields above are valid, so a pair is never compared against a key that is itself broken.
-export const AuthConfigSchema = authEnvironmentSchema.transform(
+export const AuthConfigSchema = serviceKeyEnvironmentSchema.transform(
   (environment, context) => buildAuthConfig(environment, context) ?? z.NEVER,
 );
 
 // Returns undefined only after adding at least one issue, which makes the parse fail.
 function buildAuthConfig(
-  environment: AuthEnvironment,
+  environment: ServiceKeyEnvironment,
   context: z.RefinementCtx,
 ): AuthConfig | undefined {
   const servicePublicKeys = readServicePublicKeys(environment, context);
   if (servicePublicKeys === undefined) return undefined;
-  if (!hasMatchingKeyPairs(environment, servicePublicKeys, context)) return undefined;
+  if (!hasMatchingServiceKeyPair(environment, servicePublicKeys, context)) return undefined;
   return {
     SERVICE_NAME: environment.SERVICE_NAME,
-    USER_JWT_ISSUER: environment.USER_JWT_ISSUER,
-    USER_JWT_AUDIENCE: environment.USER_JWT_AUDIENCE,
-    USER_JWT_PUBLIC_KEY: environment.USER_JWT_PUBLIC_KEY,
-    USER_JWT_PRIVATE_KEY: environment.USER_JWT_PRIVATE_KEY,
     SERVICE_JWT_PRIVATE_KEY: environment.SERVICE_JWT_PRIVATE_KEY,
     SERVICE_JWT_PUBLIC_KEYS: servicePublicKeys,
   };
@@ -93,7 +93,7 @@ function buildAuthConfig(
 // Every service needs a usable public key, so each missing or invalid variable is reported. No map
 // is returned unless all of them are usable.
 function readServicePublicKeys(
-  environment: AuthEnvironment,
+  environment: ServiceKeyEnvironment,
   context: z.RefinementCtx,
 ): ReadonlyMap<ServiceName, string> | undefined {
   const publicKeys = new Map<ServiceName, string>();
@@ -113,40 +113,73 @@ function readServicePublicKeys(
   return publicKeys.size === Object.values(ServiceName).length ? publicKeys : undefined;
 }
 
-function readPemValue(value: unknown, requirement: KeyRequirement): string | undefined {
-  return typeof value === 'string' ? readKeyPem(value, requirement) : undefined;
-}
-
 // A private key that does not match the public key it is paired with would sign tokens that no
-// receiver accepts, so the mismatch fails at startup. Each message names the variable to fix.
-function hasMatchingKeyPairs(
-  environment: AuthEnvironment,
+// receiver accepts, so the mismatch fails at startup. The message names the variable to fix.
+function hasMatchingServiceKeyPair(
+  environment: ServiceKeyEnvironment,
   servicePublicKeys: ReadonlyMap<ServiceName, string>,
   context: z.RefinementCtx,
 ): boolean {
   const ownPublicKey = servicePublicKeys.get(environment.SERVICE_NAME);
-  const ownPublicKeyVariable = serviceJwtPublicKeyVariable(environment.SERVICE_NAME);
-  const userPrivateKey = environment.USER_JWT_PRIVATE_KEY;
-  const pairChecks = [
-    {
-      field: 'USER_JWT_PRIVATE_KEY',
-      message: 'must match USER_JWT_PUBLIC_KEY',
-      isMatching:
-        userPrivateKey === undefined ||
-        isMatchingKeyPair(userPrivateKey, environment.USER_JWT_PUBLIC_KEY),
-    },
-    {
-      field: 'SERVICE_JWT_PRIVATE_KEY',
-      message: `must match ${ownPublicKeyVariable}`,
-      isMatching:
-        ownPublicKey !== undefined &&
-        isMatchingKeyPair(environment.SERVICE_JWT_PRIVATE_KEY, ownPublicKey),
-    },
-  ];
-  for (const check of pairChecks) {
-    if (!check.isMatching) {
-      context.addIssue({ code: 'custom', path: [check.field], message: check.message });
-    }
+  const isMatching =
+    ownPublicKey !== undefined &&
+    isMatchingKeyPair(environment.SERVICE_JWT_PRIVATE_KEY, ownPublicKey);
+  if (!isMatching) {
+    context.addIssue({
+      code: 'custom',
+      path: ['SERVICE_JWT_PRIVATE_KEY'],
+      message: `must match ${serviceJwtPublicKeyVariable(environment.SERVICE_NAME)}`,
+    });
   }
-  return pairChecks.every((check) => check.isMatching);
+  return isMatching;
 }
+
+const userJwtVerifierEnvironmentSchema = z.looseObject({
+  USER_JWT_ISSUER: z.string().min(1, 'must not be empty'),
+  USER_JWT_AUDIENCE: z.string().min(1, 'must not be empty'),
+  USER_JWT_PUBLIC_KEY: pemField(USER_PUBLIC_KEY_REQUIREMENT),
+});
+
+/** Settings a service needs to verify user tokens. Only api-gateway uses this schema. */
+export const UserJwtVerifierConfigSchema = userJwtVerifierEnvironmentSchema.transform(
+  (environment): UserJwtVerifierConfig => ({
+    USER_JWT_ISSUER: environment.USER_JWT_ISSUER,
+    USER_JWT_AUDIENCE: environment.USER_JWT_AUDIENCE,
+    USER_JWT_PUBLIC_KEY: environment.USER_JWT_PUBLIC_KEY,
+  }),
+);
+
+// Only auth-service signs user tokens. The private key is optional here so the schema can say which
+// settings are missing; auth-service refuses a missing key in its own schema.
+const userJwtSigningEnvironmentSchema = z.looseObject({
+  USER_JWT_ISSUER: z.string().min(1, 'must not be empty'),
+  USER_JWT_AUDIENCE: z.string().min(1, 'must not be empty'),
+  USER_JWT_PUBLIC_KEY: pemField(USER_PUBLIC_KEY_REQUIREMENT),
+  USER_JWT_PRIVATE_KEY: z.preprocess(
+    treatBlankAsUnset,
+    pemField(USER_PRIVATE_KEY_REQUIREMENT).optional(),
+  ),
+});
+
+/** Settings a service needs to sign user tokens. Only auth-service uses this schema. */
+export const UserJwtSigningConfigSchema = userJwtSigningEnvironmentSchema.transform(
+  (environment, context): UserJwtSigningConfig => {
+    const isMatching =
+      environment.USER_JWT_PRIVATE_KEY === undefined ||
+      isMatchingKeyPair(environment.USER_JWT_PRIVATE_KEY, environment.USER_JWT_PUBLIC_KEY);
+    if (!isMatching) {
+      context.addIssue({
+        code: 'custom',
+        path: ['USER_JWT_PRIVATE_KEY'],
+        message: 'must match USER_JWT_PUBLIC_KEY',
+      });
+      return z.NEVER;
+    }
+    return {
+      USER_JWT_ISSUER: environment.USER_JWT_ISSUER,
+      USER_JWT_AUDIENCE: environment.USER_JWT_AUDIENCE,
+      USER_JWT_PUBLIC_KEY: environment.USER_JWT_PUBLIC_KEY,
+      USER_JWT_PRIVATE_KEY: environment.USER_JWT_PRIVATE_KEY,
+    };
+  },
+);

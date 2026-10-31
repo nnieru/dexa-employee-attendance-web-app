@@ -1,4 +1,5 @@
 import { ServiceName, configureApp, parseConfig } from '@dexa/common';
+import { type Role } from '@dexa/contracts';
 import type { Database } from '@dexa/db';
 import type { INestApplication, LoggerService } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -25,6 +26,11 @@ import {
   servicePair,
   type AuthKeySet,
 } from './auth-key-set.js';
+import {
+  forgeGatewayUserToken,
+  signEndUserJwt,
+  signGatewayUserToken,
+} from './gateway-user-token.js';
 
 // Starting the container pulls an image on a cold machine, which exceeds Jest's 5 second default.
 const CONTAINER_TIMEOUT_MS = 120_000;
@@ -54,6 +60,11 @@ const UNAUTHORIZED_BODY = { statusCode: 401, code: 'UNAUTHORIZED', message: 'Una
 const jwtService = new JwtService();
 // Generated once for the file. The keys are only as valid as the config needs.
 const TEST_KEYS: AuthKeySet = generateAuthKeySet();
+
+// The token api-gateway sends to /auth/me for this user, after it checked the sign-in token (D-51).
+function gatewayTokenFor(account: { readonly id: string; readonly role: Role }): string {
+  return signGatewayUserToken(TEST_KEYS, ServiceName.AUTH_SERVICE, account.id, account.role);
+}
 
 type SignInBody = { readonly email?: string; readonly password?: string; readonly portal?: string };
 
@@ -361,7 +372,7 @@ describe('login and sessions', () => {
 
         const response = await request(app.getHttpServer())
           .get(CURRENT_ACCOUNT_PATH)
-          .set('Authorization', `Bearer ${session.accessToken}`)
+          .set('Authorization', `Bearer ${gatewayTokenFor(session.account)}`)
           .expect(200);
 
         expect(response.body).toEqual(session.account);
@@ -371,6 +382,37 @@ describe('login and sessions', () => {
 
     it('should return 401 when no bearer token is sent', async () => {
       const response = await request(app.getHttpServer()).get(CURRENT_ACCOUNT_PATH).expect(401);
+
+      expect(response.body).toEqual(UNAUTHORIZED_BODY);
+    });
+
+    it('should return 401 when an end-user JWT is sent, because only the gateway verifies end-user tokens', async () => {
+      const session = (await signIn(EMPLOYEE_EMAIL, EMPLOYEE_PASSWORD, 'EMPLOYEE').expect(200))
+        .body;
+      const endUserJwt = signEndUserJwt(TEST_KEYS, session.account.id, session.account.role);
+
+      const response = await request(app.getHttpServer())
+        .get(CURRENT_ACCOUNT_PATH)
+        .set('Authorization', `Bearer ${endUserJwt}`)
+        .expect(401);
+
+      expect(response.body).toEqual(UNAUTHORIZED_BODY);
+    });
+
+    it('should return 401 when a token names api-gateway but is signed with another service key', async () => {
+      const session = (await signIn(EMPLOYEE_EMAIL, EMPLOYEE_PASSWORD, 'EMPLOYEE').expect(200))
+        .body;
+      const forged = forgeGatewayUserToken(
+        TEST_KEYS,
+        ServiceName.AUTH_SERVICE,
+        session.account.id,
+        session.account.role,
+      );
+
+      const response = await request(app.getHttpServer())
+        .get(CURRENT_ACCOUNT_PATH)
+        .set('Authorization', `Bearer ${forged}`)
+        .expect(401);
 
       expect(response.body).toEqual(UNAUTHORIZED_BODY);
     });
@@ -388,7 +430,7 @@ describe('login and sessions', () => {
 
         const response = await request(app.getHttpServer())
           .get(CURRENT_ACCOUNT_PATH)
-          .set('Authorization', `Bearer ${session.accessToken}`)
+          .set('Authorization', `Bearer ${gatewayTokenFor(session.account)}`)
           .expect(401);
 
         expect(response.body).toMatchObject({ statusCode: 401, code: 'ACCOUNT_DISABLED' });
@@ -409,7 +451,7 @@ describe('login and sessions', () => {
 
         const response = await request(app.getHttpServer())
           .get(CURRENT_ACCOUNT_PATH)
-          .set('Authorization', `Bearer ${session.accessToken}`)
+          .set('Authorization', `Bearer ${gatewayTokenFor(session.account)}`)
           .expect(401);
 
         // The shared JwtAuthGuard answers before the service runs, with the message the gateway sends.

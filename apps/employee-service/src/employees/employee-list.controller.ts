@@ -1,4 +1,4 @@
-import { JwtAuthGuard, Roles, RolesGuard } from '@dexa/common';
+import { GatewayUserAuthGuard, Roles, RolesGuard } from '@dexa/common';
 import {
   employeeListQuerySchema,
   Role,
@@ -14,7 +14,7 @@ import {
 
 // The gateway checks the role too. This service checks it again, so the list stays closed if the gateway is bypassed.
 @Controller('employees')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)
 export class EmployeeListController {
   constructor(@Inject(EMPLOYEE_LIST_SERVICE) private readonly employeeList: IEmployeeListService) {}
