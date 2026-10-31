@@ -107,21 +107,36 @@ describe('isWithinGatewayTokenLifetime', () => {
   const NOW_SECONDS = 1_800_000_000;
 
   it.each([
-    { condition: 'it lives exactly the lifetime', iat: NOW_SECONDS, exp: NOW_SECONDS + 60, expected: true },
-    { condition: 'it lives one second longer', iat: NOW_SECONDS, exp: NOW_SECONDS + 61, expected: false },
+    {
+      condition: 'it lives exactly the lifetime',
+      iat: NOW_SECONDS,
+      exp: NOW_SECONDS + SERVICE_TOKEN_LIFETIME_SECONDS,
+      expected: true,
+    },
+    {
+      condition: 'it lives one second longer',
+      iat: NOW_SECONDS,
+      exp: NOW_SECONDS + SERVICE_TOKEN_LIFETIME_SECONDS + 1,
+      expected: false,
+    },
     {
       condition: 'it was issued within the clock skew ahead of now',
       iat: NOW_SECONDS + GATEWAY_TOKEN_CLOCK_SKEW_SECONDS,
-      exp: NOW_SECONDS + GATEWAY_TOKEN_CLOCK_SKEW_SECONDS + 60,
+      exp: NOW_SECONDS + GATEWAY_TOKEN_CLOCK_SKEW_SECONDS + SERVICE_TOKEN_LIFETIME_SECONDS,
       expected: true,
     },
     {
       condition: 'it was issued beyond the clock skew ahead of now',
       iat: NOW_SECONDS + GATEWAY_TOKEN_CLOCK_SKEW_SECONDS + 1,
-      exp: NOW_SECONDS + GATEWAY_TOKEN_CLOCK_SKEW_SECONDS + 61,
+      exp: NOW_SECONDS + GATEWAY_TOKEN_CLOCK_SKEW_SECONDS + SERVICE_TOKEN_LIFETIME_SECONDS + 1,
       expected: false,
     },
-    { condition: 'iat is not a whole number', iat: 'soon', exp: NOW_SECONDS + 60, expected: false },
+    {
+      condition: 'iat is not a whole number',
+      iat: 'soon',
+      exp: NOW_SECONDS + SERVICE_TOKEN_LIFETIME_SECONDS,
+      expected: false,
+    },
   ])('should return $expected when $condition', ({ iat, exp, expected }) => {
     expect(isWithinGatewayTokenLifetime({ iat, exp }, NOW_SECONDS)).toBe(expected);
   });

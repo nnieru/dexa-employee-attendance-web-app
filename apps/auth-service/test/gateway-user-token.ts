@@ -45,6 +45,8 @@ function gatewayUserClaims(
     iss: GATEWAY,
     sub: GATEWAY,
     aud: target,
+    // The real signer always sets iat, and the guard caps exp - iat at the token lifetime.
+    iat: expiresAtSeconds - TOKEN_LIFETIME_SECONDS,
     exp: expiresAtSeconds,
     user: { accountId, role },
   };

@@ -15,6 +15,7 @@ import {
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard.js';
 import { ServiceAuthGuard } from '../src/auth/service-auth.guard.js';
 import { ServiceName } from '../src/auth/service-name.js';
+import { SERVICE_TOKEN_LIFETIME_SECONDS } from '../src/auth/service-token.signer.js';
 import {
   SERVICE_TOKEN_SIGNER,
   type IServiceTokenSigner,
@@ -63,10 +64,13 @@ const VALID_USER_CLAIMS = {
 };
 
 // A token api-gateway signs for a forwarded call: the user is named by a claim, and the subject is the gateway.
-const VALID_GATEWAY_USER_CLAIMS = {
-  exp: FAR_FUTURE_EXPIRY_SECONDS,
-  user: { accountId: ACCOUNT_ID, role: Role.EMPLOYEE },
-};
+// Built per token, because the guard caps exp - iat at the token lifetime and the signer sets iat to now.
+function validGatewayUserClaims() {
+  return {
+    exp: Math.floor(Date.now() / 1000) + SERVICE_TOKEN_LIFETIME_SECONDS,
+    user: { accountId: ACCOUNT_ID, role: Role.EMPLOYEE },
+  };
+}
 
 type RejectedToken = { readonly condition: string; readonly mintToken: () => Promise<string> };
 
@@ -309,7 +313,7 @@ describe('auth guards', () => {
       condition: 'the token has expired',
       mintToken: () =>
         jwtService.signAsync(
-          { ...VALID_GATEWAY_USER_CLAIMS, exp: PAST_EXPIRY_SECONDS },
+          { ...validGatewayUserClaims(), exp: PAST_EXPIRY_SECONDS },
           gatewayUserSigning(keys, EMPLOYEE),
         ),
     },
@@ -317,7 +321,7 @@ describe('auth guards', () => {
       condition: 'the token has no expiry claim',
       mintToken: () =>
         jwtService.signAsync(
-          { user: VALID_GATEWAY_USER_CLAIMS.user },
+          { user: validGatewayUserClaims().user },
           gatewayUserSigning(keys, EMPLOYEE),
         ),
     },
@@ -333,7 +337,7 @@ describe('auth guards', () => {
       condition: 'the user role is not a known role',
       mintToken: () =>
         jwtService.signAsync(
-          { ...VALID_GATEWAY_USER_CLAIMS, user: { accountId: ACCOUNT_ID, role: 'ADMIN' } },
+          { ...validGatewayUserClaims(), user: { accountId: ACCOUNT_ID, role: 'ADMIN' } },
           gatewayUserSigning(keys, EMPLOYEE),
         ),
     },
@@ -341,20 +345,20 @@ describe('auth guards', () => {
       condition: 'the user account ID is not a UUID',
       mintToken: () =>
         jwtService.signAsync(
-          { ...VALID_GATEWAY_USER_CLAIMS, user: { accountId: 'not-a-uuid', role: Role.HR } },
+          { ...validGatewayUserClaims(), user: { accountId: 'not-a-uuid', role: Role.HR } },
           gatewayUserSigning(keys, EMPLOYEE),
         ),
     },
     {
       condition: 'the token is addressed to another service',
       mintToken: () =>
-        jwtService.signAsync(VALID_GATEWAY_USER_CLAIMS, gatewayUserSigning(keys, ATTENDANCE)),
+        jwtService.signAsync(validGatewayUserClaims(), gatewayUserSigning(keys, ATTENDANCE)),
     },
     {
       condition: 'the token was signed by another service while naming the gateway',
       mintToken: () =>
         jwtService.signAsync(
-          VALID_GATEWAY_USER_CLAIMS,
+          validGatewayUserClaims(),
           serviceSigning(servicePair(keys, ATTENDANCE).privateKeyPem, GATEWAY, EMPLOYEE),
         ),
     },
@@ -362,14 +366,14 @@ describe('auth guards', () => {
       condition: 'an employee-service token carries a user claim (issuer is not the gateway)',
       mintToken: () =>
         jwtService.signAsync(
-          VALID_GATEWAY_USER_CLAIMS,
+          validGatewayUserClaims(),
           serviceSigning(servicePair(keys, EMPLOYEE).privateKeyPem, EMPLOYEE, EMPLOYEE),
         ),
     },
     {
       condition: 'the subject names another service under the gateway kid',
       mintToken: () =>
-        jwtService.signAsync(VALID_GATEWAY_USER_CLAIMS, {
+        jwtService.signAsync(validGatewayUserClaims(), {
           ...gatewayUserSigning(keys, EMPLOYEE),
           subject: ATTENDANCE,
         }),
@@ -377,7 +381,7 @@ describe('auth guards', () => {
     {
       condition: 'the kid is missing from the header',
       mintToken: () =>
-        jwtService.signAsync(VALID_GATEWAY_USER_CLAIMS, {
+        jwtService.signAsync(validGatewayUserClaims(), {
           privateKey: servicePair(keys, GATEWAY).privateKeyPem,
           algorithm: 'ES256',
           issuer: GATEWAY,
@@ -389,7 +393,7 @@ describe('auth guards', () => {
       condition: 'it is signed with a key that is not configured',
       mintToken: () =>
         jwtService.signAsync(
-          VALID_GATEWAY_USER_CLAIMS,
+          validGatewayUserClaims(),
           serviceSigning(unconfiguredServiceKey.privateKeyPem, GATEWAY, EMPLOYEE),
         ),
     },
@@ -401,7 +405,7 @@ describe('auth guards', () => {
     {
       condition: 'it is HS256 with the gateway public key as the HMAC secret',
       mintToken: () =>
-        jwtService.signAsync(VALID_GATEWAY_USER_CLAIMS, {
+        jwtService.signAsync(validGatewayUserClaims(), {
           secret: servicePair(keys, GATEWAY).publicKeyPem,
           algorithm: 'HS256',
           keyid: GATEWAY,
@@ -419,7 +423,7 @@ describe('auth guards', () => {
             sub: GATEWAY,
             aud: EMPLOYEE,
             exp: FAR_FUTURE_EXPIRY_SECONDS,
-            user: VALID_GATEWAY_USER_CLAIMS.user,
+            user: validGatewayUserClaims().user,
           },
           { alg: 'none', typ: 'JWT', kid: GATEWAY },
         ),
@@ -547,7 +551,7 @@ describe('auth guards', () => {
 
     it('should return 401 when api-gateway signs a user token for this service', async () => {
       // A token that names a user is a user credential, so a service route does not accept it.
-      const token = await jwtService.signAsync(VALID_GATEWAY_USER_CLAIMS, gatewayToEmployee());
+      const token = await jwtService.signAsync(validGatewayUserClaims(), gatewayToEmployee());
 
       await expectUnauthorized(INTERNAL_PATH, token);
     });
@@ -566,7 +570,7 @@ describe('auth guards', () => {
       'should return the account ID and role when api-gateway forwards the role %s',
       async (role) => {
         const token = await jwtService.signAsync(
-          { ...VALID_GATEWAY_USER_CLAIMS, user: { accountId: ACCOUNT_ID, role } },
+          { ...validGatewayUserClaims(), user: { accountId: ACCOUNT_ID, role } },
           gatewayUserSigning(keys, EMPLOYEE),
         );
 
