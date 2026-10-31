@@ -18,7 +18,7 @@ import type {
 } from './employee-profile.writer.interface.js';
 
 // Only the statements below run in the transaction, so the runner needs these three methods.
-type EmployeeProfileRunner = Pick<Database['db'], 'select' | 'update'>;
+type EmployeeProfileRunner = Pick<Database['db'], 'select' | 'insert' | 'update'>;
 
 @Injectable()
 export class EmployeeProfileWriter implements IEmployeeProfileWriter {
@@ -44,6 +44,7 @@ export class EmployeeProfileWriter implements IEmployeeProfileWriter {
 
 function createTransactionScope(runner: EmployeeProfileRunner): IEmployeeProfileTransaction {
   return {
+    insert: (table) => runner.insert(table),
     lockProfileForUpdate: (accountId) => lockProfileForUpdate(runner, accountId),
     updatePhone: (update) => updatePhone(runner, update),
     updatePhoto: (update) => updatePhoto(runner, update),

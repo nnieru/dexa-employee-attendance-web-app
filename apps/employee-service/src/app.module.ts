@@ -5,10 +5,12 @@ import {
   InternalHttpModule,
   ServiceName,
 } from '@dexa/common';
+import { MessagingModule, OutboxModule } from '@dexa/messaging';
 import { Module, type Type } from '@nestjs/common';
 import { ConfigModule } from './config/config.module.js';
 import type { EmployeeServiceConfig } from './config/employee-service-config.schema.js';
 import { HrProfileBootstrapModule } from './bootstrap/hr-profile-bootstrap.module.js';
+import { DATABASE } from './infrastructure/db/database.token.js';
 import { DatabaseModule } from './infrastructure/db/database.module.js';
 import { EmployeesModule } from './employees/employees.module.js';
 import { MasterDataModule } from './master-data/master-data.module.js';
@@ -16,6 +18,7 @@ import { MastersModule } from './masters/masters.module.js';
 import { PhotoModule } from './photo/photo.module.js';
 import { ProfileModule } from './profile/profile.module.js';
 import { ProvisioningModule } from './provisioning/provisioning.module.js';
+import { ClockModule } from './time/clock.module.js';
 
 /**
  * Builds the root module from the validated config. The config is parsed before the module graph is
@@ -32,6 +35,9 @@ export function createAppModule(config: EmployeeServiceConfig): Type<unknown> {
       }),
       AccountStatusModule.forRemote(),
       DatabaseModule,
+      ClockModule,
+      MessagingModule.forRoot({ url: config.RABBITMQ_URL }),
+      OutboxModule.forRoot({ databaseToken: DATABASE }),
       MasterDataModule,
       MastersModule,
       HrProfileBootstrapModule,

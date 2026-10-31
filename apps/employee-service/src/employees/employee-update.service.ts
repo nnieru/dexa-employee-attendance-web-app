@@ -1,6 +1,8 @@
-import { DependencyUnavailableError, DomainError } from '@dexa/common';
+import { CLOCK, DependencyUnavailableError, DomainError, type IClock } from '@dexa/common';
 import type { EmployeeDetail, ProfileField } from '@dexa/contracts';
+import { OUTBOX_WRITER, type IOutboxWriter } from '@dexa/messaging';
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import {
   AUTH_ACCOUNT_CLIENT,
   type IAuthAccountClient,
@@ -20,6 +22,7 @@ import {
   type IEmployeeProfileTransaction,
   type IEmployeeProfileWriter,
 } from '../profile/employee-profile.writer.interface.js';
+import { buildEmployeeProfileUpdatedEvent } from '../profile/employee-profile-updated-event.rules.js';
 import { profileNotFoundError } from '../profile/profile.errors.js';
 import {
   AccountActivityChange,
@@ -81,6 +84,8 @@ export class EmployeeUpdateService implements IEmployeeUpdateService {
     @Inject(AUTH_ACCOUNT_CLIENT) private readonly authAccounts: IAuthAccountClient,
     @Inject(AUTH_ACCOUNT_ADMINISTRATION_CLIENT)
     private readonly authAdministration: IAuthAccountAdministrationClient,
+    @Inject(OUTBOX_WRITER) private readonly outbox: IOutboxWriter,
+    @Inject(CLOCK) private readonly clock: IClock,
   ) {}
 
   async updateEmployee(command: EmployeeUpdateCommand): Promise<EmployeeUpdateResult> {
@@ -182,13 +187,38 @@ export class EmployeeUpdateService implements IEmployeeUpdateService {
     if (!requestsProfileChange(command.request)) return [];
     try {
       const outcome = await this.profiles.runInTransaction((transaction) =>
-        applyProfileUpdate(transaction, command),
+        this.applyProfileUpdate(transaction, command),
       );
       return resolveProfileOutcome(outcome);
     } catch (error: unknown) {
       if (activityChange !== AccountActivityChange.DEACTIVATE) throw error;
       throw this.stopped(command.accountId, 'profile', progress);
     }
+  }
+
+  // The lock is taken here, and the plan is computed from the locked row, so a concurrent edit is never reverted.
+  // The event joins the transaction, so it commits only with the profile change it reports.
+  private async applyProfileUpdate(
+    transaction: IEmployeeProfileTransaction,
+    command: EmployeeUpdateCommand,
+  ): Promise<ProfileUpdateOutcome> {
+    const locked = await transaction.lockProfileForUpdate(command.accountId);
+    if (locked === undefined) return { kind: 'NOT_FOUND' };
+    const plan = planEmployeeUpdate(locked, command.request);
+    if (plan === undefined) return { kind: 'UNCHANGED' };
+    await transaction.updateFields({ accountId: command.accountId, changes: plan.changes });
+    await this.outbox.add(
+      transaction,
+      buildEmployeeProfileUpdatedEvent({
+        eventId: randomUUID(),
+        occurredAt: this.clock.now(),
+        accountId: command.accountId,
+        actorAccountId: command.actorAccountId,
+        employeeName: plan.changes.name ?? locked.name,
+        changedFields: plan.changedFields,
+      }),
+    );
+    return { kind: 'SAVED', changedFields: plan.changedFields };
   }
 
   // An Auth refusal and an Auth outage both leave the outcome unconfirmed for this step, so the step is reported as
@@ -231,19 +261,6 @@ export class EmployeeUpdateService implements IEmployeeUpdateService {
     this.logger.warn(`Employee update for account ${accountId} stopped at ${step}.`);
     return employeeUpdateIncompleteError(accountId, progress);
   }
-}
-
-// The lock is taken here, and the plan is computed from the locked row, so a concurrent edit is never reverted.
-async function applyProfileUpdate(
-  transaction: IEmployeeProfileTransaction,
-  command: EmployeeUpdateCommand,
-): Promise<ProfileUpdateOutcome> {
-  const locked = await transaction.lockProfileForUpdate(command.accountId);
-  if (locked === undefined) return { kind: 'NOT_FOUND' };
-  const plan = planEmployeeUpdate(locked, command.request);
-  if (plan === undefined) return { kind: 'UNCHANGED' };
-  await transaction.updateFields({ accountId: command.accountId, changes: plan.changes });
-  return { kind: 'SAVED', changedFields: plan.changedFields };
 }
 
 function resolveProfileOutcome(outcome: ProfileUpdateOutcome): ReadonlyArray<ProfileField> {

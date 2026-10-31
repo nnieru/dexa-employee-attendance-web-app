@@ -1,10 +1,14 @@
+import { CLOCK, type IClock } from '@dexa/common';
 import type { ProfileField, UpdateOwnProfileRequest } from '@dexa/contracts';
+import { OUTBOX_WRITER, type IOutboxWriter } from '@dexa/messaging';
 import { Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import {
   EMPLOYEE_PROFILE_WRITER,
   type IEmployeeProfileTransaction,
   type IEmployeeProfileWriter,
 } from './employee-profile.writer.interface.js';
+import { buildEmployeeProfileUpdatedEvent } from './employee-profile-updated-event.rules.js';
 import { profileNotFoundError } from './profile.errors.js';
 import { planOwnPhoneChange } from './own-phone.rules.js';
 import type { IOwnPhoneService, OwnPhoneChangeSet } from './own-phone.service.interface.js';
@@ -18,34 +22,50 @@ type OwnPhoneOutcome =
 
 @Injectable()
 export class OwnPhoneService implements IOwnPhoneService {
-  constructor(@Inject(EMPLOYEE_PROFILE_WRITER) private readonly profiles: IEmployeeProfileWriter) {}
+  constructor(
+    @Inject(EMPLOYEE_PROFILE_WRITER) private readonly profiles: IEmployeeProfileWriter,
+    @Inject(OUTBOX_WRITER) private readonly outbox: IOutboxWriter,
+    @Inject(CLOCK) private readonly clock: IClock,
+  ) {}
 
   async updatePhone(
     accountId: string,
     request: UpdateOwnProfileRequest,
   ): Promise<OwnPhoneChangeSet> {
     const outcome = await this.profiles.runInTransaction((transaction) =>
-      applyPhoneChange(transaction, accountId, request.phoneNumber),
+      this.applyPhoneChange(transaction, accountId, request.phoneNumber),
     );
     if (outcome.status === 'PROFILE_NOT_FOUND') throw profileNotFoundError();
     if (outcome.status === 'NO_CHANGE') return { changedFields: [] };
     return { changedFields: outcome.changedFields };
   }
-}
 
-async function applyPhoneChange(
-  transaction: IEmployeeProfileTransaction,
-  accountId: string,
-  phoneNumber: string | null,
-): Promise<OwnPhoneOutcome> {
-  const stored = await transaction.lockProfileForUpdate(accountId);
-  if (stored === undefined) return { status: 'PROFILE_NOT_FOUND' };
-  const plan = planOwnPhoneChange(stored, phoneNumber);
-  if (plan === undefined) return { status: 'NO_CHANGE' };
-  await transaction.updatePhone({
-    accountId,
-    phoneNumber: plan.phoneNumber,
-    profileStatus: plan.profileStatus,
-  });
-  return { status: 'UPDATED', changedFields: plan.changedFields };
+  // The event joins the transaction, so it commits only with the phone it reports.
+  private async applyPhoneChange(
+    transaction: IEmployeeProfileTransaction,
+    accountId: string,
+    phoneNumber: string | null,
+  ): Promise<OwnPhoneOutcome> {
+    const stored = await transaction.lockProfileForUpdate(accountId);
+    if (stored === undefined) return { status: 'PROFILE_NOT_FOUND' };
+    const plan = planOwnPhoneChange(stored, phoneNumber);
+    if (plan === undefined) return { status: 'NO_CHANGE' };
+    await transaction.updatePhone({
+      accountId,
+      phoneNumber: plan.phoneNumber,
+      profileStatus: plan.profileStatus,
+    });
+    await this.outbox.add(
+      transaction,
+      buildEmployeeProfileUpdatedEvent({
+        eventId: randomUUID(),
+        occurredAt: this.clock.now(),
+        accountId,
+        actorAccountId: accountId,
+        employeeName: stored.name,
+        changedFields: plan.changedFields,
+      }),
+    );
+    return { status: 'UPDATED', changedFields: plan.changedFields };
+  }
 }

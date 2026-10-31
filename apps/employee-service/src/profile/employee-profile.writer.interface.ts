@@ -1,4 +1,5 @@
 import type { ProfileStatus } from '@dexa/contracts';
+import type { OutboxTransaction } from '@dexa/messaging';
 
 export const EMPLOYEE_PROFILE_WRITER = Symbol('IEmployeeProfileWriter');
 
@@ -44,8 +45,11 @@ export type EmployeeFieldsUpdate = {
   readonly changes: EmployeeFieldsChanges;
 };
 
-/** Writes that share one transaction, so the row lock and the update commit or roll back together. */
-export interface IEmployeeProfileTransaction {
+/**
+ * Writes that share one transaction, so the row lock, the profile update, and the outbox row (inherited from
+ * OutboxTransaction) commit or roll back together.
+ */
+export interface IEmployeeProfileTransaction extends OutboxTransaction {
   lockProfileForUpdate(accountId: string): Promise<LockedEmployeeProfile | undefined>;
   updatePhone(update: EmployeePhoneUpdate): Promise<void>;
   updatePhoto(update: EmployeePhotoUpdate): Promise<void>;

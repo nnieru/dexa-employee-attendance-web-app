@@ -1,6 +1,9 @@
 import type { Readable } from 'node:stream';
+import { CLOCK, type IClock } from '@dexa/common';
 import type { ProfileField } from '@dexa/contracts';
+import { OUTBOX_WRITER, type IOutboxWriter } from '@dexa/messaging';
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import {
   EMPLOYEE_PROFILE_READER,
   type IEmployeeProfileReader,
@@ -10,6 +13,7 @@ import {
   type IEmployeeProfileTransaction,
   type IEmployeeProfileWriter,
 } from '../profile/employee-profile.writer.interface.js';
+import { buildEmployeeProfileUpdatedEvent } from '../profile/employee-profile-updated-event.rules.js';
 import { profileNotFoundError } from '../profile/profile.errors.js';
 import { PHOTO_PROCESSOR, type IPhotoProcessor } from './photo-processor.interface.js';
 import { PHOTO_STORAGE, type IPhotoStorage } from './photo-storage.interface.js';
@@ -36,6 +40,8 @@ export class OwnPhotoService implements IOwnPhotoService {
     @Inject(EMPLOYEE_PROFILE_WRITER) private readonly writer: IEmployeeProfileWriter,
     @Inject(PHOTO_PROCESSOR) private readonly processor: IPhotoProcessor,
     @Inject(PHOTO_STORAGE) private readonly storage: IPhotoStorage,
+    @Inject(OUTBOX_WRITER) private readonly outbox: IOutboxWriter,
+    @Inject(CLOCK) private readonly clock: IClock,
   ) {}
 
   // The order is part of the contract (DATABASE §4.2): the file is durable before its key commits, and the replaced
@@ -64,7 +70,7 @@ export class OwnPhotoService implements IOwnPhotoService {
   private async commitPhoto(accountId: string, photoKey: string): Promise<PhotoCommitOutcome> {
     try {
       return await this.writer.runInTransaction((transaction) =>
-        applyPhotoChange(transaction, accountId, photoKey),
+        this.applyPhotoChange(transaction, accountId, photoKey),
       );
     } catch (error: unknown) {
       this.logger.error(
@@ -84,25 +90,38 @@ export class OwnPhotoService implements IOwnPhotoService {
       );
     }
   }
-}
 
-// The row lock serializes concurrent photo and phone edits, so the status decision sees the stored fields.
-async function applyPhotoChange(
-  transaction: IEmployeeProfileTransaction,
-  accountId: string,
-  photoKey: string,
-): Promise<PhotoCommitOutcome> {
-  const stored = await transaction.lockProfileForUpdate(accountId);
-  if (stored === undefined) return { status: 'PROFILE_NOT_FOUND' };
-  const plan = planOwnPhotoChange(stored, photoKey);
-  await transaction.updatePhoto({
-    accountId,
-    photoKey,
-    profileStatus: plan.profileStatus,
-  });
-  return {
-    status: 'UPDATED',
-    replacedPhotoKey: stored.photoKey,
-    changedFields: plan.changedFields,
-  };
+  // The row lock serializes concurrent photo and phone edits, so the status decision sees the stored fields.
+  // The event joins the transaction, so a rolled-back photo change leaves no event. The file was saved before
+  // this transaction (DATABASE §4.2), so a rollback leaves the file behind for operators, as before.
+  private async applyPhotoChange(
+    transaction: IEmployeeProfileTransaction,
+    accountId: string,
+    photoKey: string,
+  ): Promise<PhotoCommitOutcome> {
+    const stored = await transaction.lockProfileForUpdate(accountId);
+    if (stored === undefined) return { status: 'PROFILE_NOT_FOUND' };
+    const plan = planOwnPhotoChange(stored, photoKey);
+    await transaction.updatePhoto({
+      accountId,
+      photoKey,
+      profileStatus: plan.profileStatus,
+    });
+    await this.outbox.add(
+      transaction,
+      buildEmployeeProfileUpdatedEvent({
+        eventId: randomUUID(),
+        occurredAt: this.clock.now(),
+        accountId,
+        actorAccountId: accountId,
+        employeeName: stored.name,
+        changedFields: plan.changedFields,
+      }),
+    );
+    return {
+      status: 'UPDATED',
+      replacedPhotoKey: stored.photoKey,
+      changedFields: plan.changedFields,
+    };
+  }
 }
