@@ -21,3 +21,11 @@ export const QUORUM_QUEUE_ARGUMENTS = { 'x-queue-type': 'quorum' } as const;
 export function deadLetterQueueName(queue: string): string {
   return `${queue}.dlq`;
 }
+
+/**
+ * Holds dead-letter messages that a consumer cannot store or redeliver (DATABASE §6.2). Nothing consumes it; an
+ * operator reviews the messages by hand.
+ */
+export function parkedQueueName(queue: string): string {
+  return `${deadLetterQueueName(queue)}.parked`;
+}

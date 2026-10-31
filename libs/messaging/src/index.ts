@@ -7,6 +7,13 @@ export {
   createDeadLetterConsumerOptions,
   type EventQueueSettings,
 } from './event-consumer.options.js';
+export {
+  EVENTS_EXCHANGE,
+  MAX_DELIVERIES,
+  QUORUM_QUEUE_ARGUMENTS,
+  deadLetterQueueName,
+  parkedQueueName,
+} from './event-topology.js';
 export { RmqAckInterceptor } from './rmq-ack.interceptor.js';
 export { OutboxModule } from './outbox/outbox.module.js';
 export type { OutboxModuleOptions } from './outbox/outbox-settings.js';

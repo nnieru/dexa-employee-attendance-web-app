@@ -3,6 +3,12 @@ export { BaseConfigSchema, type BaseConfig } from './config/base-config.schema.j
 export { configureApp } from './bootstrap/configure-app.js';
 export { bootstrapService } from './bootstrap/bootstrap-service.js';
 export { HealthModule } from './health/health.module.js';
+export {
+  HEALTH_INDICATOR_REGISTRY,
+  type HealthCheckResult,
+  type IHealthIndicator,
+  type IHealthIndicatorRegistry,
+} from './health/health-indicator.interface.js';
 export { CLOCK, type IClock } from './time/clock.interface.js';
 export { SystemClock } from './time/system-clock.js';
 export { getMonthStart, toBusinessDate, type BusinessDate } from './time/business-date.js';

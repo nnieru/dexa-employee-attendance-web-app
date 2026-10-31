@@ -6,6 +6,7 @@ import { AUDIT_PROFILE_CHANGES_QUEUE } from './audit/audit-queue.constants.js';
 import { createAppModule } from './app.module.js';
 import { connectDeadLetterConsumer } from './dlq/connect-dead-letter-consumer.js';
 import { DeadLetterArchiveService } from './dlq/dead-letter-archive.service.js';
+import { DeadLetterConsumerStatus } from './dlq/dead-letter-consumer-status.js';
 import { loadAuditWorkerConfig } from './config/load-audit-worker-config.js';
 
 const DEFAULT_PORT = 3005;
@@ -17,10 +18,10 @@ const config = loadAuditWorkerConfig();
 const app = await NestFactory.create(createAppModule(config));
 configureApp(app, config);
 await connectEventConsumer(app, { url: config.RABBITMQ_URL, queue: AUDIT_PROFILE_CHANGES_QUEUE });
-connectDeadLetterConsumer(
-  app,
-  { url: config.RABBITMQ_URL, queue: AUDIT_PROFILE_CHANGES_QUEUE },
-  app.get(DeadLetterArchiveService),
-);
+connectDeadLetterConsumer(app, {
+  settings: { url: config.RABBITMQ_URL, queue: AUDIT_PROFILE_CHANGES_QUEUE },
+  archive: app.get(DeadLetterArchiveService),
+  status: app.get(DeadLetterConsumerStatus),
+});
 await app.listen(config.PORT ?? DEFAULT_PORT, config.HOST);
 await app.startAllMicroservices();

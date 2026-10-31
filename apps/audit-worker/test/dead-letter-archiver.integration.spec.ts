@@ -3,15 +3,18 @@ import type { INestApplication } from '@nestjs/common';
 import { EventName } from '@dexa/contracts';
 import { createDatabase, type Database } from '@dexa/db';
 import {
+  deadLetterQueueName,
   EVENT_PUBLISHER,
+  EVENTS_EXCHANGE,
   MessagingModule,
+  parkedQueueName,
   type EventMessage,
   type IEventPublisher,
 } from '@dexa/messaging';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { RabbitMQContainer, type StartedRabbitMQContainer } from '@testcontainers/rabbitmq';
-import { connect, type ChannelModel, type ConfirmChannel } from 'amqplib';
+import { connect, type ChannelModel, type ConfirmChannel, type GetMessage } from 'amqplib';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { DeadLetterArchiveRepository } from '../src/dlq/dead-letter-archive.repository.js';
@@ -22,9 +25,12 @@ import {
   createEmptyDatabaseUri,
   requireRow,
 } from './test-database.js';
-import { startAuditConsumerApp } from './audit-consumer-app.js';
+import { AuditLogRepository } from '../src/audit/audit-log.repository.js';
+import type { DeadLetterTiming } from '../src/dlq/dead-letter-policy.js';
+import { ScriptedAuditLogWriter, startAuditConsumerApp } from './audit-consumer-app.js';
 import {
   ARCHIVED_AT,
+  failureWithCode,
   ScriptedDeadLetterArchiveWriter,
   startDeadLetterArchiverApp,
 } from './dead-letter-archiver-app.js';
@@ -34,8 +40,21 @@ const POSTGRES_IMAGE = 'postgres:18';
 const RABBITMQ_IMAGE = 'rabbitmq:4-management';
 const WAIT_TIMEOUT_MS = 20_000;
 const WAIT_INTERVAL_MS = 25;
-// The events exchange name from libs/messaging (EVENTS_EXCHANGE). The library does not export it, so the test names it.
-const EVENTS_EXCHANGE = 'app.events';
+// Retries and pauses short enough for a test. The production values (D-46) are 1-8 s and 60 s.
+const FAST_RETRY_DELAYS_MS = [1, 1, 1, 1];
+const FAST_TIMING: DeadLetterTiming = {
+  archiveRetryDelaysMs: FAST_RETRY_DELAYS_MS,
+  consumerPauseMs: 60_000,
+};
+const SHORT_PAUSE_MS = 1_500;
+const PAUSE_TIMING: DeadLetterTiming = {
+  archiveRetryDelaysMs: FAST_RETRY_DELAYS_MS,
+  consumerPauseMs: SHORT_PAUSE_MS,
+};
+// Deliveries of the failing message before the archive gives up: the initial attempt plus four retries.
+const ARCHIVE_ATTEMPTS_PER_DELIVERY = FAST_RETRY_DELAYS_MS.length + 1;
+// How long the test watches a paused consumer. Shorter than SHORT_PAUSE_MS, so the consumer must still be paused.
+const PAUSE_OBSERVATION_MS = 300;
 const OCCURRED_AT = '2026-10-30T02:05:00.000Z';
 const ACCOUNT_ID = '5b7e2c1a-9f3d-4e6b-8a2c-1d0e9f8a7b6c';
 const ACTOR_ACCOUNT_ID = '2c9d4f7e-1a3b-4c5d-9e8f-0a1b2c3d4e5f';
@@ -51,10 +70,6 @@ type DeadLetterRow = typeof dlqMessages.$inferSelect;
 
 function uniqueQueueName(): string {
   return `audit.profile-changes.${randomUUID()}`;
-}
-
-function deadLetterQueueOf(queue: string): string {
-  return `${queue}.dlq`;
 }
 
 function profileUpdatedEventWithOldValues(): EventMessage {
@@ -90,6 +105,25 @@ function xDeathEntry(overrides: {
   };
 }
 
+// A valid event: the audit consumer fails on it only when its writer does.
+function validProfileUpdatedEvent(): EventMessage {
+  return {
+    eventId: randomUUID(),
+    type: EventName.EMPLOYEE_PROFILE_UPDATED,
+    occurredAt: OCCURRED_AT,
+    payload: {
+      accountId: ACCOUNT_ID,
+      actorAccountId: ACTOR_ACCOUNT_ID,
+      employeeName: EMPLOYEE_NAME,
+      changedFields: ['phoneNumber'],
+    },
+  };
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+}
+
 async function waitFor(predicate: () => Promise<boolean>, description: string): Promise<void> {
   const deadline = Date.now() + WAIT_TIMEOUT_MS;
   while (!(await predicate())) {
@@ -120,6 +154,21 @@ async function waitForDeadLetterQueueToDrain(
     const { messageCount } = await channel.checkQueue(deadLetterQueue);
     return messageCount === 0;
   }, `${deadLetterQueue} to drain`);
+}
+
+// Polls a queue until a message arrives, reading it without acknowledgement, which is fine for a test queue.
+async function takeDeadLetter(channel: ConfirmChannel, queue: string): Promise<GetMessage> {
+  const deadline = Date.now() + WAIT_TIMEOUT_MS;
+  for (;;) {
+    const message = await channel.get(queue, { noAck: true });
+    if (message !== false) {
+      return message;
+    }
+    if (Date.now() > deadline) {
+      throw new Error(`Timed out waiting for a message in ${queue}.`);
+    }
+    await sleep(WAIT_INTERVAL_MS);
+  }
 }
 
 async function readRows(database: Database, queue: string): Promise<DeadLetterRow[]> {
@@ -201,7 +250,7 @@ describe('dead-letter archiver on the Nest RMQ transport', () => {
       await publisher.publish(event);
 
       await waitFor(async () => (await readRows(database, queue)).length === 1, 'the archived row');
-      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueOf(queue));
+      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueName(queue));
       const row = requireRow((await readRows(database, queue))[0]);
       expect(row).toMatchObject({
         messageId: event.eventId,
@@ -255,15 +304,15 @@ describe('dead-letter archiver on the Nest RMQ transport', () => {
       const messageId = randomUUID();
       const body = Buffer.from('{"pattern":"employee.profile.updated"}', 'utf8');
 
-      await publishToDeadLetterQueue(observerChannel, deadLetterQueueOf(queue), body, {
+      await publishToDeadLetterQueue(observerChannel, deadLetterQueueName(queue), body, {
         messageId,
       });
-      await publishToDeadLetterQueue(observerChannel, deadLetterQueueOf(queue), body, {
+      await publishToDeadLetterQueue(observerChannel, deadLetterQueueName(queue), body, {
         messageId,
       });
 
       await waitFor(async () => writer.successes === 2, 'both archive writes to commit');
-      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueOf(queue));
+      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueName(queue));
       const rows = await readRows(database, queue);
       expect(rows.map((row) => row.messageId)).toEqual([messageId]);
     },
@@ -291,10 +340,10 @@ describe('dead-letter archiver on the Nest RMQ transport', () => {
       // Not UTF-8 and not JSON, with a NUL byte: the row must keep every byte.
       const body = Buffer.from([0xff, 0x00, 0x7b, 0xfe, 0x22]);
 
-      await publishToDeadLetterQueue(observerChannel, deadLetterQueueOf(queue), body);
+      await publishToDeadLetterQueue(observerChannel, deadLetterQueueName(queue), body);
 
       await waitFor(async () => writer.successes === 1, 'the archive write to commit');
-      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueOf(queue));
+      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueName(queue));
       const row = requireRow((await readRows(database, queue))[0]);
       expect(row.payload.equals(body)).toBe(true);
       expect(row.messageId).toMatch(FALLBACK_MESSAGE_ID_PATTERN);
@@ -333,11 +382,12 @@ describe('dead-letter archiver on the Nest RMQ transport', () => {
 
       await publishToDeadLetterQueue(
         observerChannel,
-        deadLetterQueueOf(queue),
+        deadLetterQueueName(queue),
         Buffer.from('{}', 'utf8'),
         {
           messageId,
           headers: {
+            'x-acquired-count': 2,
             'x-death': [
               xDeathEntry({ queue, reason: 'rejected', count: 1, time: FIRST_DEATH_AT }),
               xDeathEntry({ queue, reason: 'delivery_limit', count: 2, time: LATEST_DEATH_AT }),
@@ -387,11 +437,12 @@ describe('dead-letter archiver on the Nest RMQ transport', () => {
 
       await publishToDeadLetterQueue(
         observerChannel,
-        deadLetterQueueOf(queue),
+        deadLetterQueueName(queue),
         Buffer.from('{}', 'utf8'),
         {
           messageId,
           headers: {
+            'x-acquired-count': 3,
             'x-death': [
               xDeathEntry({ queue, reason: 'delivery_limit', count: 3, time: LATE_DUPLICATE_AT }),
             ],
@@ -443,7 +494,7 @@ describe('dead-letter archiver on the Nest RMQ transport', () => {
 
       await publishToDeadLetterQueue(
         observerChannel,
-        deadLetterQueueOf(queue),
+        deadLetterQueueName(queue),
         Buffer.from('{}', 'utf8'),
         {
           messageId,
@@ -456,7 +507,7 @@ describe('dead-letter archiver on the Nest RMQ transport', () => {
       );
 
       await waitFor(async () => writer.successes === 1, 'the archive write to finish');
-      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueOf(queue));
+      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueName(queue));
       const row = requireRow((await readRows(database, queue))[0]);
       expect(row).toMatchObject({
         status: 'RESOLVED',
@@ -479,24 +530,159 @@ describe('dead-letter archiver on the Nest RMQ transport', () => {
         rabbitMqUrl: rabbitMq.getAmqpUrl(),
         queue,
         archiveWriter: writer,
+        timing: FAST_TIMING,
       });
       try {
         await publishToDeadLetterQueue(
           observerChannel,
-          deadLetterQueueOf(queue),
+          deadLetterQueueName(queue),
           Buffer.from('not json{', 'utf8'),
         );
-        // Two attempts show the failed delivery was requeued and tried again, never acknowledged.
-        await waitFor(async () => writer.attempts >= 2, 'a retried archive write');
+        // The retries run in process, then the message is requeued and the consumer pauses.
+        await waitFor(
+          async () => writer.attempts === ARCHIVE_ATTEMPTS_PER_DELIVERY,
+          'the retries of the first delivery',
+        );
       } finally {
         await app.close();
       }
 
       await waitFor(async () => {
-        const { messageCount } = await observerChannel.checkQueue(deadLetterQueueOf(queue));
+        const { messageCount } = await observerChannel.checkQueue(deadLetterQueueName(queue));
         return messageCount === 1;
       }, 'the message to remain in the dead-letter queue');
       expect(writer.successes).toBe(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should pause the archive consumer after a transient failure and resume it after the pause',
+    async () => {
+      const queue = uniqueQueueName();
+      const databaseUrl = await createEmptyDatabaseUri(postgres.getConnectionUri());
+      const database = openDatabase(databaseUrl);
+      // Fails the first delivery's five attempts with a connection error, then archives the redelivery.
+      const writer = new ScriptedDeadLetterArchiveWriter(
+        new DeadLetterArchiveRepository(database),
+        ARCHIVE_ATTEMPTS_PER_DELIVERY,
+      );
+      startedApps.push(
+        await startDeadLetterArchiverApp({
+          databaseUrl,
+          rabbitMqUrl: rabbitMq.getAmqpUrl(),
+          queue,
+          archiveWriter: writer,
+          timing: PAUSE_TIMING,
+        }),
+      );
+      const messageId = randomUUID();
+
+      await publishToDeadLetterQueue(
+        observerChannel,
+        deadLetterQueueName(queue),
+        Buffer.from('{}', 'utf8'),
+        { messageId },
+      );
+
+      await waitFor(
+        async () => writer.attempts === ARCHIVE_ATTEMPTS_PER_DELIVERY,
+        'the retries of the first delivery',
+      );
+      await sleep(PAUSE_OBSERVATION_MS);
+      expect(writer.attempts).toBe(ARCHIVE_ATTEMPTS_PER_DELIVERY);
+      await waitFor(async () => writer.successes === 1, 'the redelivery to commit after the pause');
+      expect(writer.attempts).toBe(ARCHIVE_ATTEMPTS_PER_DELIVERY + 1);
+      const row = requireRow((await readRows(database, queue))[0]);
+      expect(row.messageId).toBe(messageId);
+      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueName(queue));
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should park the unchanged message and store no row when the archive fails permanently',
+    async () => {
+      const queue = uniqueQueueName();
+      const databaseUrl = await createEmptyDatabaseUri(postgres.getConnectionUri());
+      const database = openDatabase(databaseUrl);
+      // SQLSTATE 23505, a unique violation: retrying cannot succeed.
+      const writer = new ScriptedDeadLetterArchiveWriter(undefined, Number.POSITIVE_INFINITY, () =>
+        failureWithCode('23505'),
+      );
+      startedApps.push(
+        await startDeadLetterArchiverApp({
+          databaseUrl,
+          rabbitMqUrl: rabbitMq.getAmqpUrl(),
+          queue,
+          archiveWriter: writer,
+          timing: FAST_TIMING,
+        }),
+      );
+      const messageId = randomUUID();
+      const body = Buffer.from(
+        '{"pattern":"employee.profile.updated","data":{"oldValues":{}}}',
+        'utf8',
+      );
+      const headers = {
+        'x-acquired-count': 1,
+        'x-death': [xDeathEntry({ queue, reason: 'rejected', count: 1, time: FIRST_DEATH_AT })],
+      };
+
+      await publishToDeadLetterQueue(observerChannel, deadLetterQueueName(queue), body, {
+        messageId,
+        headers,
+      });
+
+      const parked = await takeDeadLetter(observerChannel, parkedQueueName(queue));
+      // A unique violation is permanent, so the archive is tried once and the message is parked without retries.
+      expect(writer.attempts).toBe(1);
+      expect(parked.content.equals(body)).toBe(true);
+      expect(parked.properties.messageId).toBe(messageId);
+      expect(parked.properties.headers).toEqual(headers);
+      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueName(queue));
+      expect(await readRows(database, queue)).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should record attempt count 3 when a message fails on every delivery of the audit queue',
+    async () => {
+      const queue = uniqueQueueName();
+      const databaseUrl = await createEmptyDatabaseUri(postgres.getConnectionUri());
+      const database = openDatabase(databaseUrl);
+      const auditWriter = new ScriptedAuditLogWriter(
+        new AuditLogRepository(database),
+        Number.POSITIVE_INFINITY,
+      );
+      startedApps.push(
+        await startAuditConsumerApp({
+          databaseUrl,
+          rabbitMqUrl: rabbitMq.getAmqpUrl(),
+          queue,
+          auditLogWriter: auditWriter,
+        }),
+        await startDeadLetterArchiverApp({
+          databaseUrl,
+          rabbitMqUrl: rabbitMq.getAmqpUrl(),
+          queue,
+          timing: FAST_TIMING,
+        }),
+      );
+      const validEvent = validProfileUpdatedEvent();
+
+      await publisher.publish(validEvent);
+
+      await waitFor(async () => (await readRows(database, queue)).length === 1, 'the archived row');
+      await waitForDeadLetterQueueToDrain(observerChannel, deadLetterQueueName(queue));
+      const row = requireRow((await readRows(database, queue))[0]);
+      expect(auditWriter.attempts).toBe(3);
+      expect(row).toMatchObject({
+        messageId: validEvent.eventId,
+        attemptCount: 3,
+        lastError: 'delivery_limit',
+      });
     },
     TEST_TIMEOUT_MS,
   );

@@ -15,7 +15,6 @@ export type DeathRecord = {
 
 /** The failure facts stored in dlq_messages, derived from the x-death header of one message. */
 export type FailureSummary = {
-  readonly attemptCount: number;
   readonly lastError: string;
   readonly firstFailedAt: Date;
   readonly lastFailedAt: Date;
@@ -77,8 +76,9 @@ function readXDeathEntries(headers: unknown): ReadonlyArray<unknown> {
 }
 
 /**
- * Derives the failure facts for one source queue. The latest failure (largest time) supplies the attempt count and
- * the reason; the earliest failure supplies first_failed_at. Entries from other queues are ignored.
+ * Derives the failure facts for one source queue. The latest failure (largest time) supplies the reason; the
+ * earliest failure supplies first_failed_at. Entries from other queues are ignored. The attempt count is not here:
+ * it comes from the delivery counters (delivery-count.rules.ts, D-45).
  */
 export function summarizeFailures(
   deaths: ReadonlyArray<DeathRecord>,
@@ -89,7 +89,6 @@ export function summarizeFailures(
   const [firstDeath, ...otherDeaths] = sourceDeaths;
   if (firstDeath === undefined) {
     return {
-      attemptCount: 1,
       lastError: UNRECORDED_FAILURE_REASON,
       firstFailedAt: observedAt,
       lastFailedAt: observedAt,
@@ -104,7 +103,6 @@ export function summarizeFailures(
     firstDeath.time,
   );
   return {
-    attemptCount: latestDeath.count,
     lastError: latestDeath.reason,
     firstFailedAt: earliestTime,
     lastFailedAt: latestDeath.time,

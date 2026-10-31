@@ -3,7 +3,10 @@ import type { INestApplication } from '@nestjs/common';
 import { EventName } from '@dexa/contracts';
 import { createDatabase, type Database } from '@dexa/db';
 import {
+  deadLetterQueueName,
   EVENT_PUBLISHER,
+  EVENTS_EXCHANGE,
+  MAX_DELIVERIES,
   MessagingModule,
   type EventMessage,
   type IEventPublisher,
@@ -33,19 +36,10 @@ const POSTGRES_IMAGE = 'postgres:18';
 const RABBITMQ_IMAGE = 'rabbitmq:4-management';
 const WAIT_TIMEOUT_MS = 20_000;
 const WAIT_INTERVAL_MS = 25;
-// The events exchange name from libs/messaging (EVENTS_EXCHANGE). The library does not export it, so the test names it.
-const EVENTS_EXCHANGE = 'app.events';
-// Deliveries before RabbitMQ dead-letters a message (DATABASE §6.2). The library does not export MAX_DELIVERIES.
-const DELIVERIES_BEFORE_DEAD_LETTER = 3;
 const OCCURRED_AT = '2026-10-30T02:05:00.000Z';
 const ACCOUNT_ID = '5b7e2c1a-9f3d-4e6b-8a2c-1d0e9f8a7b6c';
 const ACTOR_ACCOUNT_ID = '2c9d4f7e-1a3b-4c5d-9e8f-0a1b2c3d4e5f';
 const EMPLOYEE_NAME = 'Ada Lovelace';
-
-// The dead-letter queue name is `<queue>.dlq` (libs/messaging deadLetterQueueName, not exported).
-function deadLetterQueueOf(queue: string): string {
-  return `${queue}.dlq`;
-}
 
 function uniqueQueueName(): string {
   return `audit.profile-changes.${randomUUID()}`;
@@ -261,7 +255,7 @@ describe('audit consumer on the Nest RMQ transport', () => {
           'the queue to drain',
         );
         expect(await countAuditRows(database, event.eventId)).toBe(1);
-        expect(await observerChannel.get(deadLetterQueueOf(queue), { noAck: true })).toBe(false);
+        expect(await observerChannel.get(deadLetterQueueName(queue), { noAck: true })).toBe(false);
       },
       TEST_TIMEOUT_MS,
     );
@@ -324,7 +318,7 @@ describe('audit consumer on the Nest RMQ transport', () => {
 
         await publishRawBody(observerChannel, routingKey, body);
 
-        const deadLetter = await takeDeadLetter(observerChannel, deadLetterQueueOf(queue));
+        const deadLetter = await takeDeadLetter(observerChannel, deadLetterQueueName(queue));
         expect(writer.attempts).toBe(0);
         expect(await countAuditRows(database)).toBe(0);
         expect(deadLetter.content.equals(body)).toBe(true);
@@ -363,7 +357,7 @@ describe('audit consumer on the Nest RMQ transport', () => {
           async () => (await readyMessageCount(observerChannel, queue)) === 0,
           'the queue to drain',
         );
-        expect(await observerChannel.get(deadLetterQueueOf(queue), { noAck: true })).toBe(false);
+        expect(await observerChannel.get(deadLetterQueueName(queue), { noAck: true })).toBe(false);
       },
       TEST_TIMEOUT_MS,
     );
@@ -390,8 +384,8 @@ describe('audit consumer on the Nest RMQ transport', () => {
 
         await publisher.publish(event);
 
-        const deadLetter = await takeDeadLetter(observerChannel, deadLetterQueueOf(queue));
-        expect(writer.attempts).toBe(DELIVERIES_BEFORE_DEAD_LETTER);
+        const deadLetter = await takeDeadLetter(observerChannel, deadLetterQueueName(queue));
+        expect(writer.attempts).toBe(MAX_DELIVERIES);
         expect(writer.successes).toBe(0);
         expect(await countAuditRows(database, event.eventId)).toBe(0);
         expect(deadLetter.properties.messageId).toBe(event.eventId);

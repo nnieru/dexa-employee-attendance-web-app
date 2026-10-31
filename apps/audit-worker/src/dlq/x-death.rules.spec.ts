@@ -109,7 +109,6 @@ describe('summarizeFailures', () => {
       condition: 'the message has no x-death entry for its source queue',
       deaths: [] as DeathRecord[],
       expected: {
-        attemptCount: 1,
         lastError: 'unknown',
         firstFailedAt: OBSERVED_AT,
         lastFailedAt: OBSERVED_AT,
@@ -119,7 +118,6 @@ describe('summarizeFailures', () => {
       condition: 'the only x-death entry is for another queue',
       deaths: [death({ queue: 'notification.events' })],
       expected: {
-        attemptCount: 1,
         lastError: 'unknown',
         firstFailedAt: OBSERVED_AT,
         lastFailedAt: OBSERVED_AT,
@@ -129,7 +127,6 @@ describe('summarizeFailures', () => {
       condition: 'there is one failure',
       deaths: [death({ reason: 'rejected', count: 1, time: EARLIER_TIME })],
       expected: {
-        attemptCount: 1,
         lastError: 'rejected',
         firstFailedAt: EARLIER_TIME,
         lastFailedAt: EARLIER_TIME,
@@ -142,7 +139,6 @@ describe('summarizeFailures', () => {
         death({ reason: 'rejected', count: 1, time: EARLIER_TIME }),
       ],
       expected: {
-        attemptCount: 2,
         lastError: 'delivery_limit',
         firstFailedAt: EARLIER_TIME,
         lastFailedAt: LATER_TIME,
@@ -155,7 +151,6 @@ describe('summarizeFailures', () => {
         death({ reason: 'delivery_limit', count: 2, time: LATER_TIME }),
       ],
       expected: {
-        attemptCount: 2,
         lastError: 'delivery_limit',
         firstFailedAt: EARLIER_TIME,
         lastFailedAt: LATER_TIME,
@@ -173,16 +168,12 @@ describe('summarizeFailures', () => {
         }),
       ],
       expected: {
-        attemptCount: 1,
         lastError: 'rejected',
         firstFailedAt: EARLIER_TIME,
         lastFailedAt: EARLIER_TIME,
       },
     },
-  ])(
-    'should derive the attempt count and failure times when $condition',
-    ({ deaths, expected }) => {
-      expect(summarizeFailures(deaths, SOURCE_QUEUE, OBSERVED_AT)).toEqual(expected);
-    },
-  );
+  ])('should derive the reason and failure times when $condition', ({ deaths, expected }) => {
+    expect(summarizeFailures(deaths, SOURCE_QUEUE, OBSERVED_AT)).toEqual(expected);
+  });
 });

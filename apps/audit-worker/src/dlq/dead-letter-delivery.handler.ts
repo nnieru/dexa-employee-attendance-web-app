@@ -1,71 +1,166 @@
 import { Logger } from '@nestjs/common';
-import { RmqContext, type MessageHandler } from '@nestjs/microservices';
+import { RmqContext } from '@nestjs/microservices';
 import type { Channel, Message } from 'amqplib';
-import type { DeadLetterArchiveService } from './dead-letter-archive.service.js';
+import { archiveWithRetry, type RetryPolicy } from './archive-with-retry.js';
+import { classifyArchiveFailure, readFailureCode } from './archive-failure.rules.js';
+import type { DeadLetterDelivery } from './dead-letter-archive.rules.js';
 
-type DeliverySettlementChannel = Pick<Channel, 'ack' | 'nack'>;
-
-type Delivery = {
-  readonly channel: DeliverySettlementChannel;
+export type RmqDelivery = {
+  readonly channel: Channel;
   readonly message: Message;
+  /** The consumer that delivered the message, so the server can cancel exactly that consumer. */
+  readonly consumerTag: string;
+};
+
+/**
+ * What became of one delivery. `requeued` means the message is back in the DLQ after a transient failure, and the
+ * server pauses the consumer before it takes more work.
+ */
+export type DeliveryOutcome = 'archived' | 'parked' | 'requeued';
+
+export type DeadLetterHandlerPorts = {
+  readonly sourceQueue: string;
+  /** Resolves once the failure row has committed. */
+  readonly archive: (delivery: DeadLetterDelivery) => Promise<void>;
+  /** Resolves once the broker has confirmed the parking publish. */
+  readonly park: (message: Message) => Promise<void>;
+  readonly retry: RetryPolicy;
+};
+
+/** How one delivery is acknowledged or requeued. Bound to the delivering channel and message by the handler. */
+export type DeliverySettlement = {
+  readonly ack: () => void;
+  readonly requeue: () => void;
+};
+
+export type DeliverySettlementInput = {
+  readonly sourceQueue: string;
+  /** The AMQP message ID for logs, or a placeholder. Never a body or a header. */
+  readonly messageLabel: string;
+  readonly archive: () => Promise<void>;
+  readonly park: () => Promise<void>;
+  readonly settlement: DeliverySettlement;
+  readonly retry: RetryPolicy;
 };
 
 const logger = new Logger('DeadLetterArchiver');
 
 /**
- * The catch-all handler for a queue's dead-letter queue. It archives the delivery and acknowledges it only after the
- * database write commits. When the write fails, it nacks with requeue, so the message stays in the DLQ and RabbitMQ
- * redelivers it (DATABASE §6.2 step 4). The DLQ has no delivery limit, so the requeue is not counted.
+ * Creates the catch-all handler for a queue's dead-letter queue. The handler settles each delivery as described in
+ * settleDeadLetterDelivery.
  */
 export function createDeadLetterHandler(
-  archive: DeadLetterArchiveService,
-  sourceQueue: string,
-): MessageHandler {
-  return async (_data: unknown, context?: RmqContext): Promise<void> => {
-    const delivery = readDelivery(context);
-    await archiveAndSettle(archive, sourceQueue, delivery);
+  ports: DeadLetterHandlerPorts,
+): (delivery: RmqDelivery) => Promise<DeliveryOutcome> {
+  return ({ channel, message }) =>
+    settleDeadLetterDelivery({
+      sourceQueue: ports.sourceQueue,
+      messageLabel: describeMessageId(message),
+      archive: () => ports.archive(toArchiveDelivery(message)),
+      park: () => ports.park(message),
+      settlement: {
+        ack: () => channel.ack(message),
+        requeue: () => channel.nack(message, false, true),
+      },
+      retry: ports.retry,
+    });
+}
+
+/**
+ * Settles one dead-lettered delivery (DATABASE §6.2, D-46):
+ * - archived: ack after the commit.
+ * - transient failure after the retries: requeue, so the message stays in the DLQ.
+ * - permanent failure after the retries: park the unchanged message, then ack. If the parking publish fails, the
+ *   delivery is treated as transient, so nothing is lost.
+ * Logs carry the queue, the message label and the failure code only.
+ */
+export async function settleDeadLetterDelivery(
+  input: DeliverySettlementInput,
+): Promise<DeliveryOutcome> {
+  const outcome = await archiveWithRetry(input.archive, input.retry);
+  if (outcome.kind === 'archived') {
+    input.settlement.ack();
+    return 'archived';
+  }
+
+  const code = describeCode(outcome.error);
+  if (classifyArchiveFailure(outcome.error) === 'permanent') {
+    const parked = await tryPark(input, code);
+    if (parked) {
+      input.settlement.ack();
+      logger.error(
+        `Parked dead-letter message ${input.messageLabel} from ${input.sourceQueue} (${code})`,
+      );
+      return 'parked';
+    }
+  }
+  input.settlement.requeue();
+  logger.warn(
+    `Archive of dead-letter message ${input.messageLabel} from ${input.sourceQueue} failed (${code}); ` +
+      'requeued and pausing the archive consumer',
+  );
+  return 'requeued';
+}
+
+async function tryPark(input: DeliverySettlementInput, archiveCode: string): Promise<boolean> {
+  try {
+    await input.park();
+    return true;
+  } catch (parkError: unknown) {
+    logger.error(
+      `Could not park dead-letter message ${input.messageLabel} from ${input.sourceQueue} ` +
+        `after archive failed (${archiveCode}); parking failed with ${describeCode(parkError)}`,
+    );
+    return false;
+  }
+}
+
+function toArchiveDelivery(message: Message): DeadLetterDelivery {
+  return {
+    content: message.content,
+    messageId: message.properties.messageId,
+    headers: message.properties.headers,
   };
 }
 
-async function archiveAndSettle(
-  archive: DeadLetterArchiveService,
-  sourceQueue: string,
-  delivery: Delivery,
-): Promise<void> {
-  const { channel, message } = delivery;
-  try {
-    await archive.archive(sourceQueue, {
-      content: message.content,
-      messageId: message.properties.messageId,
-      headers: message.properties.headers,
-    });
-  } catch (error: unknown) {
-    // The DB error text can echo the statement's parameters, which include the body, so only its code is logged.
-    logger.error(
-      `Could not archive a dead-letter message from ${sourceQueue}; it stays in the dead-letter queue. ` +
-        `Cause: ${describeFailureCode(error)}`,
-    );
-    channel.nack(message, false, true);
-    return;
-  }
-  channel.ack(message);
+function describeMessageId(message: Message): string {
+  const { messageId } = message.properties;
+  return typeof messageId === 'string' ? messageId : 'without-message-id';
 }
 
-function readDelivery(context: RmqContext | undefined): Delivery {
+function describeCode(error: unknown): string {
+  const code = readFailureCode(error);
+  if (code !== undefined) {
+    return code;
+  }
+  return error instanceof Error ? error.name : 'unknown error';
+}
+
+/** Reads the channel and message of a delivery from Nest's RMQ context. */
+export function readRmqDelivery(context: RmqContext | undefined): RmqDelivery {
   if (context === undefined) {
     throw new Error('The dead-letter delivery has no RMQ context');
   }
   const channel: unknown = context.getChannelRef();
   const message: unknown = context.getMessage();
-  if (!isDeliverySettlementChannel(channel) || !isMessage(message)) {
+  if (!isDeliveryChannel(channel) || !isMessage(message)) {
     throw new Error('The RMQ context does not carry the channel and message of its delivery');
   }
-  return { channel, message };
+  const { consumerTag } = message.fields;
+  if (typeof consumerTag !== 'string') {
+    throw new Error('The RMQ delivery does not name its consumer');
+  }
+  return { channel, message, consumerTag };
 }
 
 // Nest types the channel and message loosely, so the members this handler uses are checked at runtime.
-function isDeliverySettlementChannel(value: unknown): value is DeliverySettlementChannel {
-  return isRecord(value) && typeof value.ack === 'function' && typeof value.nack === 'function';
+function isDeliveryChannel(value: unknown): value is Channel {
+  return (
+    isRecord(value) &&
+    typeof value.ack === 'function' &&
+    typeof value.nack === 'function' &&
+    typeof value.cancel === 'function'
+  );
 }
 
 function isMessage(value: unknown): value is Message {
@@ -75,24 +170,6 @@ function isMessage(value: unknown): value is Message {
     isRecord(value.properties) &&
     isRecord(value.fields)
   );
-}
-
-function describeFailureCode(error: unknown): string {
-  const code = findErrorCode(error);
-  if (code !== undefined) {
-    return code;
-  }
-  return error instanceof Error ? error.name : 'unknown error';
-}
-
-function findErrorCode(error: unknown): string | undefined {
-  if (!(error instanceof Error)) {
-    return undefined;
-  }
-  if ('code' in error && typeof error.code === 'string') {
-    return error.code;
-  }
-  return findErrorCode(error.cause);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

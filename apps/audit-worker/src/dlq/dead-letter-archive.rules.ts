@@ -1,6 +1,7 @@
 import { eventEnvelopeSchema } from '@dexa/contracts';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
+import { deriveAttemptCount, readDeliveryCount } from './delivery-count.rules.js';
 import {
   readDeathRecords,
   summarizeFailures,
@@ -55,7 +56,10 @@ export function buildDeadLetterArchiveRecord(input: {
     sourceQueue,
     payload: delivery.content,
     headers: toArchivedHeaders(deaths),
-    attemptCount: failure.attemptCount,
+    attemptCount: deriveAttemptCount({
+      deliveryCount: readDeliveryCount(delivery.headers),
+      lastError: failure.lastError,
+    }),
     lastError: failure.lastError,
     firstFailedAt: failure.firstFailedAt,
     lastFailedAt: failure.lastFailedAt,
