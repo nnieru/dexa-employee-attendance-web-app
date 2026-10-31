@@ -1,9 +1,12 @@
 import { Roles } from '@dexa/common';
 import {
+  attendanceMonitoringQuerySchema,
   attendanceSummaryQuerySchema,
   clockInRequestSchema,
   clockOutRequestSchema,
   Role,
+  type AttendanceMonitoringPage,
+  type AttendanceMonitoringQuery,
   type AttendanceSummaryPage,
   type AttendanceSummaryQuery,
   type ClockInRequest,
@@ -62,5 +65,16 @@ export class AttendanceController {
     @Query(new ZodValidationPipe(attendanceSummaryQuerySchema)) query: AttendanceSummaryQuery,
   ): Promise<AttendanceSummaryPage> {
     return this.attendanceService.listOwnSummary(readBearerToken(authorization), query);
+  }
+
+  // HR monitoring of every account's days (ADM-4). The query is strict here and again in attendance-service. The
+  // service has no write route for these records, so only this GET exists (ADM-6).
+  @Roles(Role.HR)
+  @Get()
+  listAttendance(
+    @Headers('authorization') authorization: string | undefined,
+    @Query(new ZodValidationPipe(attendanceMonitoringQuerySchema)) query: AttendanceMonitoringQuery,
+  ): Promise<AttendanceMonitoringPage> {
+    return this.attendanceService.listAttendance(readBearerToken(authorization), query);
   }
 }

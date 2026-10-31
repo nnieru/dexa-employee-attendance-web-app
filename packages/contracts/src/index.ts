@@ -126,6 +126,14 @@ export {
   type AttendanceSummaryQuery,
 } from './attendance/attendance-summary.schema.js';
 export {
+  attendanceMonitoringItemSchema,
+  attendanceMonitoringPageSchema,
+  attendanceMonitoringQuerySchema,
+  type AttendanceMonitoringItem,
+  type AttendanceMonitoringPage,
+  type AttendanceMonitoringQuery,
+} from './attendance/attendance-monitoring.schema.js';
+export {
   todayAttendanceResponseSchema,
   todayStateSchema,
   type TodayAttendanceResponse,

@@ -1,13 +1,9 @@
-import { CLOCK, getMonthStart, toBusinessDate, ValidationError, type IClock } from '@dexa/common';
-import {
-  ErrorCode,
-  isSummaryRangeOrdered,
-  type AttendanceSummaryPage,
-  type AttendanceSummaryQuery,
-} from '@dexa/contracts';
+import { CLOCK, toBusinessDate, type IClock } from '@dexa/common';
+import type { AttendanceSummaryPage, AttendanceSummaryQuery } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { CONFIG } from '../config/config.token.js';
 import type { AttendanceServiceConfig } from '../config/attendance-service-config.schema.js';
+import { resolveAttendanceRange } from './attendance-range.rules.js';
 import {
   ATTENDANCE_SUMMARY_READER,
   type IAttendanceSummaryReader,
@@ -30,11 +26,7 @@ export class AttendanceSummaryService implements IAttendanceSummaryService {
     query: AttendanceSummaryQuery,
   ): Promise<AttendanceSummaryPage> {
     const today = toBusinessDate(this.clock.now(), this.config.BUSINESS_TIMEZONE);
-    const from = query.from ?? getMonthStart(today);
-    const to = query.to ?? today;
-    if (!isSummaryRangeOrdered(from, to)) {
-      throw new ValidationError(ErrorCode.VALIDATION_FAILED, 'from: must not be after to');
-    }
+    const { from, to } = resolveAttendanceRange(query, today);
     const { records, totalItems } = await this.reader.findDayPage({
       accountId,
       from,

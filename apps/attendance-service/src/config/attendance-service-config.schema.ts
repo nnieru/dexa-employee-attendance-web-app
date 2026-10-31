@@ -48,6 +48,8 @@ const attendanceEnvironmentSchema = z.intersection(
     ATTENDANCE_DATABASE_URL: postgresUrlSchema,
     // Every user-token request checks the account with auth-service (JwtAuthGuard), so the URL is required.
     AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
+    // The HR attendance list resolves names through employee-service's batched lookup (PRD ADM-4).
+    EMPLOYEE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
   }),
   defaultScheduleSettingsSchema,
 );

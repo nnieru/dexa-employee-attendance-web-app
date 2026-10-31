@@ -6,6 +6,7 @@ import {
 } from '@dexa/common';
 import {
   ErrorCode,
+  type AttendanceMonitoringPage,
   type AttendanceSummaryPage,
   type ClockInResponse,
   type ClockOutResponse,
@@ -34,6 +35,33 @@ const CLOCK_OUT_RESPONSE: ClockOutResponse = {
   recordedAt: '2026-11-02T11:00:00.000Z',
   businessDate: '2026-11-02',
   classification: 'ON_TIME_CHECKOUT',
+};
+
+const MONITORING_PAGE: AttendanceMonitoringPage = {
+  items: [
+    {
+      accountId: '5f3c2a1e-7b4d-4c8e-9a6f-2d1b0e9c8a7f',
+      employee: { name: 'Sari Lestari', positionName: 'HR Staff' },
+      businessDate: '2026-11-02',
+      clockInAt: '2026-11-02T02:30:00.000Z',
+      clockInStatus: 'LATE_CHECKIN',
+      clockOutAt: null,
+      clockOutStatus: 'PENDING_CHECKOUT',
+    },
+    {
+      accountId: '0b9e8d7c-6a5f-4e3d-8c2b-1a0f9e8d7c6b',
+      employee: null,
+      businessDate: '2026-11-02',
+      clockInAt: '2026-11-02T02:05:00.000Z',
+      clockInStatus: 'ON_TIME_CHECKIN',
+      clockOutAt: '2026-11-02T11:00:00.000Z',
+      clockOutStatus: 'ON_TIME_CHECKOUT',
+    },
+  ],
+  page: 1,
+  pageSize: 20,
+  totalItems: 2,
+  totalPages: 1,
 };
 
 const SUMMARY_PAGE: AttendanceSummaryPage = {
@@ -190,5 +218,70 @@ describe('AttendanceServiceClient.listOwnSummary', () => {
     const client = new AttendanceServiceClient(createRecordingHttpClient(malformedPage, recorded));
 
     await expect(client.listOwnSummary(USER_TOKEN, { page: 1, pageSize: 20 })).rejects.toThrow();
+  });
+});
+
+describe('AttendanceServiceClient.listAttendance', () => {
+  const EMPLOYEE_ACCOUNT_ID = '5f3c2a1e-7b4d-4c8e-9a6f-2d1b0e9c8a7f';
+
+  it.each([
+    {
+      condition: 'every filter is given',
+      query: {
+        from: '2026-11-01',
+        to: '2026-11-30',
+        employeeId: EMPLOYEE_ACCOUNT_ID,
+        page: 2,
+        pageSize: 5,
+      },
+      expectedParameters: {
+        from: '2026-11-01',
+        to: '2026-11-30',
+        employeeId: EMPLOYEE_ACCOUNT_ID,
+        page: '2',
+        pageSize: '5',
+      },
+    },
+    {
+      condition: 'no filter is given',
+      query: { page: 1, pageSize: 20 },
+      expectedParameters: { page: '1', pageSize: '20' },
+    },
+    {
+      condition: 'only the employee filter is given',
+      query: { employeeId: EMPLOYEE_ACCOUNT_ID, page: 1, pageSize: 20 },
+      expectedParameters: { employeeId: EMPLOYEE_ACCOUNT_ID, page: '1', pageSize: '20' },
+    },
+  ])(
+    'should get the attendance list on attendance-service with the query and the HR token when $condition',
+    async ({ query, expectedParameters }) => {
+      const recorded: InternalGetRequest<unknown>[] = [];
+      const client = new AttendanceServiceClient(
+        createRecordingHttpClient(MONITORING_PAGE, recorded),
+      );
+
+      const response = await client.listAttendance(USER_TOKEN, query);
+
+      expect(response).toEqual(MONITORING_PAGE);
+      expect(recorded).toHaveLength(1);
+      expect(recorded[0]).toMatchObject({
+        target: ServiceName.ATTENDANCE_SERVICE,
+        path: '/api/v1/attendance',
+        forwardedUserToken: USER_TOKEN,
+        refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      });
+      expect(recorded[0]?.query).toEqual(expectedParameters);
+    },
+  );
+
+  it('should reject the response when attendance-service answers a row without an account ID', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const malformedPage = {
+      ...MONITORING_PAGE,
+      items: [{ ...MONITORING_PAGE.items[0], accountId: undefined }],
+    };
+    const client = new AttendanceServiceClient(createRecordingHttpClient(malformedPage, recorded));
+
+    await expect(client.listAttendance(USER_TOKEN, { page: 1, pageSize: 20 })).rejects.toThrow();
   });
 });

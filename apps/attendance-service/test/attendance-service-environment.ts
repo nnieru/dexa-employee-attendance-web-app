@@ -6,6 +6,8 @@ const TEST_DATABASE_URL =
   'postgres://attendance_app:test-only-password@postgres:5432/attendance_db';
 // Nothing listens here. Specs that need account status override ACCOUNT_STATUS_READER instead of calling it.
 const TEST_AUTH_SERVICE_URL = 'http://auth-service:3000';
+// Nothing listens here either. Specs that list attendance for HR override EMPLOYEE_CLIENT instead of calling it.
+const TEST_EMPLOYEE_SERVICE_URL = 'http://employee-service:3000';
 
 // Generated once per test process, so every environment and every signed token agree on the keys.
 // Test-only key material, never stored in the repository.
@@ -25,6 +27,7 @@ export function attendanceServiceEnvironment(
     BUSINESS_TIMEZONE: 'Asia/Jakarta',
     ATTENDANCE_DATABASE_URL: TEST_DATABASE_URL,
     AUTH_SERVICE_INTERNAL_URL: TEST_AUTH_SERVICE_URL,
+    EMPLOYEE_SERVICE_INTERNAL_URL: TEST_EMPLOYEE_SERVICE_URL,
     ...authEnvironmentFor(attendanceServiceAuthKeys(), ServiceName.ATTENDANCE_SERVICE),
     ...overrides,
   };

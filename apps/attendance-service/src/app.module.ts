@@ -9,6 +9,7 @@ import { Module, type Type } from '@nestjs/common';
 import type { AttendanceServiceConfig } from './config/attendance-service-config.schema.js';
 import { ConfigModule } from './config/config.module.js';
 import { DatabaseModule } from './infrastructure/db/database.module.js';
+import { AttendanceMonitoringModule } from './monitoring/attendance-monitoring.module.js';
 import { PunchesModule } from './punches/punches.module.js';
 import { SchedulesModule } from './schedules/schedules.module.js';
 import { AttendanceSummaryModule } from './summary/attendance-summary.module.js';
@@ -24,7 +25,10 @@ export function createAppModule(config: AttendanceServiceConfig): Type<unknown> 
       ConfigModule.forRoot(config),
       AuthModule.forRoot(config),
       InternalHttpModule.forRoot({
-        serviceBaseUrls: { [ServiceName.AUTH_SERVICE]: config.AUTH_SERVICE_INTERNAL_URL },
+        serviceBaseUrls: {
+          [ServiceName.AUTH_SERVICE]: config.AUTH_SERVICE_INTERNAL_URL,
+          [ServiceName.EMPLOYEE_SERVICE]: config.EMPLOYEE_SERVICE_INTERNAL_URL,
+        },
         authConfig: config,
       }),
       AccountStatusModule.forRemote(),
@@ -33,6 +37,7 @@ export function createAppModule(config: AttendanceServiceConfig): Type<unknown> 
       SchedulesModule,
       PunchesModule,
       AttendanceSummaryModule,
+      AttendanceMonitoringModule,
       HealthModule,
     ],
   })

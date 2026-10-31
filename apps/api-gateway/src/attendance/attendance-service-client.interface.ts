@@ -1,4 +1,6 @@
 import type {
+  AttendanceMonitoringPage,
+  AttendanceMonitoringQuery,
   AttendanceSummaryPage,
   AttendanceSummaryQuery,
   ClockInResponse,
@@ -15,6 +17,10 @@ export interface IAttendanceServiceClient {
     accessToken: string,
     query: AttendanceSummaryQuery,
   ): Promise<AttendanceSummaryPage>;
+  listAttendance(
+    accessToken: string,
+    query: AttendanceMonitoringQuery,
+  ): Promise<AttendanceMonitoringPage>;
 }
 
 export const ATTENDANCE_SERVICE_CLIENT = Symbol('IAttendanceServiceClient');

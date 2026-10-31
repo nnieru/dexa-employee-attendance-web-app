@@ -11,6 +11,8 @@ import {
 import {
   ErrorCode,
   loginResponseSchema,
+  type AttendanceMonitoringPage,
+  type AttendanceMonitoringQuery,
   MAX_PHOTO_BYTES,
   PHOTO_CONTENT_TYPE,
   Portal,
@@ -31,6 +33,10 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import request from 'supertest';
 import { z } from 'zod';
 import { createAppModule } from '../src/app.module.js';
+import {
+  ATTENDANCE_SERVICE_CLIENT,
+  type IAttendanceServiceClient,
+} from '../src/attendance/attendance-service-client.interface.js';
 import {
   EMPLOYEE_SERVICE_CLIENT,
   type IEmployeeServiceClient,
@@ -66,6 +72,8 @@ const OWN_PROFILE_PATH = '/api/v1/employees/me';
 const OWN_PHOTO_PATH = '/api/v1/employees/me/photo';
 const EMPLOYEE_LIST_PATH = '/api/v1/employees';
 const EMPLOYEE_PHOTO_PATH = (accountId: string) => `/api/v1/employees/${accountId}/photo`;
+const ATTENDANCE_LIST_PATH = '/api/v1/attendance';
+const ATTENDANCE_RECORD_PATH = `${ATTENDANCE_LIST_PATH}/${randomUUID()}`;
 const PHOTO_MULTIPART_OVERHEAD_BYTES = 64 * 1024;
 const STORED_PHOTO_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
 const SELF_SERVICE_ROUTE_PATH = '/api/v1/route-guard-tests/self-service';
@@ -248,6 +256,38 @@ const employeeServiceFake: IEmployeeServiceClient = {
   },
 };
 
+const ATTENDANCE_EMPLOYEE_ACCOUNT_ID = randomUUID();
+const ATTENDANCE_PAGE: AttendanceMonitoringPage = {
+  items: [
+    {
+      accountId: ATTENDANCE_EMPLOYEE_ACCOUNT_ID,
+      employee: { name: 'Gita Kusuma', positionName: 'HR Officer' },
+      businessDate: '2026-11-02',
+      clockInAt: '2026-11-02T02:30:00.000Z',
+      clockInStatus: 'LATE_CHECKIN',
+      clockOutAt: null,
+      clockOutStatus: 'PENDING_CHECKOUT',
+    },
+  ],
+  page: 2,
+  pageSize: 5,
+  totalItems: 6,
+  totalPages: 2,
+};
+const attendanceListQueries: AttendanceMonitoringQuery[] = [];
+const attendanceServiceFake: IAttendanceServiceClient = {
+  clockIn: () => Promise.reject(new Error('The route guard tests never clock in.')),
+  clockOut: () => Promise.reject(new Error('The route guard tests never clock out.')),
+  getToday: () => Promise.reject(new Error('The route guard tests never read today.')),
+  listOwnSummary: () =>
+    Promise.reject(new Error('The route guard tests never list the own summary.')),
+  listAttendance: (accessToken: string, query: AttendanceMonitoringQuery) => {
+    forwardedTokens.push(accessToken);
+    attendanceListQueries.push(query);
+    return Promise.resolve(ATTENDANCE_PAGE);
+  },
+};
+
 @Controller('route-guard-tests/self-service')
 class StubSelfServiceController {
   @Roles(Role.EMPLOYEE, Role.HR)
@@ -361,6 +401,8 @@ describe('api-gateway route guards through a running auth-service', () => {
     })
       .overrideProvider(EMPLOYEE_SERVICE_CLIENT)
       .useValue(employeeServiceFake)
+      .overrideProvider(ATTENDANCE_SERVICE_CLIENT)
+      .useValue(attendanceServiceFake)
       .compile();
     app = moduleRef.createNestApplication();
     configureApp(app, { CORS_ORIGINS: [] });
@@ -1202,6 +1244,99 @@ describe('api-gateway route guards through a running auth-service', () => {
       expect(Buffer.isBuffer(body) && body.equals(STORED_PHOTO_BYTES)).toBe(true);
       expect(requestedPhotoAccountIds).toEqual([]);
       expect(forwardedTokens).toEqual([hrToken, hrToken]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return the page and forward the query and the HR token when HR lists attendance',
+    async () => {
+      forwardedTokens.length = 0;
+      attendanceListQueries.length = 0;
+
+      const response = await getWithToken(
+        `${ATTENDANCE_LIST_PATH}?from=2026-11-01&to=2026-11-30&employeeId=${ATTENDANCE_EMPLOYEE_ACCOUNT_ID}&page=2&pageSize=5`,
+        hrToken,
+      ).expect(200);
+
+      expect(response.body).toEqual(ATTENDANCE_PAGE);
+      expect(forwardedTokens).toEqual([hrToken]);
+      expect(attendanceListQueries).toEqual([
+        {
+          from: '2026-11-01',
+          to: '2026-11-30',
+          employeeId: ATTENDANCE_EMPLOYEE_ACCOUNT_ID,
+          page: 2,
+          pageSize: 5,
+        },
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 without calling attendance-service when an employee token lists attendance',
+    async () => {
+      forwardedTokens.length = 0;
+      attendanceListQueries.length = 0;
+
+      const response = await getWithToken(ATTENDANCE_LIST_PATH, employeeToken).expect(403);
+
+      expect(response.body).toEqual({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Your role cannot use this action.',
+      });
+      expect(forwardedTokens).toEqual([]);
+      expect(attendanceListQueries).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 400 without calling attendance-service when the attendance query has an unknown key',
+    async () => {
+      forwardedTokens.length = 0;
+      attendanceListQueries.length = 0;
+
+      const response = await getWithToken(`${ATTENDANCE_LIST_PATH}?sort=name`, hrToken).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(attendanceListQueries).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 404 without calling attendance-service when HR patches an attendance record',
+    async () => {
+      forwardedTokens.length = 0;
+      attendanceListQueries.length = 0;
+
+      await patchWithToken(ATTENDANCE_RECORD_PATH, hrToken, {
+        clockInAt: '2026-11-02T02:00:00Z',
+      }).expect(404);
+
+      expect(forwardedTokens).toEqual([]);
+      expect(attendanceListQueries).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 404 without calling attendance-service when HR deletes an attendance record',
+    async () => {
+      forwardedTokens.length = 0;
+      attendanceListQueries.length = 0;
+
+      await request(app.getHttpServer())
+        .delete(ATTENDANCE_RECORD_PATH)
+        .set('Authorization', `Bearer ${hrToken}`)
+        .expect(404);
+
+      expect(forwardedTokens).toEqual([]);
+      expect(attendanceListQueries).toEqual([]);
     },
     TEST_TIMEOUT_MS,
   );

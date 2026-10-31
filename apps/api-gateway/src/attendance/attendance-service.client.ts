@@ -1,11 +1,14 @@
 import { INTERNAL_HTTP_CLIENT, ServiceName, type IInternalHttpClient } from '@dexa/common';
 import {
   API_PREFIX,
+  attendanceMonitoringPageSchema,
   attendanceSummaryPageSchema,
   clockInResponseSchema,
   clockOutResponseSchema,
   ErrorCode,
   todayAttendanceResponseSchema,
+  type AttendanceMonitoringPage,
+  type AttendanceMonitoringQuery,
   type AttendanceSummaryPage,
   type AttendanceSummaryQuery,
   type ClockInResponse,
@@ -22,6 +25,7 @@ const CLOCK_IN_PATH = `/${API_PREFIX}/attendance/clock-in`;
 const CLOCK_OUT_PATH = `/${API_PREFIX}/attendance/clock-out`;
 const TODAY_PATH = `/${API_PREFIX}/attendance/me/today`;
 const SUMMARY_PATH = `/${API_PREFIX}/attendance/me`;
+const MONITORING_PATH = `/${API_PREFIX}/attendance`;
 
 @Injectable()
 export class AttendanceServiceClient implements IAttendanceServiceClient {
@@ -77,6 +81,21 @@ export class AttendanceServiceClient implements IAttendanceServiceClient {
       responseSchema: attendanceSummaryPageSchema,
     });
   }
+
+  // HR only: the gateway guard and attendance-service both check the role. A read, so it is not retried.
+  listAttendance(
+    accessToken: string,
+    query: AttendanceMonitoringQuery,
+  ): Promise<AttendanceMonitoringPage> {
+    return this.httpClient.get({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: MONITORING_PATH,
+      query: toMonitoringQueryParameters(query),
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      responseSchema: attendanceMonitoringPageSchema,
+    });
+  }
 }
 
 // An absent range bound is omitted, not sent empty, so attendance-service fills it from its own clock.
@@ -87,5 +106,17 @@ function toSummaryQueryParameters(query: AttendanceSummaryQuery): Record<string,
   };
   if (query.from !== undefined) parameters.from = query.from;
   if (query.to !== undefined) parameters.to = query.to;
+  return parameters;
+}
+
+// Absent filters are omitted, not sent empty, so attendance-service applies no filter for them.
+function toMonitoringQueryParameters(query: AttendanceMonitoringQuery): Record<string, string> {
+  const parameters: Record<string, string> = {
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+  };
+  if (query.from !== undefined) parameters.from = query.from;
+  if (query.to !== undefined) parameters.to = query.to;
+  if (query.employeeId !== undefined) parameters.employeeId = query.employeeId;
   return parameters;
 }
