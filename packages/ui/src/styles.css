@@ -366,3 +366,211 @@ body {
     padding: var(--space-4);
   }
 }
+
+.dexa-toast-region {
+  position: fixed;
+  inset-inline: var(--layout-gutter);
+  inset-block-end: var(--layout-gutter);
+  z-index: var(--z-toast);
+  display: grid;
+  gap: var(--space-3);
+  justify-items: end;
+  /* The region spans the viewport width; only the toasts themselves should catch pointer input. */
+  pointer-events: none;
+}
+
+.dexa-toast {
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--space-2);
+  width: min(100%, var(--layout-form-max));
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-overlay);
+  pointer-events: auto;
+  animation: dexa-toast-in var(--duration-normal) var(--ease-standard);
+}
+
+.dexa-toast__message {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.dexa-toast__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dexa-toast__link {
+  display: inline-flex;
+  min-height: var(--control-height);
+  align-items: center;
+  color: inherit;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+}
+
+.dexa-toast__link:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.dexa-toast--info {
+  color: var(--color-info);
+  background: var(--color-info-surface);
+  border-color: var(--color-info);
+}
+
+.dexa-toast--success {
+  color: var(--color-success);
+  background: var(--color-success-surface);
+  border-color: var(--color-success);
+}
+
+.dexa-toast--warning {
+  color: var(--color-warning);
+  background: var(--color-warning-surface);
+  border-color: var(--color-warning);
+}
+
+.dexa-toast--error {
+  color: var(--color-error);
+  background: var(--color-error-surface);
+  border-color: var(--color-error);
+}
+
+@keyframes dexa-toast-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dexa-toast {
+    animation: none;
+  }
+}
+
+.dexa-data-table {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.dexa-data-table:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.dexa-data-table__table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  text-align: start;
+}
+
+.dexa-data-table__caption {
+  caption-side: top;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  color: var(--color-brand);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  text-align: start;
+}
+
+/* Keeps the caption available to assistive technology and the accessible name while hiding it visually. */
+.dexa-data-table__caption--hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dexa-data-table__table th,
+.dexa-data-table__table td {
+  padding: var(--space-3) var(--space-4);
+  border-block-end: var(--border-width) solid var(--color-border);
+  vertical-align: top;
+  text-align: start;
+}
+
+.dexa-data-table__table th {
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  background: var(--color-surface-muted);
+}
+
+.dexa-data-table__table td {
+  overflow-wrap: anywhere;
+}
+
+.dexa-data-table__table tbody tr {
+  height: var(--table-row-height);
+}
+
+.dexa-data-table__state {
+  color: var(--color-text-muted);
+}
+
+.dexa-data-table__message {
+  margin: 0;
+}
+
+.dexa-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-block-start: var(--space-4);
+}
+
+.dexa-pagination__status {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.dexa-toast-region:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.dexa-data-table__refreshing {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.dexa-data-table__refreshing:not(:empty) {
+  margin-block-end: var(--space-2);
+}
