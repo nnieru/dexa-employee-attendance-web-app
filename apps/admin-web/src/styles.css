@@ -15,3 +15,20 @@
     padding: var(--space-4);
   }
 }
+
+/* Placeholder empty state: plain text, no action, no fake data (DESIGN §9). */
+.hr-empty-state {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-6) var(--space-2);
+  text-align: center;
+}
+
+.hr-empty-state__title {
+  font-weight: 600;
+}
+
+.hr-empty-state__text {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}

@@ -1,5 +1,5 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
-import type { RouterContext } from '../app/router-context.js';
+import type { RouterContext } from '@dexa/session';
 
 export const Route = createRootRouteWithContext<RouterContext>()({ component: RootLayout });
 

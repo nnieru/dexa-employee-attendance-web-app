@@ -1,9 +1,10 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
+import { Portal, Role } from '@dexa/contracts';
+import { SessionProvider, useSession, type SessionConfig } from '@dexa/session';
 import { useCallback, useMemo } from 'react';
+import { API_BASE_URL } from './api-base-url.js';
 import type { AppRouter } from './router.js';
-import { SessionProvider } from './session-provider.js';
-import { useSession } from './session-context.js';
 
 type EmployeeAppProps = {
   queryClient: QueryClient;
@@ -19,9 +20,20 @@ export function EmployeeApp({ queryClient, router }: EmployeeAppProps) {
     void router.navigate({ to: '/login' });
   }, [router]);
 
+  const sessionConfig = useMemo<SessionConfig>(
+    () => ({
+      portal: Portal.EMPLOYEE,
+      // The employee portal accepts EMPLOYEE and HR accounts (PRD AUTH-3, contracts Portal).
+      allowedRoles: [Role.EMPLOYEE, Role.HR],
+      apiBaseUrl: API_BASE_URL,
+      onSessionEnded: navigateToLogin,
+    }),
+    [navigateToLogin],
+  );
+
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider onSessionEnded={navigateToLogin}>
+      <SessionProvider config={sessionConfig}>
         <SessionRouter router={router} />
       </SessionProvider>
     </QueryClientProvider>

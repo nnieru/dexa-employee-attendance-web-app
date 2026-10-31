@@ -1,6 +1,6 @@
 import { createRouter, type RouterHistory } from '@tanstack/react-router';
 import { routeTree } from '../routeTree.gen.js';
-import type { RouterContext } from './router-context.js';
+import type { RouterContext } from '@dexa/session';
 
 // Before the session provider supplies the real check, nothing is signed in, so protected routes redirect.
 const SIGNED_OUT_ROUTER_CONTEXT: RouterContext = { isSignedIn: () => false };

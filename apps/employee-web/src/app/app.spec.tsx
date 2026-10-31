@@ -1,20 +1,11 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
-import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { createAppRouter } from './router.js';
+import { screen } from '@testing-library/react';
+import { renderEmployeeApp } from '../test/employee-app-harness.js';
 
 describe('employee-web shell', () => {
-  it('renders the shared page shell on the home route', async () => {
-    const router = createAppRouter(createMemoryHistory({ initialEntries: ['/'] }));
+  it('should show the login screen when a signed-out employee opens the home route', async () => {
+    const router = await renderEmployeeApp('/');
 
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>,
-    );
-
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Dexa Employee' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/login');
   });
 });

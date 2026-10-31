@@ -1,12 +1,19 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { Alert, PageShell } from '@dexa/ui';
-import { useSession } from '../app/session-context.js';
-import { LoginForm } from '../features/auth/components/login-form.js';
-import { useEmployeeLogin } from '../features/auth/hooks/use-employee-login.js';
-import { loginSearchSchema } from '../features/auth/types/login-search.schema.js';
-import { getSessionEndMessage } from '../features/auth/utils/session-end-message.js';
+import {
+  LoginForm,
+  loginSearchSchema,
+  useLogin,
+  useSession,
+  type LoginFormCopy,
+} from '@dexa/session';
 
 const DEFAULT_SIGNED_IN_PATH = '/attendance';
+
+const EMPLOYEE_LOGIN_COPY: LoginFormCopy = {
+  heading: 'Sign in',
+  description: 'Use your company email and password.',
+  submitLabel: 'Sign in',
+};
 
 // A signed-in visit has nothing to sign in to, so it goes to the default page, not to a `redirect` target.
 export const Route = createFileRoute('/login')({
@@ -18,29 +25,27 @@ export const Route = createFileRoute('/login')({
 });
 
 function EmployeeLoginPage() {
-  const { apiClient, session, signIn } = useSession();
+  const { isSignedIn, session, signIn } = useSession();
   const { redirect: requestedPath } = Route.useSearch();
   const navigate = useNavigate();
-  const login = useEmployeeLogin({
-    apiClient,
+  const login = useLogin({
     onSignedIn: (response) => {
-      signIn(response.accessToken);
-      // The search value was already checked to be a path on this app (login-search.schema.ts).
+      signIn(response.accessToken, response.account);
+      // A disallowed account ends the session inside signIn, so there is no session to continue into.
+      if (!isSignedIn()) return;
+      // The search value was already checked to be a path on this app (loginSearchSchema).
       void navigate({ href: requestedPath ?? DEFAULT_SIGNED_IN_PATH });
     },
   });
-  const endReason = session.status === 'signed-out' ? session.endReason : null;
 
   return (
-    <PageShell layout="form" title="Sign in" description="Use your company email and password.">
-      <section className="employee-login-panel">
-        {endReason && <Alert variant="error">{getSessionEndMessage(endReason)}</Alert>}
-        <LoginForm
-          errorMessage={login.errorMessage}
-          isBusy={login.isBusy}
-          onSubmit={login.submitLogin}
-        />
-      </section>
-    </PageShell>
+    <LoginForm
+      copy={EMPLOYEE_LOGIN_COPY}
+      panelClassName="employee-login-panel"
+      sessionEndReason={session.status === 'signed-out' ? session.endReason : null}
+      errorMessage={login.errorMessage}
+      isBusy={login.isBusy}
+      onSubmit={login.submitLogin}
+    />
   );
 }

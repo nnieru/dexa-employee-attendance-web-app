@@ -1,10 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { PageShell } from '@dexa/ui';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/')({ component: HomePage });
-
-function HomePage() {
-  return (
-    <PageShell title="Dexa HR" description="Application shell. Features are added per plan." />
-  );
-}
+// The home route has no page of its own: it sends an HR user to Employees when signed in, and to login
+// otherwise. The same session check as the protected layout decides which.
+export const Route = createFileRoute('/')({
+  beforeLoad: ({ context }) => {
+    if (context.isSignedIn()) throw redirect({ to: '/employees' });
+    throw redirect({ to: '/login' });
+  },
+});

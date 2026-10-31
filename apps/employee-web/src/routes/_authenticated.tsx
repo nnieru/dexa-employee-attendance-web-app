@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, redirect, useMatchRoute } from '@tanstack/react-router';
 import { AppShell, type AppShellRenderLink } from '@dexa/ui';
 import { EMPLOYEE_NAVIGATION } from '../app/employee-navigation.js';
-import { useSession } from '../app/session-context.js';
+import { useSession } from '@dexa/session';
 
 const EMPLOYEE_BRAND_NAME = 'Dexa Employee';
 

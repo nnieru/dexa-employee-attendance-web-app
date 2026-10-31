@@ -17,7 +17,7 @@ import {
   renderEmployeeApp,
   signInWith,
 } from '../test/employee-app-harness.js';
-import { listenForWindowFocus } from './window-focus.js';
+import { listenForWindowFocus } from '@dexa/session';
 
 const SESSION_CHECK_INTERVAL_MS = 30_000;
 

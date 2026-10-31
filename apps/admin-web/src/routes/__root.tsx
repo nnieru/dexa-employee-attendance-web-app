@@ -1,12 +1,9 @@
-import { Outlet, createRootRoute } from '@tanstack/react-router';
-import { SessionProvider } from '../app/session-provider.js';
+import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
+import type { RouterContext } from '@dexa/session';
 
-export const Route = createRootRoute({ component: RootLayout });
+export const Route = createRootRouteWithContext<RouterContext>()({ component: RootLayout });
 
+// The session provider sits above the router (app/admin-app.tsx), so the root only renders children.
 function RootLayout() {
-  return (
-    <SessionProvider>
-      <Outlet />
-    </SessionProvider>
-  );
+  return <Outlet />;
 }

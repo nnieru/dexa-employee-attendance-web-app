@@ -1,80 +1,25 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { HttpResponse, http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mswServer } from '../test/msw-server.js';
-import { createAppRouter } from './router.js';
-import { listenForWindowFocus } from './window-focus.js';
+import {
+  CURRENT_ACCOUNT_URL,
+  EMPLOYEE_ACCOUNT,
+  HR_ACCOUNT,
+  LOGIN_URL,
+  VALID_PASSWORD,
+  accountCheckRejected,
+  accountCheckSucceeds,
+  loginRejected,
+  loginResponseFor,
+  loginSucceeds,
+  renderAdminApp,
+  signInWith,
+} from '../test/admin-app-harness.js';
+import { listenForWindowFocus } from '@dexa/session';
 
-const LOGIN_URL = '/api/v1/auth/login';
-const CURRENT_ACCOUNT_URL = '/api/v1/auth/me';
 const SESSION_CHECK_INTERVAL_MS = 30_000;
-
-const ACCESS_TOKEN = 'access-token-for-tests';
-const HR_ACCOUNT = {
-  id: '9b1e4c7d-2f3a-4e5b-8c6d-1a2b3c4d5e6f',
-  email: 'sari.wulandari@dexa.test',
-  role: 'HR',
-};
-const EMPLOYEE_ACCOUNT = {
-  id: '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13',
-  email: 'rina.kusuma@dexa.test',
-  role: 'EMPLOYEE',
-};
-const VALID_PASSWORD = 'correct-horse-1';
-
-function loginResponseFor(account: typeof HR_ACCOUNT) {
-  return { accessToken: ACCESS_TOKEN, tokenType: 'Bearer', expiresIn: 3600, account };
-}
-
-function loginSucceeds(account: typeof HR_ACCOUNT = HR_ACCOUNT) {
-  return http.post(LOGIN_URL, () => HttpResponse.json(loginResponseFor(account)));
-}
-
-// The gateway answers the same 401 for a wrong password and for an EMPLOYEE account on the HR portal.
-function loginRejected() {
-  return http.post(LOGIN_URL, () =>
-    HttpResponse.json(
-      { statusCode: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid credentials.' },
-      { status: 401 },
-    ),
-  );
-}
-
-function accountCheckSucceeds(account: typeof HR_ACCOUNT = HR_ACCOUNT) {
-  return http.get(CURRENT_ACCOUNT_URL, () => HttpResponse.json(account));
-}
-
-function accountCheckRejected(code: 'ACCOUNT_DISABLED' | 'UNAUTHORIZED') {
-  return http.get(CURRENT_ACCOUNT_URL, () =>
-    HttpResponse.json({ statusCode: 401, code, message: 'Unauthorized.' }, { status: 401 }),
-  );
-}
-
-async function renderHrApp(initialPath = '/login') {
-  const router = createAppRouter(createMemoryHistory({ initialEntries: [initialPath] }));
-  await act(async () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>,
-    );
-    await router.load();
-  });
-  return router;
-}
-
-async function signInWith(
-  user: ReturnType<typeof userEvent.setup>,
-  email: string,
-  password = VALID_PASSWORD,
-) {
-  await user.type(screen.getByLabelText('Company email'), email);
-  await user.type(screen.getByLabelText('Password'), password);
-  await user.click(screen.getByRole('button', { name: 'Sign in' }));
-}
 
 let stopListeningForWindowFocus: () => void = () => undefined;
 
@@ -101,7 +46,7 @@ describe('HR sign-in', () => {
       accountCheckSucceeds(),
     );
     const user = userEvent.setup();
-    const router = await renderHrApp();
+    const router = await renderAdminApp();
 
     await signInWith(user, HR_ACCOUNT.email);
 
@@ -117,7 +62,7 @@ describe('HR sign-in', () => {
   it('should show the generic message and stay on login when an employee account signs in on the HR portal', async () => {
     mswServer.use(loginRejected());
     const user = userEvent.setup();
-    const router = await renderHrApp();
+    const router = await renderAdminApp();
 
     await signInWith(user, EMPLOYEE_ACCOUNT.email);
 
@@ -128,7 +73,7 @@ describe('HR sign-in', () => {
   it('should show the generic message and stay on login when the credentials are rejected', async () => {
     mswServer.use(loginRejected());
     const user = userEvent.setup();
-    const router = await renderHrApp();
+    const router = await renderAdminApp();
 
     await signInWith(user, HR_ACCOUNT.email, 'wrong-password-1');
 
@@ -151,7 +96,7 @@ describe('HR sign-in', () => {
       accountCheckSucceeds(),
     );
     const user = userEvent.setup();
-    await renderHrApp();
+    await renderAdminApp();
     await user.type(screen.getByLabelText('Company email'), HR_ACCOUNT.email);
     await user.type(screen.getByLabelText('Password'), VALID_PASSWORD);
     const signInButton = screen.getByRole('button', { name: 'Sign in' });
@@ -165,6 +110,40 @@ describe('HR sign-in', () => {
     expect(loginRequestCount).toBe(1);
   });
 
+  it('should keep no session and stay on login when the login returns an account that is not HR', async () => {
+    let releaseLogin: () => void = () => undefined;
+    const loginGate = new Promise<void>((resolve) => {
+      releaseLogin = resolve;
+    });
+    let accountCheckCount = 0;
+    mswServer.use(
+      http.post(LOGIN_URL, async () => {
+        await loginGate;
+        return HttpResponse.json(loginResponseFor(EMPLOYEE_ACCOUNT));
+      }),
+      http.get(CURRENT_ACCOUNT_URL, () => {
+        accountCheckCount += 1;
+        return HttpResponse.json(EMPLOYEE_ACCOUNT);
+      }),
+    );
+    const user = userEvent.setup();
+    const router = await renderAdminApp();
+    await signInWith(user, EMPLOYEE_ACCOUNT.email);
+    const signInButton = screen.getByRole('button', { name: 'Sign in' });
+    await waitFor(() => expect(signInButton).toBeDisabled());
+
+    releaseLogin();
+    await waitFor(() => expect(signInButton).toBeEnabled());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect email or password.');
+    expect(router.state.location.pathname).toBe('/login');
+    await act(async () => {
+      await router.navigate({ href: '/employees' });
+    });
+    expect(router.state.location.search).toEqual({ redirect: '/employees' });
+    expect(accountCheckCount).toBe(0);
+  });
+
   it('should not send a login request when the email is not a company email', async () => {
     let loginRequestCount = 0;
     mswServer.use(
@@ -174,7 +153,7 @@ describe('HR sign-in', () => {
       }),
     );
     const user = userEvent.setup();
-    await renderHrApp();
+    await renderAdminApp();
 
     await signInWith(user, 'not-an-email');
 
@@ -192,7 +171,7 @@ describe('HR sign-in', () => {
       }),
     );
     const user = userEvent.setup();
-    await renderHrApp();
+    await renderAdminApp();
 
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
@@ -205,7 +184,7 @@ describe('HR sign-in', () => {
     mswServer.use(loginSucceeds(), accountCheckSucceeds());
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     const user = userEvent.setup();
-    await renderHrApp();
+    await renderAdminApp();
 
     await signInWith(user, HR_ACCOUNT.email);
     await screen.findByRole('heading', { level: 1, name: 'Employees' });
@@ -232,7 +211,7 @@ describe('HR session', () => {
       }),
     );
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const router = await renderHrApp();
+    const router = await renderAdminApp();
     await signInWith(user, HR_ACCOUNT.email);
     await screen.findByRole('heading', { level: 1, name: 'Employees' });
     await waitFor(() => expect(accountCheckCount).toBe(1));
@@ -249,7 +228,7 @@ describe('HR session', () => {
   it('should send the user to login with the session-ended message when the session check reports UNAUTHORIZED', async () => {
     mswServer.use(loginSucceeds(), accountCheckSucceeds());
     const user = userEvent.setup();
-    const router = await renderHrApp();
+    const router = await renderAdminApp();
     await signInWith(user, HR_ACCOUNT.email);
     await screen.findByRole('heading', { level: 1, name: 'Employees' });
 
@@ -265,7 +244,7 @@ describe('HR session', () => {
   it('should keep the HR session when the session check reports INVALID_CREDENTIALS', async () => {
     mswServer.use(loginSucceeds(), accountCheckSucceeds());
     const user = userEvent.setup();
-    const router = await renderHrApp();
+    const router = await renderAdminApp();
     await signInWith(user, HR_ACCOUNT.email);
     await screen.findByRole('heading', { level: 1, name: 'Employees' });
 
@@ -298,7 +277,7 @@ describe('HR session', () => {
       }),
     );
     const user = userEvent.setup();
-    await renderHrApp();
+    await renderAdminApp();
     await signInWith(user, HR_ACCOUNT.email);
     await screen.findByRole('heading', { level: 1, name: 'Employees' });
     expect(accountCheckCount).toBe(1);

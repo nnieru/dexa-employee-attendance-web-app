@@ -1,38 +1,51 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { Alert, PageShell } from '@dexa/ui';
-import { useSession } from '../app/session-context.js';
-import { LoginForm } from '../features/auth/components/login-form.js';
-import { useHrLogin } from '../features/auth/hooks/use-hr-login.js';
-import { getSessionEndMessage } from '../features/auth/utils/session-end-message.js';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import {
+  LoginForm,
+  loginSearchSchema,
+  useLogin,
+  useSession,
+  type LoginFormCopy,
+} from '@dexa/session';
 
-export const Route = createFileRoute('/login')({ component: HrLoginPage });
+const DEFAULT_SIGNED_IN_PATH = '/employees';
+
+const HR_LOGIN_COPY: LoginFormCopy = {
+  heading: 'HR sign in',
+  description: 'Use your company email and password to open the HR Portal.',
+  submitLabel: 'Sign in',
+};
+
+// A signed-in visit has nothing to sign in to, so it goes to the default page, not to a `redirect` target.
+export const Route = createFileRoute('/login')({
+  validateSearch: loginSearchSchema,
+  beforeLoad: ({ context }) => {
+    if (context.isSignedIn()) throw redirect({ to: DEFAULT_SIGNED_IN_PATH });
+  },
+  component: HrLoginPage,
+});
 
 function HrLoginPage() {
-  const { apiClient, session, signIn } = useSession();
+  const { isSignedIn, session, signIn } = useSession();
+  const { redirect: requestedPath } = Route.useSearch();
   const navigate = useNavigate();
-  const login = useHrLogin({
-    apiClient,
+  const login = useLogin({
     onSignedIn: (response) => {
-      signIn(response.accessToken);
-      void navigate({ to: '/employees' });
+      signIn(response.accessToken, response.account);
+      // A disallowed account ends the session inside signIn, so there is no session to continue into.
+      if (!isSignedIn()) return;
+      // The search value was already checked to be a path on this app (loginSearchSchema).
+      void navigate({ href: requestedPath ?? DEFAULT_SIGNED_IN_PATH });
     },
   });
-  const endReason = session.status === 'signed-out' ? session.endReason : null;
 
   return (
-    <PageShell
-      layout="form"
-      title="HR sign in"
-      description="Use your company email and password to open the HR Portal."
-    >
-      <section className="hr-login-panel">
-        {endReason && <Alert variant="error">{getSessionEndMessage(endReason)}</Alert>}
-        <LoginForm
-          errorMessage={login.errorMessage}
-          isBusy={login.isBusy}
-          onSubmit={login.submitLogin}
-        />
-      </section>
-    </PageShell>
+    <LoginForm
+      copy={HR_LOGIN_COPY}
+      panelClassName="hr-login-panel"
+      sessionEndReason={session.status === 'signed-out' ? session.endReason : null}
+      errorMessage={login.errorMessage}
+      isBusy={login.isBusy}
+      onSubmit={login.submitLogin}
+    />
   );
 }

@@ -1,18 +1,15 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
-import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { createAppRouter } from './router.js';
+import { screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { renderAdminApp } from '../test/admin-app-harness.js';
 
 describe('admin-web shell', () => {
-  it('renders the shared page shell on the home route', async () => {
-    const router = createAppRouter(createMemoryHistory({ initialEntries: ['/'] }));
+  it('should show the HR sign-in screen when a signed-out visitor opens the app', async () => {
+    const router = await renderAdminApp('/');
 
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>,
-    );
-
-    expect(await screen.findByRole('heading', { level: 1, name: 'Dexa HR' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'HR sign in' }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/login');
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
   });
 });

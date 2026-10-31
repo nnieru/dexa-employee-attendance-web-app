@@ -9,7 +9,7 @@ import {
   renderEmployeeApp,
   signInWith,
 } from '../test/employee-app-harness.js';
-import { listenForWindowFocus } from './window-focus.js';
+import { listenForWindowFocus } from '@dexa/session';
 
 let stopListeningForWindowFocus: () => void = () => undefined;
 
@@ -37,6 +37,27 @@ function getEmployeeNavigation(): HTMLElement {
 }
 
 describe('employee route guards', () => {
+  it('should send a signed-out employee from the home route to login when no session exists', async () => {
+    const router = await renderEmployeeApp('/');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/login');
+  });
+
+  it('should send a signed-in employee from the home route to Attendance when the session exists', async () => {
+    const { router } = await signInFrom('/login');
+    await screen.findByRole('heading', { level: 1, name: 'Attendance' });
+
+    await act(async () => {
+      await router.navigate({ href: '/' });
+    });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Attendance' }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/attendance');
+  });
+
   it('should redirect to login with the requested page when a signed-out employee opens Profile', async () => {
     const router = await renderEmployeeApp('/profile');
 
