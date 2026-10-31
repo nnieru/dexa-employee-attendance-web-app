@@ -30,6 +30,7 @@
     "@types/jest": "30.0.0",
     "jest": "30.5.2",
     "@nestjs/testing": "12.3.2",
+    "@testcontainers/postgresql": "12.2.1",
     "@types/express": "5.0.6",
     "@types/supertest": "7.2.1",
     "concurrently": "10.0.6",

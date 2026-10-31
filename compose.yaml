@@ -189,7 +189,7 @@ services:
       PORT: '3000'
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Asia/Jakarta}
-      DATABASE_URL: ${AUDIT_DATABASE_URL_CONTAINER:-}
+      AUDIT_DATABASE_URL: ${AUDIT_DATABASE_URL_CONTAINER:-}
     ports:
       - '127.0.0.1:3005:3000'
     read_only: true
