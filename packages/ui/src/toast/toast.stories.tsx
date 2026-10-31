@@ -54,6 +54,14 @@ export const ErrorState: Story = {
   },
 };
 
+export const WithTitle: Story = {
+  args: {
+    title: 'Profile updated',
+    message: 'Rina Kusuma changed: phone number',
+    variant: 'info',
+  },
+};
+
 export const WithLink: Story = {
   args: {
     message: 'Priya Sharma changed her phone number.',

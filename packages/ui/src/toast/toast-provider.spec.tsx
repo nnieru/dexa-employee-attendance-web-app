@@ -88,8 +88,8 @@ it('should remove the toast when its close button is clicked', () => {
 it('should name each close button after its message when two toasts are open', () => {
   renderProviderWithToasts([{ message: 'Changes saved.' }, { message: 'Profile updated.' }]);
 
-  expect(getCloseButton('Changes saved.')).toHaveTextContent('Close');
-  expect(getCloseButton('Profile updated.')).toHaveTextContent('Close');
+  expect(getCloseButton('Changes saved.')).toHaveAccessibleName('Close: Changes saved.');
+  expect(getCloseButton('Profile updated.')).toHaveAccessibleName('Close: Profile updated.');
 });
 
 it('should close only the toast whose close button is clicked when two toasts are open', () => {
@@ -203,4 +203,14 @@ it('should throw a clear error when useToast is used outside ToastProvider', () 
   );
 
   consoleErrorSpy.mockRestore();
+});
+
+it('should show the optional title above the message when the toast has a title', () => {
+  renderProviderAndShowToast({
+    title: 'Profile updated',
+    message: 'Rina Kusuma changed: phone number.',
+  });
+
+  expect(screen.getByText('Profile updated')).toBeInTheDocument();
+  expect(screen.getByText('Rina Kusuma changed: phone number.')).toBeInTheDocument();
 });

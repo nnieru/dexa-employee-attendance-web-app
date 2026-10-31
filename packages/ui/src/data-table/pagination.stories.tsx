@@ -6,14 +6,21 @@ type PaginationDemoProps = {
   initialPage: number;
   isDisabled: boolean;
   pageCount: number;
+  summary?: string;
 };
 
 /** Holds the page locally so the controls can be tried. Nothing is fetched. */
-function PaginationDemo({ initialPage, isDisabled, pageCount }: PaginationDemoProps) {
+function PaginationDemo({ initialPage, isDisabled, pageCount, summary }: PaginationDemoProps) {
   const [page, setPage] = useState(initialPage);
 
   return (
-    <Pagination isDisabled={isDisabled} onPageChange={setPage} page={page} pageCount={pageCount} />
+    <Pagination
+      isDisabled={isDisabled}
+      onPageChange={setPage}
+      page={page}
+      pageCount={pageCount}
+      summary={summary}
+    />
   );
 }
 
@@ -43,3 +50,5 @@ export const LastPage: Story = { args: { initialPage: 5 } };
 export const SinglePage: Story = { args: { initialPage: 1, pageCount: 1 } };
 
 export const Disabled: Story = { args: { isDisabled: true } };
+
+export const WithSummary: Story = { args: { summary: '41 records' } };

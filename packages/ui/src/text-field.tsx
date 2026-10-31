@@ -8,7 +8,9 @@ type TextFieldProps = ComponentPropsWithRef<'input'> & {
 
 /**
  * The label is always visible: placeholders never replace it. Error and hint text are linked
- * through aria-describedby so screen readers announce them with the input.
+ * through aria-describedby so screen readers announce them with the input. Visually the error sits
+ * directly under the control, with the hint below it, as in the mockup; the description order is
+ * still hint then error.
  */
 export function TextField({
   'aria-describedby': ariaDescribedBy,
@@ -31,11 +33,6 @@ export function TextField({
       <label className="dexa-field__label" htmlFor={inputId}>
         {label}
       </label>
-      {hint && (
-        <p id={hintId} className="dexa-field__hint">
-          {hint}
-        </p>
-      )}
       <input
         {...props}
         id={inputId}
@@ -47,6 +44,11 @@ export function TextField({
       {error && (
         <p id={errorId} className="dexa-field__error">
           {error}
+        </p>
+      )}
+      {hint && (
+        <p id={hintId} className="dexa-field__hint">
+          {hint}
         </p>
       )}
     </div>

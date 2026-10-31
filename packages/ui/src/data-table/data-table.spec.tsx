@@ -124,9 +124,9 @@ it('should disable both pagination controls when status is refreshing', async ()
     />,
   );
 
-  expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
-  await user.click(screen.getByRole('button', { name: 'Next' }));
+  expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: 'Next page' }));
   expect(onPageChange).not.toHaveBeenCalled();
 });
 
@@ -144,7 +144,7 @@ it('should keep the status element mounted with empty text and enable pagination
 
   expect(screen.getByRole('status')).toBeEmptyDOMElement();
   expect(screen.getByRole('table')).toHaveAttribute('aria-busy', 'false');
-  expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
 });
 
 it('should show the loading cell and no rows when the first load is still in progress', () => {
@@ -218,7 +218,7 @@ it('should call onPageChange with the next page when next is clicked on a middle
     />,
   );
 
-  await user.click(screen.getByRole('button', { name: 'Next' }));
+  await user.click(screen.getByRole('button', { name: 'Next page' }));
 
   expect(onPageChange).toHaveBeenCalledWith(3);
 });
@@ -237,7 +237,7 @@ it('should call onPageChange with the previous page when previous is clicked', a
     />,
   );
 
-  await user.click(screen.getByRole('button', { name: 'Previous' }));
+  await user.click(screen.getByRole('button', { name: 'Previous page' }));
 
   expect(onPageChange).toHaveBeenCalledWith(2);
 });
@@ -272,4 +272,38 @@ it('should name the table by its caption when the caption is visually hidden', (
   );
 
   expect(screen.getByRole('table', { name: 'Attendance for November' })).toBeInTheDocument();
+});
+
+it('should give each body cell its column name for the narrow labeled layout', () => {
+  render(
+    <DataTable
+      caption="Attendance records"
+      columns={columns}
+      data={rows}
+      emptyMessage="No attendance."
+      getRowId={getRowId}
+      pagination={buildPagination({ pageCount: 1 })}
+    />,
+  );
+
+  expect(screen.getByRole('cell', { name: 'Ada Lovelace' })).toHaveAttribute(
+    'data-label',
+    'Employee',
+  );
+});
+
+it('should show the pagination summary when paginationSummary is given', () => {
+  render(
+    <DataTable
+      caption="Attendance records"
+      columns={columns}
+      data={rows}
+      emptyMessage="No attendance."
+      getRowId={getRowId}
+      pagination={buildPagination({ pageCount: 1 })}
+      paginationSummary="2 records"
+    />,
+  );
+
+  expect(screen.getByText('2 records')).toBeInTheDocument();
 });

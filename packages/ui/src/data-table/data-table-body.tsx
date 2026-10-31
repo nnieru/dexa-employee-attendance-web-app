@@ -14,6 +14,14 @@ type DataTableBodyProps<TRow extends RowData> = {
 };
 
 /**
+ * The narrow layout repeats each column name before its value, so the name must be plain text.
+ * Columns whose header is a custom element get no label and show only their value.
+ */
+function getColumnLabel(header: unknown): string | undefined {
+  return typeof header === 'string' ? header : undefined;
+}
+
+/**
  * Renders the single body state for the table: loading, error, empty, or the rows. Each state is
  * one row spanning every column, so the header stays in place and assistive technology reads one
  * outcome at a time.
@@ -77,8 +85,12 @@ export function DataTableBody<TRow extends RowData>({
     <tbody>
       {rows.map((row) => (
         <tr key={row.id}>
-          {row.getAllCells().map((cell) => (
-            <td key={cell.id}>
+          {row.getAllCells().map((cell, cellIndex) => (
+            <td
+              key={cell.id}
+              className={cellIndex === 0 ? 'dexa-data-table__lead' : undefined}
+              data-label={getColumnLabel(cell.column.columnDef.header)}
+            >
               <table.FlexRender cell={cell} />
             </td>
           ))}

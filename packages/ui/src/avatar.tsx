@@ -1,6 +1,10 @@
 import { useState } from 'react';
 
-type AvatarSize = 'small' | 'medium' | 'large';
+/**
+ * Named by where the mockup uses each size: `compact` is 36px in the app header and table rows,
+ * `preview` is 72px for a photo under confirmation, `profile` is 96px on the profile page.
+ */
+export type AvatarSize = 'compact' | 'preview' | 'profile';
 
 /** A photo must come with alt text. Without a photo, the name drives the initials fallback. */
 type AvatarPhoto = { photoUrl: string; photoAlt: string } | { photoUrl?: null; photoAlt?: never };
@@ -28,7 +32,7 @@ function getInitials(name: string): string {
  * A round photo with alt text, or initials when there is no photo or the photo fails to load. The
  * initials element is an image with the name as its accessible name, so the fallback is not silent.
  */
-export function Avatar({ name, photoAlt, photoUrl, size = 'medium' }: AvatarProps) {
+export function Avatar({ name, photoAlt, photoUrl, size = 'compact' }: AvatarProps) {
   const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const sizeClassName = `dexa-avatar--${size}`;
 

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { Icon } from './icon.js';
 import {
   checkPhotoFile,
   formatByteLimit,
@@ -112,6 +113,7 @@ export function PhotoUploader({
           aria-invalid={visibleError ? true : undefined}
           aria-describedby={describedBy}
         />
+        <Icon name="upload" />
         <span>{label}</span>
       </label>
       <p id={hintId} className="dexa-field__hint">

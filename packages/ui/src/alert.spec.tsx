@@ -52,3 +52,23 @@ it('should render no action control when the action is omitted', () => {
 
   expect(screen.queryByRole('button')).not.toBeInTheDocument();
 });
+
+it('should show a close icon button with the name Dismiss message when onDismiss is given', async () => {
+  const user = userEvent.setup();
+  const onDismiss = vi.fn();
+  render(
+    <Alert variant="success" onDismiss={onDismiss}>
+      Changes saved.
+    </Alert>,
+  );
+
+  await user.click(screen.getByRole('button', { name: 'Dismiss message' }));
+
+  expect(onDismiss).toHaveBeenCalledTimes(1);
+});
+
+it('should render no close button when onDismiss is omitted', () => {
+  render(<Alert variant="success">Changes saved.</Alert>);
+
+  expect(screen.queryByRole('button', { name: 'Dismiss message' })).not.toBeInTheDocument();
+});

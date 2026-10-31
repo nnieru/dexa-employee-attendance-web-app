@@ -102,7 +102,7 @@ it.each([
   async ({ preset, from, to }) => {
     const user = userEvent.setup();
     const { props } = renderFilter({ value: { from: '2026-01-01', to: '2026-01-02' } });
-    const quickRanges = screen.getByRole('group', { name: 'Quick ranges' });
+    const quickRanges = screen.getByRole('group', { name: 'Quick range' });
 
     await user.click(within(quickRanges).getByRole('button', { name: preset }));
 

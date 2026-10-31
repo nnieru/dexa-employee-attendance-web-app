@@ -39,6 +39,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
       id: toastId,
       link: input.link,
       message: input.message,
+      title: input.title,
       variant: input.variant ?? 'info',
     };
     setToasts((currentToasts) => [...currentToasts, toast]);

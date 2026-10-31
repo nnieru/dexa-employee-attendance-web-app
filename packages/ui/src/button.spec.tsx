@@ -62,3 +62,29 @@ it('submits a form only when the caller opts into submit type', async () => {
   await user.click(screen.getByRole('button', { name: 'Save changes' }));
   expect(onSubmit).toHaveBeenCalledTimes(1);
 });
+
+it('should keep the label in the DOM and the accessible name while busy', () => {
+  render(<Button isLoading>Save phone number</Button>);
+
+  const button = screen.getByRole('button', { name: 'Save phone number' });
+  expect(button).toBeDisabled();
+  expect(button).toHaveTextContent('Save phone number');
+});
+
+it('should reserve the spinner slots when idle so showing the spinner does not change the width', () => {
+  const { container, rerender } = render(<Button>Save phone number</Button>);
+  const idleSlots = container.querySelectorAll('.dexa-button__indicator');
+
+  rerender(<Button isLoading>Save phone number</Button>);
+
+  const busySlots = container.querySelectorAll('.dexa-button__indicator');
+  expect(idleSlots).toHaveLength(2);
+  expect(busySlots).toHaveLength(2);
+  expect(container.querySelector('.dexa-button__indicator--leading')).toHaveAttribute(
+    'aria-hidden',
+    'true',
+  );
+  expect(
+    container.querySelector('.dexa-button__indicator--leading .dexa-button__spinner'),
+  ).not.toBeNull();
+});

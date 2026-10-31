@@ -6,7 +6,7 @@ import {
   type RefObject,
   type SyntheticEvent,
 } from 'react';
-import { Button } from './button.js';
+import { IconButton } from './icon-button.js';
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -139,20 +139,26 @@ export function Dialog({
       onCancel={handleCancel}
     >
       <div className="dexa-dialog__header">
-        <h2 id={titleId} className="dexa-dialog__title">
-          {title}
-        </h2>
+        <div className="dexa-dialog__heading">
+          <h2 id={titleId} className="dexa-dialog__title">
+            {title}
+          </h2>
+          {description && (
+            <p id={descriptionId} className="dexa-dialog__description">
+              {description}
+            </p>
+          )}
+        </div>
         {showCloseButton && (
-          <Button variant="secondary" disabled={!isDismissible} onClick={onClose}>
-            Close
-          </Button>
+          <IconButton
+            className="dexa-dialog__close"
+            aria-label="Close"
+            iconName="x"
+            disabled={!isDismissible}
+            onClick={onClose}
+          />
         )}
       </div>
-      {description && (
-        <p id={descriptionId} className="dexa-dialog__description">
-          {description}
-        </p>
-      )}
       {children && <div className="dexa-dialog__body">{children}</div>}
       {footer && <div className="dexa-dialog__footer">{footer}</div>}
     </dialog>

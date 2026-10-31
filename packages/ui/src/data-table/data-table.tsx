@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import {
   useTable,
   type ColumnDef,
@@ -48,6 +48,8 @@ export type DataTableProps<TRow extends RowData> = {
   isCaptionVisible?: boolean;
   loadingMessage?: string;
   pagination: DataTablePagination;
+  /** Optional text on the left of the pager, for example "41 records". Passed to Pagination. */
+  paginationSummary?: ReactNode;
   status?: DataTableStatus;
 };
 
@@ -68,6 +70,7 @@ export function DataTable<TRow extends RowData>({
   isCaptionVisible = false,
   loadingMessage,
   pagination,
+  paginationSummary,
   status = READY_STATUS,
 }: DataTableProps<TRow>) {
   const captionId = useId();
@@ -85,12 +88,17 @@ export function DataTable<TRow extends RowData>({
   const isBusy = isLoading || isRefreshing;
 
   return (
-    <>
+    <div className="dexa-data-table">
       {/* Mounted in every state so the live region already exists when its text changes. */}
       <p role="status" className="dexa-data-table__refreshing">
         {isRefreshing ? REFRESHING_MESSAGE : ''}
       </p>
-      <div className="dexa-data-table" role="region" aria-labelledby={captionId} tabIndex={0}>
+      <div
+        className="dexa-data-table__scroll"
+        role="region"
+        aria-labelledby={captionId}
+        tabIndex={0}
+      >
         <table className="dexa-data-table__table" aria-busy={isBusy}>
           <caption
             id={captionId}
@@ -126,8 +134,9 @@ export function DataTable<TRow extends RowData>({
         onPageChange={pagination.onPageChange}
         page={pagination.page}
         pageCount={pagination.pageCount}
+        summary={paginationSummary}
       />
-    </>
+    </div>
   );
 }
 

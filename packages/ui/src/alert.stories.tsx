@@ -2,6 +2,11 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Alert } from './alert.js';
 import { Button } from './button.js';
 
+/** Story args must satisfy the optional handler; the story only shows the close control. */
+function noop(): void {
+  return undefined;
+}
+
 const retryAction = (
   <Button variant="secondary" type="button">
     Try again
@@ -40,6 +45,10 @@ export const ErrorState: Story = {
     variant: 'error',
     children: 'Attendance was not recorded. Check your connection and try again.',
   },
+};
+
+export const Dismissible: Story = {
+  args: { variant: 'success', children: 'Changes saved.', onDismiss: noop },
 };
 
 export const NeutralWithAction: Story = {

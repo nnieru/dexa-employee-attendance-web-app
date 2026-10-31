@@ -1,5 +1,8 @@
 export { Alert } from './alert.js';
 export { Button } from './button.js';
+export { Icon } from './icon.js';
+export type { IconName, IconProps } from './icon.js';
+export { IconButton } from './icon-button.js';
 export { ConfirmDialog } from './confirm-dialog.js';
 export { Dialog } from './dialog.js';
 export { PageShell } from './page-shell.js';

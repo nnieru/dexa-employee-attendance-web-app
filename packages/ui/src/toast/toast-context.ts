@@ -10,6 +10,8 @@ export type ToastLink = {
 export type ShowToastInput = {
   link?: ToastLink;
   message: string;
+  /** Optional bold line above the message, for example "Profile updated". */
+  title?: string;
   variant?: ToastVariant;
 };
 
@@ -17,6 +19,7 @@ export type ToastRecord = {
   id: string;
   link?: ToastLink;
   message: string;
+  title?: string;
   variant: ToastVariant;
 };
 

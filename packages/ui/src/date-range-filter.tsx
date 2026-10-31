@@ -1,10 +1,10 @@
-import { useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
+import { useId, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Button } from './button.js';
+import { Icon } from './icon.js';
 import { TextField } from './text-field.js';
 import {
   DATE_RANGE_PRESETS,
   calculateDateRangePreset,
-  type DatePresetPeriod,
   type DateRange,
 } from './date-range-presets.js';
 
@@ -23,11 +23,17 @@ export type DateRangeFilterProps = {
 
 /**
  * Edits a date range and submits it on Search. Presets only fill the fields; the user still
- * presses Search. Unsubmitted edits are kept until `value` changes to a different range.
+ * presses Search. A preset shows as pressed while the fields hold its range. Unsubmitted edits are
+ * kept until `value` changes to a different range.
  */
 export function DateRangeFilter({ value, today, error, onSearch, onReset }: DateRangeFilterProps) {
   const [draft, setDraft] = useState(value);
   const [syncedValue, setSyncedValue] = useState(value);
+  const presetLabelId = useId();
+  const presetRanges = DATE_RANGE_PRESETS.map((preset) => ({
+    label: preset.label,
+    range: calculateDateRangePreset(today, preset.period),
+  }));
 
   // Adjusts state during render instead of an effect. Compares the fields, not the object, so a
   // parent that rebuilds the same range on each render does not discard the user's edits.
@@ -46,10 +52,6 @@ export function DateRangeFilter({ value, today, error, onSearch, onReset }: Date
     onReset();
   }
 
-  function applyPreset(period: DatePresetPeriod) {
-    setDraft(calculateDateRangePreset(today, period));
-  }
-
   function handleFromChange(event: ChangeEvent<HTMLInputElement>) {
     const from = event.target.value;
     setDraft((current) => ({ ...current, from }));
@@ -64,33 +66,51 @@ export function DateRangeFilter({ value, today, error, onSearch, onReset }: Date
     <form className="dexa-date-range-filter" onSubmit={handleSubmit}>
       <fieldset className="dexa-date-range-filter__range">
         <legend className="dexa-date-range-filter__legend">Date range</legend>
-        <div className="dexa-date-range-filter__fields">
-          <TextField
-            type="date"
-            name="from"
-            label="From"
-            value={draft.from}
-            onChange={handleFromChange}
-          />
-          <TextField
-            type="date"
-            name="to"
-            label="To"
-            value={draft.to}
-            error={error}
-            onChange={handleToChange}
-          />
-        </div>
+        <TextField
+          className="dexa-date-range-filter__field"
+          type="date"
+          name="from"
+          label="From"
+          value={draft.from}
+          onChange={handleFromChange}
+        />
+        <TextField
+          className="dexa-date-range-filter__field"
+          type="date"
+          name="to"
+          label="To"
+          value={draft.to}
+          error={error}
+          onChange={handleToChange}
+        />
       </fieldset>
-      <div className="dexa-date-range-filter__presets" role="group" aria-label="Quick ranges">
-        {DATE_RANGE_PRESETS.map((preset) => (
-          <Button key={preset.label} variant="secondary" onClick={() => applyPreset(preset.period)}>
-            {preset.label}
-          </Button>
-        ))}
+      <div className="dexa-date-range-filter__quick">
+        <p id={presetLabelId} className="dexa-field__label">
+          Quick range
+        </p>
+        <div
+          className="dexa-date-range-filter__presets"
+          role="group"
+          aria-labelledby={presetLabelId}
+        >
+          {presetRanges.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              className="dexa-date-range-filter__preset"
+              aria-pressed={draft.from === preset.range.from && draft.to === preset.range.to}
+              onClick={() => setDraft(preset.range)}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="dexa-date-range-filter__actions">
-        <Button type="submit">Search</Button>
+        <Button type="submit">
+          <Icon name="search" />
+          Search
+        </Button>
         <Button variant="secondary" onClick={handleReset}>
           Reset
         </Button>

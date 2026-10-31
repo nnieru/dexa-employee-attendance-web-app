@@ -6,6 +6,13 @@
   --font-sans: var(--font-body);
 }
 
+/*
+ * Component looks follow docs/DESIGN.md first and docs/mockups/ui-mockups.html where DESIGN is silent
+ * (D-53). Colors, type scale, spacing, radius and elevation come from tokens.css. Sizes that DESIGN
+ * leaves unspecified (36/72/96px avatars, 35rem dialog, 23.75rem toast, 7rem table label column)
+ * are written in place with the mockup value.
+ */
+
 body {
   margin: 0;
   color: var(--color-text);
@@ -56,7 +63,7 @@ body {
 .dexa-page-shell__heading p {
   max-width: var(--layout-reading-max);
   min-width: 0;
-  margin: var(--space-3) 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-lead);
   overflow-wrap: anywhere;
@@ -71,20 +78,69 @@ body {
   width: 100%;
 }
 
+.dexa-icon {
+  display: block;
+  flex: none;
+  width: var(--space-5);
+  height: var(--space-5);
+}
+
+.dexa-icon--small {
+  width: var(--space-4);
+  height: var(--space-4);
+}
+
+/* Icon-only control: 44px square, the icon is 20px, and the accessible name comes from aria-label. */
+.dexa-icon-button {
+  display: inline-grid;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--control-height);
+  height: var(--control-height);
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.dexa-icon-button:hover:not(:disabled) {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.dexa-icon-button:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.dexa-icon-button:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/*
+ * Two fixed-width slots flank the label, one holding the busy spinner. They are always reserved, so
+ * showing the spinner never changes the button's width or moves the label (DESIGN §7). The label
+ * is centred in the middle column.
+ */
 .dexa-button {
+  --dexa-button-slot: 1.25rem;
   position: relative;
   display: inline-grid;
-  grid-template-columns: 1rem minmax(0, 1fr) 1rem;
+  grid-template-columns: var(--dexa-button-slot) minmax(0, 1fr) var(--dexa-button-slot);
+  box-sizing: border-box;
   max-width: 100%;
-  column-gap: var(--space-1);
   min-width: var(--control-height);
-  min-height: var(--control-height-large);
+  min-height: var(--control-height);
   align-items: center;
-  padding: 0.625rem var(--space-2);
+  column-gap: 0;
+  padding: 0 var(--space-4);
   border: var(--border-width) solid transparent;
   border-radius: var(--radius-control);
-  font: var(--font-weight-semibold) var(--font-size-small) / var(--line-height-body)
-    var(--font-body);
+  font: var(--font-weight-semibold) var(--font-size-body) / var(--line-height-body) var(--font-body);
   text-align: center;
   text-decoration: none;
   cursor: pointer;
@@ -96,21 +152,35 @@ body {
 
 .dexa-button__indicator {
   display: flex;
-  width: 1rem;
-  height: 1rem;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   grid-row: 1;
+  width: var(--dexa-button-slot);
+  height: var(--dexa-button-slot);
+}
+
+.dexa-button__indicator--leading {
+  grid-column: 1;
+}
+
+.dexa-button__indicator--trailing {
+  grid-column: 3;
 }
 
 .dexa-button__label {
-  min-width: 0;
+  display: inline-flex;
   grid-column: 2;
   grid-row: 1;
+  justify-self: center;
+  max-width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
   overflow-wrap: anywhere;
 }
 
 .dexa-button__spinner {
+  flex: none;
   width: 1rem;
   height: 1rem;
   border: 2px solid currentColor;
@@ -191,6 +261,7 @@ body {
 }
 
 .dexa-field__label {
+  margin: 0;
   color: var(--color-text);
   font-size: var(--font-size-small);
   font-weight: var(--font-weight-semibold);
@@ -218,7 +289,7 @@ body {
   width: 100%;
   min-width: 0;
   min-height: var(--control-height);
-  padding: var(--space-2) var(--space-3);
+  padding: 0 var(--space-3);
   border: var(--border-width) solid var(--color-border-control);
   border-radius: var(--radius-control);
   color: var(--color-text);
@@ -245,6 +316,7 @@ body {
 
 .dexa-field__input[readonly] {
   color: var(--color-text);
+  border-color: var(--color-border);
   background: var(--color-surface-muted);
 }
 
@@ -255,57 +327,69 @@ body {
   cursor: not-allowed;
 }
 
+/* Full-width feedback: no border, icon, semibold text, as in the mockup's .alert. */
 .dexa-alert {
-  display: grid;
-  gap: var(--space-2);
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  gap: var(--space-3);
   width: 100%;
   min-width: 0;
   padding: var(--space-3) var(--space-4);
-  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-control);
+  font-weight: var(--font-weight-semibold);
+}
+
+.dexa-alert__icon {
+  color: inherit;
 }
 
 .dexa-alert__message {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
 }
 
 .dexa-alert__action {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
+.dexa-alert__dismiss {
+  flex: none;
+  margin-inline-start: auto;
+}
+
 .dexa-alert--neutral {
-  color: var(--color-text-muted);
-  background: var(--color-surface);
-  border-color: var(--color-border);
+  color: var(--color-text);
+  background: var(--color-surface-muted);
 }
 
 .dexa-alert--success {
   color: var(--color-success);
   background: var(--color-success-surface);
-  border-color: var(--color-success);
 }
 
 .dexa-alert--warning {
   color: var(--color-warning);
   background: var(--color-warning-surface);
-  border-color: var(--color-warning);
 }
 
 .dexa-alert--error {
   color: var(--color-error);
   background: var(--color-error-surface);
-  border-color: var(--color-error);
 }
 
 .dexa-dialog {
+  --dexa-dialog-padding: var(--space-6);
   box-sizing: border-box;
-  width: min(calc(100% - var(--layout-gutter) - var(--layout-gutter)), var(--layout-form-max));
+  width: min(35rem, calc(100% - var(--layout-gutter) - var(--layout-gutter)));
   max-height: calc(100% - var(--layout-gutter) - var(--layout-gutter));
   margin: auto;
-  padding: var(--space-6);
+  padding: var(--dexa-dialog-padding);
   overflow: auto;
   border: none;
   border-radius: var(--radius-card);
@@ -320,37 +404,46 @@ body {
 
 .dexa-dialog__header {
   display: flex;
-  gap: var(--space-4);
+  gap: var(--space-3);
   align-items: flex-start;
   justify-content: space-between;
+  margin-block-end: var(--space-5);
+}
+
+.dexa-dialog__heading {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .dexa-dialog__title {
   min-width: 0;
   margin: 0;
-  color: var(--color-brand);
-  font-size: var(--font-size-h3);
+  color: var(--color-text);
+  font-size: var(--font-size-h2);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-heading);
   overflow-wrap: anywhere;
 }
 
 .dexa-dialog__description {
-  margin: var(--space-3) 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
+  font-size: var(--font-size-small);
   overflow-wrap: anywhere;
 }
 
-.dexa-dialog__body {
-  margin-block-start: var(--space-4);
-}
-
+/* The footer sticks to the bottom edge of the dialog with a top divider, as in the mockup's .dialog-foot. */
 .dexa-dialog__footer {
+  position: sticky;
+  inset-block-end: calc(var(--dexa-dialog-padding) * -1);
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
   justify-content: flex-end;
-  margin-block-start: var(--space-6);
+  margin-block: var(--dexa-dialog-padding) calc(var(--dexa-dialog-padding) * -1);
+  padding-block: var(--space-5) var(--dexa-dialog-padding);
+  border-top: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .dexa-confirm-dialog__confirm--danger.dexa-button--primary,
@@ -359,12 +452,6 @@ body {
   border-color: var(--color-error);
   color: var(--color-text-on-brand);
   background: var(--color-error);
-}
-
-@media (max-width: 767px) {
-  .dexa-dialog {
-    padding: var(--space-4);
-  }
 }
 
 .dexa-toast-region {
@@ -379,13 +466,20 @@ body {
   pointer-events: none;
 }
 
+.dexa-toast-region:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* White card with an icon, bold title, message and link, as in the mockup's .toast. */
 .dexa-toast {
   box-sizing: border-box;
-  display: grid;
-  gap: var(--space-2);
-  width: min(100%, var(--layout-form-max));
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: min(100%, 23.75rem);
   min-width: 0;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-control);
   color: var(--color-text);
@@ -395,26 +489,35 @@ body {
   animation: dexa-toast-in var(--duration-normal) var(--ease-standard);
 }
 
-.dexa-toast__message {
+.dexa-toast__body {
+  display: grid;
+  flex: 1 1 auto;
+  justify-items: start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.dexa-toast__title {
   margin: 0;
+  font-weight: var(--font-weight-bold);
   overflow-wrap: anywhere;
 }
 
-.dexa-toast__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: center;
-  justify-content: space-between;
+.dexa-toast__message {
+  margin: 0;
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
 }
 
 .dexa-toast__link {
   display: inline-flex;
   min-height: var(--control-height);
   align-items: center;
-  color: inherit;
+  color: var(--color-brand);
+  font-size: var(--font-size-small);
   font-weight: var(--font-weight-semibold);
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .dexa-toast__link:focus-visible {
@@ -422,28 +525,24 @@ body {
   outline-offset: var(--focus-offset);
 }
 
-.dexa-toast--info {
+.dexa-toast__close {
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0 0;
+}
+
+.dexa-toast--info .dexa-toast__icon {
   color: var(--color-info);
-  background: var(--color-info-surface);
-  border-color: var(--color-info);
 }
 
-.dexa-toast--success {
+.dexa-toast--success .dexa-toast__icon {
   color: var(--color-success);
-  background: var(--color-success-surface);
-  border-color: var(--color-success);
 }
 
-.dexa-toast--warning {
+.dexa-toast--warning .dexa-toast__icon {
   color: var(--color-warning);
-  background: var(--color-warning-surface);
-  border-color: var(--color-warning);
 }
 
-.dexa-toast--error {
+.dexa-toast--error .dexa-toast__icon {
   color: var(--color-error);
-  background: var(--color-error-surface);
-  border-color: var(--color-error);
 }
 
 @keyframes dexa-toast-in {
@@ -462,18 +561,28 @@ body {
   }
 }
 
+/*
+ * Outer box is the white table panel from the mockup's .table-wrap; the scroll region inside it holds
+ * the table, and pagination sits in the same panel below. The container query switches to labeled
+ * blocks on narrow widths, as the mockup's table.cards does.
+ */
 .dexa-data-table {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  overflow-x: auto;
-  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  container-type: inline-size;
 }
 
-.dexa-data-table:focus-visible {
+.dexa-data-table__scroll {
+  overflow-x: auto;
+  border-radius: var(--radius-card);
+}
+
+.dexa-data-table__scroll:focus-visible {
   outline: var(--focus-width) solid var(--color-focus);
   outline-offset: var(--focus-offset);
 }
@@ -490,8 +599,8 @@ body {
 
 .dexa-data-table__caption {
   caption-side: top;
-  padding: var(--space-4) var(--space-4) var(--space-3);
-  color: var(--color-brand);
+  padding: var(--space-5) var(--space-6) var(--space-3);
+  color: var(--color-text);
   font-size: var(--font-size-h3);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-heading);
@@ -515,12 +624,12 @@ body {
 .dexa-data-table__table th,
 .dexa-data-table__table td {
   padding: var(--space-3) var(--space-4);
-  border-block-end: var(--border-width) solid var(--color-border);
-  vertical-align: top;
+  vertical-align: middle;
   text-align: start;
 }
 
 .dexa-data-table__table th {
+  padding-block: var(--space-3);
   color: var(--color-text);
   font-size: var(--font-size-small);
   font-weight: var(--font-weight-semibold);
@@ -529,6 +638,7 @@ body {
 }
 
 .dexa-data-table__table td {
+  border-block-start: var(--border-width) solid var(--color-border);
   overflow-wrap: anywhere;
 }
 
@@ -544,137 +654,282 @@ body {
   margin: 0;
 }
 
+/* Refresh notice: a bar above the rows, present only while the rows reload. */
+.dexa-data-table__refreshing {
+  margin: 0;
+}
+
+.dexa-data-table__refreshing:not(:empty) {
+  display: flex;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-info);
+  background: var(--color-info-surface);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+}
+
+/*
+ * Pager row as in the mockup's .pager: top divider, optional summary on the left, and the controls
+ * group on the right with "Page x of y" between the two icon buttons. Without a summary the group
+ * still sits at the end of the row.
+ */
 .dexa-pagination {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
-  justify-content: space-between;
-  margin-block-start: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--border-width) solid var(--color-border);
 }
 
-.dexa-pagination__status {
+.dexa-pagination__summary {
   margin: 0;
-  color: var(--color-text);
+  color: var(--color-text-muted);
   font-size: var(--font-size-small);
   font-variant-numeric: tabular-nums;
 }
 
-.dexa-toast-region:focus-visible {
-  outline: var(--focus-width) solid var(--color-focus);
-  outline-offset: var(--focus-offset);
+.dexa-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline-start: auto;
 }
 
-.dexa-data-table__refreshing {
-  margin: 0;
+.dexa-pagination__status {
+  padding-inline: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.dexa-data-table__refreshing:not(:empty) {
-  margin-block-end: var(--space-2);
+@container (max-width: 767px) {
+  .dexa-data-table__table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .dexa-data-table__table,
+  .dexa-data-table__table tbody,
+  .dexa-data-table__table tr,
+  .dexa-data-table__table td {
+    display: block;
+    width: 100%;
+  }
+
+  .dexa-data-table__table {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dexa-data-table__table caption {
+    display: block;
+    padding: var(--space-4) var(--space-4) var(--space-2);
+  }
+
+  .dexa-data-table__table tbody tr {
+    height: auto;
+    padding: var(--space-3) var(--space-4);
+    border-block-start: var(--border-width) solid var(--color-border);
+  }
+
+  .dexa-data-table__table td {
+    height: auto;
+    padding: var(--space-1) 0;
+    border: 0;
+  }
+
+  .dexa-data-table__table td[data-label] {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+
+  .dexa-data-table__table td[data-label]::before {
+    content: attr(data-label);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .dexa-data-table__table td.dexa-data-table__lead {
+    display: block;
+    padding-block-end: var(--space-2);
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .dexa-data-table__table td.dexa-data-table__lead::before {
+    content: none;
+  }
 }
 
 /* Status text is static: the tone adds color, and the visible text carries the meaning (DESIGN §7, §9). */
 .dexa-status-label {
-  display: inline-flex;
+  display: inline-block;
   box-sizing: border-box;
-  align-items: center;
   max-width: 100%;
   padding: var(--space-1) var(--space-2);
-  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-small);
   font-size: var(--font-size-small);
   font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-body);
-  overflow-wrap: anywhere;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
-/* Neutral uses the DESIGN §3 pair (muted text on white); muted text on surface-muted falls below 4.5:1. */
+/* Neutral is muted text on white with an inset ring; muted text on surface-muted falls below 4.5:1. */
 .dexa-status-label--neutral {
   color: var(--color-text-muted);
   background: var(--color-surface);
-  border-color: var(--color-border);
+  box-shadow: inset 0 0 0 var(--border-width) var(--color-border);
 }
 
 .dexa-status-label--success {
   color: var(--color-success);
   background: var(--color-success-surface);
-  border-color: var(--color-success);
 }
 
 .dexa-status-label--warning {
   color: var(--color-warning);
   background: var(--color-warning-surface);
-  border-color: var(--color-warning);
 }
 
 .dexa-status-label--error {
   color: var(--color-error);
   background: var(--color-error-surface);
-  border-color: var(--color-error);
 }
 
 .dexa-status-label--info {
   color: var(--color-info);
   background: var(--color-info-surface);
-  border-color: var(--color-info);
 }
 
+/* The filter row is a panel of fields, a quick-range group and actions (mockup .filters). */
 .dexa-date-range-filter {
-  display: grid;
-  gap: var(--space-4);
+  display: flex;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  align-items: flex-end;
+  width: 100%;
   min-width: 0;
+  padding: var(--space-6);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
 }
 
 .dexa-date-range-filter__range {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  align-items: flex-end;
   min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
+/* The group name is announced to assistive technology; the visible From and To labels are the design. */
 .dexa-date-range-filter__legend {
-  margin-block-end: var(--space-2);
-  padding: 0;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.dexa-date-range-filter__field {
+  flex: 1 1 10rem;
+  max-width: 15rem;
+}
+
+.dexa-date-range-filter__quick {
+  display: grid;
+  flex: 0 1 auto;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.dexa-date-range-filter__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.dexa-date-range-filter__preset {
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-control);
   color: var(--color-text);
+  background: var(--color-surface);
   font-size: var(--font-size-small);
   font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-body);
+  cursor: pointer;
 }
 
-.dexa-date-range-filter__fields {
-  display: grid;
-  gap: var(--space-4);
-  grid-template-columns: minmax(0, 1fr);
+.dexa-date-range-filter__preset[aria-pressed='true'] {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
 }
 
-.dexa-date-range-filter__presets,
+.dexa-date-range-filter__preset:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
 .dexa-date-range-filter__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3);
   align-items: center;
 }
 
-@media (min-width: 768px) {
-  .dexa-date-range-filter__fields {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 767px) {
+  .dexa-dialog {
+    --dexa-dialog-padding: var(--space-4);
+  }
+
+  .dexa-date-range-filter {
+    padding: var(--space-4);
+  }
+
+  .dexa-date-range-filter__range,
+  .dexa-date-range-filter__quick {
+    flex-basis: 100%;
+  }
+
+  .dexa-date-range-filter__field {
+    flex-basis: 100%;
+    max-width: none;
   }
 }
 
+/* Photo choice: the control has the secondary button look; the preview is the 96px profile photo. */
 .dexa-photo-uploader {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-3);
   justify-items: start;
   min-width: 0;
 }
 
 .dexa-photo-uploader__preview {
-  width: var(--space-16);
-  height: var(--space-16);
-  border: var(--border-width) solid var(--color-border);
+  display: block;
+  width: 6rem;
+  height: 6rem;
   border-radius: var(--radius-round);
+  background: var(--color-brand-soft);
   object-fit: cover;
 }
 
@@ -685,12 +940,14 @@ body {
   max-width: 100%;
   min-height: var(--control-height);
   align-items: center;
-  padding: var(--space-2) var(--space-4);
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-5);
   border: var(--border-width) solid var(--color-brand);
   border-radius: var(--radius-control);
   color: var(--color-brand);
   background: var(--color-surface);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-body);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-body);
   overflow-wrap: anywhere;
@@ -747,25 +1004,26 @@ body {
   place-items: center;
   color: var(--color-brand);
   background: var(--color-brand-soft);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   line-height: 1;
   user-select: none;
 }
 
-.dexa-avatar--small {
-  width: var(--space-8);
-  height: var(--space-8);
-  font-size: var(--font-size-caption);
-}
-
-.dexa-avatar--medium {
-  width: var(--space-12);
-  height: var(--space-12);
+/* Sizes are the mockup's: 36px header and rows, 72px preview, 96px profile. */
+.dexa-avatar--compact {
+  width: 2.25rem;
+  height: 2.25rem;
   font-size: var(--font-size-small);
 }
 
-.dexa-avatar--large {
-  width: var(--space-16);
-  height: var(--space-16);
-  font-size: var(--font-size-h3);
+.dexa-avatar--preview {
+  width: 4.5rem;
+  height: 4.5rem;
+  font-size: var(--font-size-h2);
+}
+
+.dexa-avatar--profile {
+  width: 6rem;
+  height: 6rem;
+  font-size: var(--font-size-h1);
 }

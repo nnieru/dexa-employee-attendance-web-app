@@ -35,6 +35,8 @@ export const BrokenPhotoFallsBackToInitials: Story = {
   },
 };
 
-export const Small: Story = { args: { size: 'small' } };
+export const Compact: Story = { args: { size: 'compact' } };
 
-export const Large: Story = { args: { size: 'large' } };
+export const Preview: Story = { args: { size: 'preview' } };
+
+export const Profile: Story = { args: { size: 'profile' } };
