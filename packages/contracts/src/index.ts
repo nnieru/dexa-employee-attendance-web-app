@@ -134,6 +134,12 @@ export {
   type AttendanceMonitoringQuery,
 } from './attendance/attendance-monitoring.schema.js';
 export {
+  workScheduleOverviewSchema,
+  workScheduleVersionSchema,
+  type WorkScheduleOverview,
+  type WorkScheduleVersion,
+} from './schedules/work-schedule.schema.js';
+export {
   todayAttendanceResponseSchema,
   todayStateSchema,
   type TodayAttendanceResponse,

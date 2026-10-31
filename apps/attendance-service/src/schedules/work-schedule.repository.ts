@@ -1,22 +1,42 @@
 import { isExclusionViolation } from '@dexa/common';
 import { Inject, Injectable } from '@nestjs/common';
+import type { BusinessDate } from '@dexa/common';
+import type { WorkScheduleVersion } from '@dexa/contracts';
 import type { Database } from '@dexa/db';
-import { sql } from 'drizzle-orm';
+import { asc, gt, isNull, or, sql } from 'drizzle-orm';
 import { DATABASE } from '../infrastructure/db/database.token.js';
-import { workSchedules } from '../infrastructure/db/schema.js';
+import { workSchedules, type WorkScheduleRow } from '../infrastructure/db/schema.js';
 import type {
   IWorkScheduleRepository,
+  IWorkScheduleVersionReader,
   NewWorkSchedule,
   ScheduleInsertOutcome,
 } from './work-schedule.repository.interface.js';
 
 const DEFAULT_SCHEDULE_SEED_LOCK_KEY = 720_416_101;
+// The version in effect and the nearest upcoming one are the only two the schedule view needs (DATABASE §5.2).
+const SCHEDULE_OVERVIEW_VERSION_LIMIT = 2;
 
 type ScheduleQueryRunner = Pick<Database['db'], 'select' | 'insert'>;
 
 @Injectable()
-export class WorkScheduleRepository implements IWorkScheduleRepository {
+export class WorkScheduleRepository implements IWorkScheduleRepository, IWorkScheduleVersionReader {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
+
+  // A plain read with no lock. Ordering by effective date puts the version in effect before the upcoming one.
+  async findInEffectOrUpcoming(
+    businessDate: BusinessDate,
+  ): Promise<ReadonlyArray<WorkScheduleVersion>> {
+    const rows = await this.database.db
+      .select()
+      .from(workSchedules)
+      .where(
+        or(isNull(workSchedules.effectiveUntil), gt(workSchedules.effectiveUntil, businessDate)),
+      )
+      .orderBy(asc(workSchedules.effectiveFrom))
+      .limit(SCHEDULE_OVERVIEW_VERSION_LIMIT);
+    return rows.map(toWorkScheduleVersion);
+  }
 
   async insertIfNoSchedule(schedule: NewWorkSchedule): Promise<ScheduleInsertOutcome> {
     try {
@@ -59,4 +79,23 @@ async function insertOpenEndedSchedule(
     effectiveFrom: schedule.effectiveFrom,
     effectiveUntil: null,
   });
+}
+
+// PostgreSQL returns time as HH:mm:ss, and the contract shows the HH:mm the schedule was entered with.
+function toWorkScheduleVersion(row: WorkScheduleRow): WorkScheduleVersion {
+  const [startHour, startMinute] = row.startTime.split(':');
+  const [endHour, endMinute] = row.endTime.split(':');
+  return {
+    id: row.id,
+    name: row.name,
+    timezone: row.timezone,
+    workingWeekdays: [...row.workingWeekdays],
+    startTime: `${startHour}:${startMinute}`,
+    endTime: `${endHour}:${endMinute}`,
+    lateCheckinGraceMinutes: row.lateCheckinGraceMinutes,
+    earlyCheckoutGraceMinutes: row.earlyCheckoutGraceMinutes,
+    lateCheckoutGraceMinutes: row.lateCheckoutGraceMinutes,
+    effectiveFrom: row.effectiveFrom,
+    effectiveUntil: row.effectiveUntil,
+  };
 }

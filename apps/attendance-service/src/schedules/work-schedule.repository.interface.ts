@@ -1,4 +1,8 @@
+import type { BusinessDate } from '@dexa/common';
+import type { WorkScheduleVersion } from '@dexa/contracts';
+
 export const WORK_SCHEDULE_REPOSITORY = Symbol('IWorkScheduleRepository');
+export const WORK_SCHEDULE_VERSION_READER = Symbol('IWorkScheduleVersionReader');
 
 export type ScheduleInsertOutcome = 'INSERTED' | 'ALREADY_PRESENT';
 
@@ -21,4 +25,14 @@ export interface IWorkScheduleRepository {
    * including when a concurrent instance inserted the first version between the check and the insert.
    */
   insertIfNoSchedule(schedule: NewWorkSchedule): Promise<ScheduleInsertOutcome>;
+}
+
+/** Read-only access to the schedule versions that the HR schedule view shows (PRD SCH-3). */
+export interface IWorkScheduleVersionReader {
+  /**
+   * The versions that have not ended by the business date, earliest effective date first, at most two. That is the
+   * version in effect (if any) followed by the next upcoming version. The exclusion constraint (DATABASE §5.2) keeps
+   * at most one version in effect, so the second row is the nearest upcoming one.
+   */
+  findInEffectOrUpcoming(businessDate: BusinessDate): Promise<ReadonlyArray<WorkScheduleVersion>>;
 }

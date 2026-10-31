@@ -10,6 +10,7 @@ import type { ApiGatewayConfig } from './config/api-gateway-config.schema.js';
 import { GatewayAttendanceModule } from './attendance/attendance.module.js';
 import { GatewayAuthModule } from './auth/auth.module.js';
 import { GatewayEmployeesModule } from './employees/employees.module.js';
+import { GatewayWorkSchedulesModule } from './schedules/work-schedules.module.js';
 
 /**
  * Builds the root module from the validated config. AuthModule.forRoot and InternalHttpModule.forRoot take
@@ -32,6 +33,7 @@ export function createAppModule(config: ApiGatewayConfig): Type<unknown> {
       GatewayAuthModule,
       GatewayEmployeesModule,
       GatewayAttendanceModule,
+      GatewayWorkSchedulesModule,
       HealthModule,
     ],
   })
