@@ -36,3 +36,30 @@ export interface IWorkScheduleVersionReader {
    */
   findInEffectOrUpcoming(businessDate: BusinessDate): Promise<ReadonlyArray<WorkScheduleVersion>>;
 }
+
+export const WORK_SCHEDULE_VERSION_WRITER = Symbol('IWorkScheduleVersionWriter');
+
+/**
+ * Writes schedule versions inside one transaction. The service decides what to write; the transaction scope only
+ * reads and writes rows. The find methods lock their rows, so a concurrent create or edit waits for this one.
+ */
+export interface IWorkScheduleVersionWriter {
+  runInTransaction<TResult>(
+    work: (transaction: IWorkScheduleVersionTransaction) => Promise<TResult>,
+  ): Promise<TResult>;
+}
+
+export interface IWorkScheduleVersionTransaction {
+  /** The version with the latest effective date, or undefined when the table is empty. */
+  findLatestVersionForUpdate(): Promise<WorkScheduleVersion | undefined>;
+  findVersionForUpdate(versionId: string): Promise<WorkScheduleVersion | undefined>;
+  /** The nearest version that starts before the given date, or undefined when there is none. */
+  findPreviousVersionForUpdate(
+    effectiveFrom: BusinessDate,
+  ): Promise<WorkScheduleVersion | undefined>;
+  setEffectiveUntil(versionId: string, effectiveUntil: BusinessDate): Promise<void>;
+  /** Inserts a version with no end. Returns the stored version. */
+  insertOpenEndedVersion(values: NewWorkSchedule): Promise<WorkScheduleVersion>;
+  /** Replaces the values of a version and keeps its id. Returns the stored version. */
+  updateVersion(versionId: string, values: NewWorkSchedule): Promise<WorkScheduleVersion>;
+}

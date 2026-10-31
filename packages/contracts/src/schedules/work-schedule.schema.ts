@@ -21,6 +21,37 @@ export const workScheduleVersionSchema = z.object({
 
 export type WorkScheduleVersion = z.infer<typeof workScheduleVersionSchema>;
 
+const WEEKDAY_MIN = 1;
+const WEEKDAY_MAX = 7;
+
+// Strict, so a client cannot send effectiveUntil (SCH-4: the service sets it), the timezone (the service uses the
+// configured business timezone), or a name. The version the client edits is identified by the route, not the body.
+export const workScheduleVersionRequestSchema = z
+  .strictObject({
+    workingWeekdays: z
+      .array(z.number().int().min(WEEKDAY_MIN).max(WEEKDAY_MAX))
+      .min(1)
+      .refine((weekdays) => new Set(weekdays).size === weekdays.length, {
+        error: 'must list each weekday once',
+      }),
+    startTime: clockTimeSchema,
+    endTime: clockTimeSchema,
+    lateCheckinGraceMinutes: z.number().int().nonnegative(),
+    earlyCheckoutGraceMinutes: z.number().int().nonnegative(),
+    lateCheckoutGraceMinutes: z.number().int().nonnegative(),
+    effectiveFrom: z.iso.date(),
+  })
+  // Both times are on the same business day (DATABASE §5.2), so a plain string comparison of HH:mm is a time comparison.
+  .refine((request) => request.startTime < request.endTime, {
+    error: 'must be before endTime',
+    path: ['startTime'],
+  });
+
+export type WorkScheduleVersionRequest = z.infer<typeof workScheduleVersionRequestSchema>;
+
+// The version id in a route, such as PUT /work-schedules/:id.
+export const workScheduleIdSchema = z.uuid();
+
 // The version in effect today and the next version that has not taken effect yet (PRD SCH-3). current is null only
 // when no version covers today; upcoming is null when no later version exists.
 export const workScheduleOverviewSchema = z.object({

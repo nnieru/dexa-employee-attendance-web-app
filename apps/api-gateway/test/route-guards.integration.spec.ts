@@ -26,6 +26,8 @@ import {
   type OwnProfile,
   type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
+  type WorkScheduleVersion,
+  type WorkScheduleVersionRequest,
 } from '@dexa/contracts';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -37,6 +39,10 @@ import {
   ATTENDANCE_SERVICE_CLIENT,
   type IAttendanceServiceClient,
 } from '../src/attendance/attendance-service-client.interface.js';
+import {
+  WORK_SCHEDULE_CLIENT,
+  type IWorkScheduleClient,
+} from '../src/schedules/work-schedule-client.interface.js';
 import {
   EMPLOYEE_SERVICE_CLIENT,
   type IEmployeeServiceClient,
@@ -67,6 +73,7 @@ const HEALTH_PATH = '/api/v1/health';
 const HR_ROUTE_PATH = '/api/v1/route-guard-tests/hr';
 const POSITIONS_PATH = '/api/v1/positions';
 const EMPLOYEE_STATUSES_PATH = '/api/v1/employee-statuses';
+const WORK_SCHEDULES_PATH = '/api/v1/work-schedules';
 const CREATE_EMPLOYEE_PATH = '/api/v1/employees';
 const OWN_PROFILE_PATH = '/api/v1/employees/me';
 const OWN_PHOTO_PATH = '/api/v1/employees/me/photo';
@@ -288,6 +295,49 @@ const attendanceServiceFake: IAttendanceServiceClient = {
   },
 };
 
+// Stands in for attendance-service's schedule routes. The request bodies are recorded so a test can show what reached it.
+const SAVED_SCHEDULE_VERSION: WorkScheduleVersion = {
+  id: '0b9e8d7c-6a5f-4e3d-8c2b-1a0f9e8d7c6b',
+  name: 'Shortened company schedule',
+  timezone: 'Asia/Jakarta',
+  workingWeekdays: [1, 3, 5],
+  startTime: '08:30',
+  endTime: '17:30',
+  lateCheckinGraceMinutes: 10,
+  earlyCheckoutGraceMinutes: 5,
+  lateCheckoutGraceMinutes: 20,
+  effectiveFrom: '2026-11-16',
+  effectiveUntil: null,
+};
+const SCHEDULE_VERSION_REQUEST = {
+  workingWeekdays: [1, 3, 5],
+  startTime: '08:30',
+  endTime: '17:30',
+  lateCheckinGraceMinutes: 10,
+  earlyCheckoutGraceMinutes: 5,
+  lateCheckoutGraceMinutes: 20,
+  effectiveFrom: '2026-11-16',
+};
+const scheduleVersionCreateRequests: WorkScheduleVersionRequest[] = [];
+const scheduleVersionUpdateRequests: {
+  readonly versionId: string;
+  readonly request: WorkScheduleVersionRequest;
+}[] = [];
+const workScheduleClientFake: IWorkScheduleClient = {
+  getScheduleOverview: () =>
+    Promise.reject(new Error('The route guard tests never read the schedule overview.')),
+  createVersion: (accessToken: string, request: WorkScheduleVersionRequest) => {
+    forwardedTokens.push(accessToken);
+    scheduleVersionCreateRequests.push(request);
+    return Promise.resolve(SAVED_SCHEDULE_VERSION);
+  },
+  updateVersion: (accessToken: string, versionId: string, request: WorkScheduleVersionRequest) => {
+    forwardedTokens.push(accessToken);
+    scheduleVersionUpdateRequests.push({ versionId, request });
+    return Promise.resolve(SAVED_SCHEDULE_VERSION);
+  },
+};
+
 @Controller('route-guard-tests/self-service')
 class StubSelfServiceController {
   @Roles(Role.EMPLOYEE, Role.HR)
@@ -403,6 +453,8 @@ describe('api-gateway route guards through a running auth-service', () => {
       .useValue(employeeServiceFake)
       .overrideProvider(ATTENDANCE_SERVICE_CLIENT)
       .useValue(attendanceServiceFake)
+      .overrideProvider(WORK_SCHEDULE_CLIENT)
+      .useValue(workScheduleClientFake)
       .compile();
     app = moduleRef.createNestApplication();
     configureApp(app, { CORS_ORIGINS: [] });
@@ -459,6 +511,13 @@ describe('api-gateway route guards through a running auth-service', () => {
   function postWithToken(path: string, accessToken: string, body: unknown) {
     return request(app.getHttpServer())
       .post(path)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(body as object);
+  }
+
+  function putWithToken(path: string, accessToken: string, body: unknown) {
+    return request(app.getHttpServer())
+      .put(path)
       .set('Authorization', `Bearer ${accessToken}`)
       .send(body as object);
   }
@@ -597,6 +656,123 @@ describe('api-gateway route guards through a running auth-service', () => {
         message: 'Your role cannot use this action.',
       });
       expect(forwardedTokens).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 201 with the version and forward the HR token when an HR token creates a schedule version',
+    async () => {
+      forwardedTokens.length = 0;
+      scheduleVersionCreateRequests.length = 0;
+
+      const response = await postWithToken(
+        WORK_SCHEDULES_PATH,
+        hrToken,
+        SCHEDULE_VERSION_REQUEST,
+      ).expect(201);
+
+      expect(response.body).toEqual(SAVED_SCHEDULE_VERSION);
+      expect(forwardedTokens).toEqual([hrToken]);
+      expect(scheduleVersionCreateRequests).toEqual([SCHEDULE_VERSION_REQUEST]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 FORBIDDEN without calling attendance-service when an employee token creates a schedule version',
+    async () => {
+      forwardedTokens.length = 0;
+      scheduleVersionCreateRequests.length = 0;
+
+      const response = await postWithToken(
+        WORK_SCHEDULES_PATH,
+        employeeToken,
+        SCHEDULE_VERSION_REQUEST,
+      ).expect(403);
+
+      expect(response.body).toEqual({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Your role cannot use this action.',
+      });
+      expect(forwardedTokens).toEqual([]);
+      expect(scheduleVersionCreateRequests).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 401 UNAUTHORIZED without calling attendance-service when no token creates a schedule version',
+    async () => {
+      forwardedTokens.length = 0;
+      scheduleVersionCreateRequests.length = 0;
+
+      const response = await request(app.getHttpServer())
+        .post(WORK_SCHEDULES_PATH)
+        .send(SCHEDULE_VERSION_REQUEST)
+        .expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(scheduleVersionCreateRequests).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 400 VALIDATION_FAILED without calling attendance-service when the create carries effectiveUntil',
+    async () => {
+      forwardedTokens.length = 0;
+      scheduleVersionCreateRequests.length = 0;
+
+      const response = await postWithToken(WORK_SCHEDULES_PATH, hrToken, {
+        ...SCHEDULE_VERSION_REQUEST,
+        effectiveUntil: '2026-12-01',
+      }).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(scheduleVersionCreateRequests).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 200 with the version and forward the HR token when an HR token edits a schedule version',
+    async () => {
+      forwardedTokens.length = 0;
+      scheduleVersionUpdateRequests.length = 0;
+
+      const response = await putWithToken(
+        `${WORK_SCHEDULES_PATH}/${SAVED_SCHEDULE_VERSION.id}`,
+        hrToken,
+        SCHEDULE_VERSION_REQUEST,
+      ).expect(200);
+
+      expect(response.body).toEqual(SAVED_SCHEDULE_VERSION);
+      expect(forwardedTokens).toEqual([hrToken]);
+      expect(scheduleVersionUpdateRequests).toEqual([
+        { versionId: SAVED_SCHEDULE_VERSION.id, request: SCHEDULE_VERSION_REQUEST },
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 FORBIDDEN without calling attendance-service when an employee token edits a schedule version',
+    async () => {
+      forwardedTokens.length = 0;
+      scheduleVersionUpdateRequests.length = 0;
+
+      await putWithToken(
+        `${WORK_SCHEDULES_PATH}/${SAVED_SCHEDULE_VERSION.id}`,
+        employeeToken,
+        SCHEDULE_VERSION_REQUEST,
+      ).expect(403);
+
+      expect(forwardedTokens).toEqual([]);
+      expect(scheduleVersionUpdateRequests).toEqual([]);
     },
     TEST_TIMEOUT_MS,
   );
