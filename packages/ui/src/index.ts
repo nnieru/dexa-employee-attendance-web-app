@@ -16,3 +16,13 @@ export type {
 } from './data-table/data-table.js';
 export { Pagination } from './data-table/pagination.js';
 export type { PaginationProps } from './data-table/pagination.js';
+export { StatusLabel } from './status-label.js';
+export type { StatusLabelProps } from './status-label.js';
+export { DateRangeFilter } from './date-range-filter.js';
+export type { DateRangeFilterProps } from './date-range-filter.js';
+export { calculateDateRangePreset } from './date-range-presets.js';
+export type { DatePresetPeriod, DateRange } from './date-range-presets.js';
+export { Avatar } from './avatar.js';
+export type { AvatarProps } from './avatar.js';
+export { PhotoUploader } from './photo-uploader.js';
+export type { PhotoUploaderProps } from './photo-uploader.js';

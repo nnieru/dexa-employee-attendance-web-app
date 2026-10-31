@@ -574,3 +574,198 @@ body {
 .dexa-data-table__refreshing:not(:empty) {
   margin-block-end: var(--space-2);
 }
+
+/* Status text is static: the tone adds color, and the visible text carries the meaning (DESIGN §7, §9). */
+.dexa-status-label {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-body);
+  overflow-wrap: anywhere;
+}
+
+/* Neutral uses the DESIGN §3 pair (muted text on white); muted text on surface-muted falls below 4.5:1. */
+.dexa-status-label--neutral {
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.dexa-status-label--success {
+  color: var(--color-success);
+  background: var(--color-success-surface);
+  border-color: var(--color-success);
+}
+
+.dexa-status-label--warning {
+  color: var(--color-warning);
+  background: var(--color-warning-surface);
+  border-color: var(--color-warning);
+}
+
+.dexa-status-label--error {
+  color: var(--color-error);
+  background: var(--color-error-surface);
+  border-color: var(--color-error);
+}
+
+.dexa-status-label--info {
+  color: var(--color-info);
+  background: var(--color-info-surface);
+  border-color: var(--color-info);
+}
+
+.dexa-date-range-filter {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.dexa-date-range-filter__range {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.dexa-date-range-filter__legend {
+  margin-block-end: var(--space-2);
+  padding: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-body);
+}
+
+.dexa-date-range-filter__fields {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dexa-date-range-filter__presets,
+.dexa-date-range-filter__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .dexa-date-range-filter__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.dexa-photo-uploader {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  min-width: 0;
+}
+
+.dexa-photo-uploader__preview {
+  width: var(--space-16);
+  height: var(--space-16);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-round);
+  object-fit: cover;
+}
+
+.dexa-photo-uploader__control {
+  position: relative;
+  display: inline-flex;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: var(--control-height);
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width) solid var(--color-brand);
+  border-radius: var(--radius-control);
+  color: var(--color-brand);
+  background: var(--color-surface);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-body);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.dexa-photo-uploader__control:hover {
+  border-color: var(--color-brand-hover);
+  color: var(--color-brand-hover);
+  background: var(--color-brand-soft);
+}
+
+.dexa-photo-uploader__control:has(.dexa-photo-uploader__input:focus-visible) {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.dexa-photo-uploader__control--disabled,
+.dexa-photo-uploader__control--disabled:hover {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+  cursor: not-allowed;
+}
+
+/* The native input stays in the accessibility tree and keyboard order; the label carries the look. */
+.dexa-photo-uploader__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dexa-avatar {
+  display: block;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border-radius: var(--radius-round);
+  object-fit: cover;
+}
+
+.dexa-avatar--initials {
+  display: grid;
+  place-items: center;
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  user-select: none;
+}
+
+.dexa-avatar--small {
+  width: var(--space-8);
+  height: var(--space-8);
+  font-size: var(--font-size-caption);
+}
+
+.dexa-avatar--medium {
+  width: var(--space-12);
+  height: var(--space-12);
+  font-size: var(--font-size-small);
+}
+
+.dexa-avatar--large {
+  width: var(--space-16);
+  height: var(--space-16);
+  font-size: var(--font-size-h3);
+}
