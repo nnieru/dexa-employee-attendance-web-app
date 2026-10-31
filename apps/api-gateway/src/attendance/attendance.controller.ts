@@ -1,15 +1,18 @@
 import { Roles } from '@dexa/common';
 import {
+  attendanceSummaryQuerySchema,
   clockInRequestSchema,
   clockOutRequestSchema,
   Role,
+  type AttendanceSummaryPage,
+  type AttendanceSummaryQuery,
   type ClockInRequest,
   type ClockInResponse,
   type ClockOutRequest,
   type ClockOutResponse,
   type TodayAttendanceResponse,
 } from '@dexa/contracts';
-import { Body, Controller, Get, Headers, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Inject, Post, Query } from '@nestjs/common';
 import { readBearerToken } from '../auth/read-bearer-token.js';
 import {
   ATTENDANCE_SERVICE_CLIENT,
@@ -49,5 +52,15 @@ export class AttendanceController {
     @Headers('authorization') authorization: string | undefined,
   ): Promise<TodayAttendanceResponse> {
     return this.attendanceService.getToday(readBearerToken(authorization));
+  }
+
+  // The range and page are validated here and again by attendance-service. The defaults are filled there, from its clock.
+  @Roles(Role.EMPLOYEE, Role.HR)
+  @Get('me')
+  listOwnSummary(
+    @Headers('authorization') authorization: string | undefined,
+    @Query(new ZodValidationPipe(attendanceSummaryQuerySchema)) query: AttendanceSummaryQuery,
+  ): Promise<AttendanceSummaryPage> {
+    return this.attendanceService.listOwnSummary(readBearerToken(authorization), query);
   }
 }

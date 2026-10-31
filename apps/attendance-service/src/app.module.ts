@@ -11,6 +11,7 @@ import { ConfigModule } from './config/config.module.js';
 import { DatabaseModule } from './infrastructure/db/database.module.js';
 import { PunchesModule } from './punches/punches.module.js';
 import { SchedulesModule } from './schedules/schedules.module.js';
+import { AttendanceSummaryModule } from './summary/attendance-summary.module.js';
 import { ClockModule } from './time/clock.module.js';
 
 /**
@@ -31,6 +32,7 @@ export function createAppModule(config: AttendanceServiceConfig): Type<unknown> 
       DatabaseModule,
       SchedulesModule,
       PunchesModule,
+      AttendanceSummaryModule,
       HealthModule,
     ],
   })

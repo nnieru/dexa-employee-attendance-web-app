@@ -1,10 +1,13 @@
 import { INTERNAL_HTTP_CLIENT, ServiceName, type IInternalHttpClient } from '@dexa/common';
 import {
   API_PREFIX,
+  attendanceSummaryPageSchema,
   clockInResponseSchema,
   clockOutResponseSchema,
   ErrorCode,
   todayAttendanceResponseSchema,
+  type AttendanceSummaryPage,
+  type AttendanceSummaryQuery,
   type ClockInResponse,
   type ClockOutResponse,
   type TodayAttendanceResponse,
@@ -18,6 +21,7 @@ const USER_TOKEN_REFUSAL_CODES = [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISA
 const CLOCK_IN_PATH = `/${API_PREFIX}/attendance/clock-in`;
 const CLOCK_OUT_PATH = `/${API_PREFIX}/attendance/clock-out`;
 const TODAY_PATH = `/${API_PREFIX}/attendance/me/today`;
+const SUMMARY_PATH = `/${API_PREFIX}/attendance/me`;
 
 @Injectable()
 export class AttendanceServiceClient implements IAttendanceServiceClient {
@@ -58,4 +62,30 @@ export class AttendanceServiceClient implements IAttendanceServiceClient {
       responseSchema: todayAttendanceResponseSchema,
     });
   }
+
+  // A read, so it is not retried by the gateway, as for today. Each query parameter is forwarded as the caller sent it.
+  listOwnSummary(
+    accessToken: string,
+    query: AttendanceSummaryQuery,
+  ): Promise<AttendanceSummaryPage> {
+    return this.httpClient.get({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: SUMMARY_PATH,
+      query: toSummaryQueryParameters(query),
+      forwardedUserToken: accessToken,
+      refusalCodes: USER_TOKEN_REFUSAL_CODES,
+      responseSchema: attendanceSummaryPageSchema,
+    });
+  }
+}
+
+// An absent range bound is omitted, not sent empty, so attendance-service fills it from its own clock.
+function toSummaryQueryParameters(query: AttendanceSummaryQuery): Record<string, string> {
+  const parameters: Record<string, string> = {
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+  };
+  if (query.from !== undefined) parameters.from = query.from;
+  if (query.to !== undefined) parameters.to = query.to;
+  return parameters;
 }

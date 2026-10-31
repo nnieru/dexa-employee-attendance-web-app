@@ -6,6 +6,7 @@ import {
 } from '@dexa/common';
 import {
   ErrorCode,
+  type AttendanceSummaryPage,
   type ClockInResponse,
   type ClockOutResponse,
   type TodayAttendanceResponse,
@@ -33,6 +34,22 @@ const CLOCK_OUT_RESPONSE: ClockOutResponse = {
   recordedAt: '2026-11-02T11:00:00.000Z',
   businessDate: '2026-11-02',
   classification: 'ON_TIME_CHECKOUT',
+};
+
+const SUMMARY_PAGE: AttendanceSummaryPage = {
+  items: [
+    {
+      businessDate: '2026-11-02',
+      clockInAt: '2026-11-02T02:30:00.000Z',
+      clockInStatus: 'LATE_CHECKIN',
+      clockOutAt: null,
+      clockOutStatus: 'PENDING_CHECKOUT',
+    },
+  ],
+  page: 2,
+  pageSize: 5,
+  totalItems: 6,
+  totalPages: 2,
 };
 
 // Answers every get and post with the given response, parsed by the schema the client passes, and records the requests.
@@ -124,5 +141,54 @@ describe('AttendanceServiceClient.clockOut', () => {
       forwardedUserToken: USER_TOKEN,
       refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
     });
+  });
+});
+
+describe('AttendanceServiceClient.listOwnSummary', () => {
+  it.each([
+    {
+      condition: 'the range and page are given',
+      query: { from: '2026-11-01', to: '2026-11-30', page: 2, pageSize: 5 },
+      expectedParameters: { from: '2026-11-01', to: '2026-11-30', page: '2', pageSize: '5' },
+    },
+    {
+      condition: 'the range is left to attendance-service',
+      query: { page: 1, pageSize: 20 },
+      expectedParameters: { page: '1', pageSize: '20' },
+    },
+    {
+      condition: 'only the end of the range is given',
+      query: { to: '2026-11-15', page: 1, pageSize: 20 },
+      expectedParameters: { to: '2026-11-15', page: '1', pageSize: '20' },
+    },
+  ])(
+    'should get the summary on attendance-service with the query and the user token when $condition',
+    async ({ query, expectedParameters }) => {
+      const recorded: InternalGetRequest<unknown>[] = [];
+      const client = new AttendanceServiceClient(createRecordingHttpClient(SUMMARY_PAGE, recorded));
+
+      const response = await client.listOwnSummary(USER_TOKEN, query);
+
+      expect(response).toEqual(SUMMARY_PAGE);
+      expect(recorded).toHaveLength(1);
+      expect(recorded[0]).toMatchObject({
+        target: ServiceName.ATTENDANCE_SERVICE,
+        path: '/api/v1/attendance/me',
+        forwardedUserToken: USER_TOKEN,
+        refusalCodes: [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED],
+      });
+      expect(recorded[0]?.query).toEqual(expectedParameters);
+    },
+  );
+
+  it('should reject the response when attendance-service answers a row the contract does not define', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const malformedPage = {
+      ...SUMMARY_PAGE,
+      items: [{ ...SUMMARY_PAGE.items[0], clockOutAt: null, clockOutStatus: 'ON_TIME_CHECKOUT' }],
+    };
+    const client = new AttendanceServiceClient(createRecordingHttpClient(malformedPage, recorded));
+
+    await expect(client.listOwnSummary(USER_TOKEN, { page: 1, pageSize: 20 })).rejects.toThrow();
   });
 });

@@ -117,6 +117,15 @@ export {
   type ClockOutResponse,
 } from './attendance/clock-out.schema.js';
 export {
+  attendanceSummaryItemSchema,
+  attendanceSummaryPageSchema,
+  attendanceSummaryQuerySchema,
+  isSummaryRangeOrdered,
+  type AttendanceSummaryItem,
+  type AttendanceSummaryPage,
+  type AttendanceSummaryQuery,
+} from './attendance/attendance-summary.schema.js';
+export {
   todayAttendanceResponseSchema,
   todayStateSchema,
   type TodayAttendanceResponse,
