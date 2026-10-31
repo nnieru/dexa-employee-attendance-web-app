@@ -61,6 +61,18 @@ export {
 } from './employees/create-employee.schema.js';
 export { employeeDetailSchema, type EmployeeDetail } from './employees/employee-detail.schema.js';
 export {
+  PHOTO_THUMBNAIL_DATA_URL_PREFIX,
+  PHOTO_THUMBNAIL_MAX_ACCOUNT_IDS,
+  PHOTO_THUMBNAIL_QUALITY,
+  PHOTO_THUMBNAIL_SIZE,
+  photoThumbnailItemSchema,
+  photoThumbnailRequestSchema,
+  photoThumbnailResponseSchema,
+  type PhotoThumbnailItem,
+  type PhotoThumbnailRequest,
+  type PhotoThumbnailResponse,
+} from './employees/employee-photo-thumbnail.schema.js';
+export {
   EmployeeProvisioningSavedPhase,
   employeeProvisioningIncompleteDetailsSchema,
   type EmployeeProvisioningIncompleteDetails,

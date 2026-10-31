@@ -10,7 +10,10 @@ import {
 import {
   ErrorCode,
   PHOTO_FIELD_NAME,
+  PHOTO_THUMBNAIL_DATA_URL_PREFIX,
   type CreateEmployeeRequest,
+  type PhotoThumbnailRequest,
+  type PhotoThumbnailResponse,
   type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
   Role,
@@ -275,4 +278,76 @@ describe('EmployeeServiceClient.updateEmployee', () => {
       passThroughErrorCodes: [ErrorCode.EMPLOYEE_UPDATE_INCOMPLETE],
     });
   });
+});
+
+describe('EmployeeServiceClient.getPhotoThumbnails', () => {
+  const THUMBNAIL_ACCOUNT_ID = '5f0c1f3e-8d2a-4b7e-9c61-2a4d6e8f0b13';
+  const THUMBNAIL_REQUEST: PhotoThumbnailRequest = { accountIds: [THUMBNAIL_ACCOUNT_ID] };
+  const ANSWER: PhotoThumbnailResponse = {
+    items: [
+      {
+        accountId: THUMBNAIL_ACCOUNT_ID,
+        thumbnail: `${PHOTO_THUMBNAIL_DATA_URL_PREFIX}/9j/4AAQSkZJRg==`,
+      },
+    ],
+  };
+
+  it('should post the account IDs on behalf of the user and never retry the call', async () => {
+    const recordedPosts: InternalPostRequest<unknown>[] = [];
+    const httpClient: IInternalHttpClient = {
+      ...rejectingHttpClient(),
+      post: (postRequest) => {
+        recordedPosts.push(postRequest);
+        return Promise.reject(new Error('The recording client does not answer.'));
+      },
+    };
+    const client = new EmployeeServiceClient(httpClient);
+
+    await client.getPhotoThumbnails(USER, THUMBNAIL_REQUEST).catch(() => undefined);
+
+    expect(recordedPosts).toHaveLength(1);
+    expect(recordedPosts[0]).toMatchObject({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: '/api/v1/employees/photo-thumbnails',
+      body: THUMBNAIL_REQUEST,
+      onBehalfOf: USER,
+    });
+  });
+
+  it('should return the answer that the internal client parsed', async () => {
+    const httpClient: IInternalHttpClient = {
+      ...rejectingHttpClient(),
+      // The real internal client parses the answer with the request's schema, so the fake does the same.
+      post: <TResponse>(postRequest: InternalPostRequest<TResponse>) =>
+        Promise.resolve(postRequest.responseSchema.parse(ANSWER)),
+    };
+    const client = new EmployeeServiceClient(httpClient);
+
+    await expect(client.getPhotoThumbnails(USER, THUMBNAIL_REQUEST)).resolves.toEqual(ANSWER);
+  });
+
+  it.each([
+    { condition: 'the thumbnail is a PNG', thumbnail: 'data:image/png;base64,/9j/4AAQ' },
+    { condition: 'the thumbnail is a plain URL', thumbnail: '/api/v1/employees/x/photo' },
+  ])(
+    'should parse the answer with a schema that rejects the answer when $condition',
+    async ({ thumbnail }) => {
+      const recordedPosts: InternalPostRequest<unknown>[] = [];
+      const httpClient: IInternalHttpClient = {
+        ...rejectingHttpClient(),
+        post: (postRequest) => {
+          recordedPosts.push(postRequest);
+          return Promise.reject(new Error('The recording client does not answer.'));
+        },
+      };
+      const client = new EmployeeServiceClient(httpClient);
+      await client.getPhotoThumbnails(USER, THUMBNAIL_REQUEST).catch(() => undefined);
+
+      const parsed = recordedPosts[0]?.responseSchema.safeParse({
+        items: [{ accountId: THUMBNAIL_ACCOUNT_ID, thumbnail }],
+      });
+
+      expect(parsed?.success).toBe(false);
+    },
+  );
 });

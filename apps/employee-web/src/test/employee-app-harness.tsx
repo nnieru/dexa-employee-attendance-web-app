@@ -22,6 +22,32 @@ export const HR_ACCOUNT = {
 };
 export const VALID_PASSWORD = 'correct-horse-1';
 
+export const OWN_PROFILE_URL = '/api/v1/employees/me';
+export const OWN_PHOTO_URL = '/api/v1/employees/me/photo';
+type OwnProfileFixture = {
+  accountId: string;
+  name: string;
+  email: string;
+  position: { code: string; name: string };
+  phoneNumber: string | null;
+  photoUrl: string | null;
+  profileStatus: 'COMPLETE' | 'INCOMPLETE';
+};
+
+export const OWN_PROFILE: OwnProfileFixture = {
+  accountId: EMPLOYEE_ACCOUNT.id,
+  name: 'Rina Kusuma',
+  email: 'rina.kusuma@dexa.test',
+  position: { code: 'FULLSTACK_DEVELOPER', name: 'Fullstack Developer' },
+  phoneNumber: '+6281234567890',
+  photoUrl: null,
+  profileStatus: 'COMPLETE',
+};
+
+export function ownProfileSucceeds(profile: OwnProfileFixture = OWN_PROFILE) {
+  return http.get(OWN_PROFILE_URL, () => HttpResponse.json(profile));
+}
+
 export function loginResponseFor(account: typeof EMPLOYEE_ACCOUNT) {
   return { accessToken: ACCESS_TOKEN, tokenType: 'Bearer', expiresIn: 3600, account };
 }

@@ -17,6 +17,10 @@ export type {
   DataTableProps,
   DataTableStatus,
 } from './data-table/data-table.js';
+export {
+  createDataTableColumnHelper,
+  type DataTableFeatures,
+} from './data-table/data-table-features.js';
 export { Pagination } from './data-table/pagination.js';
 export type { PaginationProps } from './data-table/pagination.js';
 export { StatusLabel } from './status-label.js';

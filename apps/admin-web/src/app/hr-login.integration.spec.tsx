@@ -18,6 +18,7 @@ import {
   signInWith,
 } from '../test/admin-app-harness.js';
 import { listenForWindowFocus } from '@dexa/session';
+import { employeeListSucceeds, photoThumbnailsSucceeds } from '../test/employee-list-fixtures.js';
 
 const SESSION_CHECK_INTERVAL_MS = 30_000;
 
@@ -26,6 +27,7 @@ let stopListeningForWindowFocus: () => void = () => undefined;
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
+  mswServer.use(employeeListSucceeds(), photoThumbnailsSucceeds());
   stopListeningForWindowFocus = listenForWindowFocus();
 });
 

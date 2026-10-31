@@ -32,3 +32,17 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
 }
+
+/* Search row of the employee list: one field and its Search button, wrapping on narrow screens (mockup .filters). */
+.employee-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-block: var(--space-4);
+}
+
+.employee-search .dexa-field {
+  flex: 1 1 16rem;
+  max-width: 26rem;
+}

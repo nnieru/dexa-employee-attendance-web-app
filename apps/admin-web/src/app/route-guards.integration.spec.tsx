@@ -13,11 +13,17 @@ import {
   signInWith,
 } from '../test/admin-app-harness.js';
 import { listenForWindowFocus } from '@dexa/session';
+import { employeeListSucceeds, photoThumbnailsSucceeds } from '../test/employee-list-fixtures.js';
 
 let stopListeningForWindowFocus: () => void = () => undefined;
 
 beforeEach(() => {
-  mswServer.use(loginSucceeds(), accountCheckSucceeds());
+  mswServer.use(
+    loginSucceeds(),
+    accountCheckSucceeds(),
+    employeeListSucceeds(),
+    photoThumbnailsSucceeds(),
+  );
   stopListeningForWindowFocus = listenForWindowFocus();
 });
 
@@ -190,11 +196,11 @@ describe('HR route guards', () => {
     },
   );
 
-  it('should show the employee list placeholder on Employees when the HR user is signed in', async () => {
+  it('should show the employee list on Employees when the HR user is signed in', async () => {
     await signInFrom('/login');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Employees' })).toBeInTheDocument();
-    expect(screen.getByText('Employee list appears here.')).toBeInTheDocument();
+    expect(await screen.findByText('No employees yet.')).toBeInTheDocument();
   });
 
   it('should return to login with no session-ended message when the HR user presses Logout', async () => {

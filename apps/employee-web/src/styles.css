@@ -16,6 +16,103 @@
   }
 }
 
+/* Profile panel: a genuine task group, so a white surface with no shadow (DESIGN §7). */
+.employee-profile-panel {
+  display: grid;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+@media (max-width: 767px) {
+  .employee-profile-panel {
+    padding: var(--space-4);
+  }
+}
+
+.employee-profile-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.employee-profile-header__summary {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+}
+
+.employee-profile-header__name {
+  margin: 0;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+}
+
+.employee-profile-header__position {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.employee-profile-fields {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* Loading skeleton with the same shape as the profile panel (DESIGN §9). */
+.employee-profile-skeleton__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.employee-profile-skeleton__field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.employee-profile-skeleton__block {
+  display: block;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+}
+
+.employee-profile-skeleton__avatar {
+  width: 6rem;
+  height: 6rem;
+  border-radius: var(--radius-round);
+}
+
+.employee-profile-skeleton__summary {
+  display: grid;
+  gap: var(--space-2);
+  width: min(100%, 16rem);
+}
+
+.employee-profile-skeleton__line-wide {
+  height: 1.25rem;
+  width: 60%;
+}
+
+.employee-profile-skeleton__line {
+  height: 1rem;
+  width: 40%;
+}
+
+.employee-profile-skeleton__label {
+  height: 0.75rem;
+  width: 30%;
+}
+
+.employee-profile-skeleton__input {
+  height: 2.75rem;
+  width: 100%;
+}
+
 /* Empty state for employee pages that later tasks build (DESIGN §9): short, centred, no fake data. */
 .employee-empty-state {
   display: grid;

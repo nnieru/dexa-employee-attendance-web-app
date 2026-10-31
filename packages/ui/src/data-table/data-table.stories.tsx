@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { createColumnHelper } from '@tanstack/react-table';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { DataTable, type DataTableColumn, type DataTableStatus } from './data-table.js';
-import type { DataTableFeatures } from './data-table-features.js';
+import { createDataTableColumnHelper } from './data-table-features.js';
 
 type AttendanceRow = {
   id: string;
@@ -47,7 +46,7 @@ const ATTENDANCE_ROWS: Array<AttendanceRow> = [
   },
 ];
 
-const helper = createColumnHelper<DataTableFeatures, AttendanceRow>();
+const helper = createDataTableColumnHelper<AttendanceRow>();
 
 const BASIC_COLUMNS = helper.columns([
   helper.accessor('employeeName', { header: 'Employee' }),

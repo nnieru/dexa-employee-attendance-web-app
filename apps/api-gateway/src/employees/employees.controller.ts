@@ -4,6 +4,7 @@ import {
   createEmployeeRequestSchema,
   employeeListQuerySchema,
   PHOTO_CONTENT_TYPE,
+  photoThumbnailRequestSchema,
   Role,
   updateEmployeeRequestSchema,
   updateOwnProfileRequestSchema,
@@ -12,6 +13,8 @@ import {
   type EmployeeListPage,
   type EmployeeListQuery,
   type OwnProfile,
+  type PhotoThumbnailRequest,
+  type PhotoThumbnailResponse,
   type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
 } from '@dexa/contracts';
@@ -131,5 +134,18 @@ export class EmployeesController {
   ): Promise<StreamableFile> {
     const photo = await this.employeeService.getEmployeePhoto(user, accountId);
     return new StreamableFile(photo.body, { type: PHOTO_CONTENT_TYPE });
+  }
+
+  // HR's batched thumbnails for the employee list (D-57). One request per page: the body holds at most 100 unique IDs,
+  // checked here and again by employee-service. A POST that reads answers 200, and it is never retried by the gateway.
+  @Roles(Role.HR)
+  @Post('photo-thumbnails')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'private, no-store')
+  getPhotoThumbnails(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(photoThumbnailRequestSchema)) request: PhotoThumbnailRequest,
+  ): Promise<PhotoThumbnailResponse> {
+    return this.employeeService.getPhotoThumbnails(user, request);
   }
 }

@@ -113,3 +113,85 @@ describe('FilePhotoStorage.remove', () => {
     expect((await stat(join(root, OUTSIDE_FILE_NAME))).isFile()).toBe(true);
   });
 });
+
+const THUMBNAIL_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x54, 0x48]);
+
+describe('FilePhotoStorage.readThumbnail', () => {
+  it('should resolve to undefined when no thumbnail is cached for the photo', async () => {
+    const photoKey = await storage.save(PHOTO_BYTES);
+
+    await expect(storage.readThumbnail(photoKey)).resolves.toBeUndefined();
+  });
+
+  it('should resolve to the cached bytes when a thumbnail was saved for the photo', async () => {
+    const photoKey = await storage.save(PHOTO_BYTES);
+    await storage.saveThumbnail(photoKey, THUMBNAIL_BYTES);
+
+    expect((await storage.readThumbnail(photoKey))?.equals(THUMBNAIL_BYTES)).toBe(true);
+  });
+
+  it('should reject the key without reading any file when the key is a traversal', async () => {
+    await writeFile(join(root, OUTSIDE_FILE_NAME), OUTSIDE_FILE_BYTES);
+
+    await expectRejectedAsMalformed(storage.readThumbnail(`../${OUTSIDE_FILE_NAME}`));
+  });
+});
+
+describe('FilePhotoStorage.saveThumbnail', () => {
+  it('should name the thumbnail beside the photo with the photo key and the thumbnail suffix', async () => {
+    const photoKey = await storage.save(PHOTO_BYTES);
+
+    await storage.saveThumbnail(photoKey, THUMBNAIL_BYTES);
+
+    expect((await readdir(directory)).sort()).toEqual([photoKey, `${photoKey}.thumb.jpg`].sort());
+  });
+
+  it('should leave no partial file in the directory when the thumbnail is saved', async () => {
+    const photoKey = await storage.save(PHOTO_BYTES);
+
+    await storage.saveThumbnail(photoKey, THUMBNAIL_BYTES);
+
+    expect((await readdir(directory)).some((name) => name.endsWith('.partial'))).toBe(false);
+  });
+
+  it('should reject the key without writing any file when the key is a traversal', async () => {
+    await expectRejectedAsMalformed(
+      storage.saveThumbnail(`../${OUTSIDE_FILE_NAME}`, THUMBNAIL_BYTES),
+    );
+
+    expect(await readdir(directory)).toEqual([]);
+  });
+});
+
+describe('FilePhotoStorage.remove with a cached thumbnail', () => {
+  it('should delete the photo and its cached thumbnail together when the photo is removed', async () => {
+    const photoKey = await storage.save(PHOTO_BYTES);
+    await storage.saveThumbnail(photoKey, THUMBNAIL_BYTES);
+
+    await storage.remove(photoKey);
+
+    expect(await readdir(directory)).toEqual([]);
+  });
+
+  it('should keep other photos and their thumbnails when one photo is removed', async () => {
+    const removedKey = await storage.save(PHOTO_BYTES);
+    const keptKey = await storage.save(PHOTO_BYTES);
+    await storage.saveThumbnail(removedKey, THUMBNAIL_BYTES);
+    await storage.saveThumbnail(keptKey, THUMBNAIL_BYTES);
+
+    await storage.remove(removedKey);
+
+    expect((await readdir(directory)).sort()).toEqual([keptKey, `${keptKey}.thumb.jpg`].sort());
+  });
+
+  it('should remove a leftover thumbnail when its photo file is already missing', async () => {
+    const photoKey = await storage.save(PHOTO_BYTES);
+    await storage.saveThumbnail(photoKey, THUMBNAIL_BYTES);
+    await storage.remove(photoKey);
+    await storage.saveThumbnail(photoKey, THUMBNAIL_BYTES);
+
+    await storage.remove(photoKey);
+
+    expect(await readdir(directory)).toEqual([]);
+  });
+});

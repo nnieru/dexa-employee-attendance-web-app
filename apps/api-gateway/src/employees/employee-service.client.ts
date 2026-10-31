@@ -13,12 +13,15 @@ import {
   masterOptionListSchema,
   ownProfileSchema,
   PHOTO_FIELD_NAME,
+  photoThumbnailResponseSchema,
   type CreateEmployeeRequest,
   type EmployeeDetail,
   type EmployeeListPage,
   type EmployeeListQuery,
   type MasterOption,
   type OwnProfile,
+  type PhotoThumbnailRequest,
+  type PhotoThumbnailResponse,
   type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
 } from '@dexa/contracts';
@@ -146,6 +149,21 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
       path: `${EMPLOYEES_PATH}/${encodeURIComponent(accountId)}/photo`,
       onBehalfOf: user,
       timeoutMilliseconds: PHOTO_TIMEOUT_MILLISECONDS,
+    });
+  }
+
+  // A POST that only reads, so it is not retried: the answer is bounded by the request schema (D-57). employee-service
+  // decides whether HR may read thumbnails, so the call acts for the caller.
+  getPhotoThumbnails(
+    user: AuthenticatedUser,
+    request: PhotoThumbnailRequest,
+  ): Promise<PhotoThumbnailResponse> {
+    return this.httpClient.post({
+      target: ServiceName.EMPLOYEE_SERVICE,
+      path: `${EMPLOYEES_PATH}/photo-thumbnails`,
+      body: request,
+      onBehalfOf: user,
+      responseSchema: photoThumbnailResponseSchema,
     });
   }
 }

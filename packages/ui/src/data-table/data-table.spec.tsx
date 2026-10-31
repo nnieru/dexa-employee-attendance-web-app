@@ -1,9 +1,8 @@
-import { createColumnHelper } from '@tanstack/react-table';
 import { expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DataTable, type DataTablePagination } from './data-table.js';
-import type { DataTableFeatures } from './data-table-features.js';
+import { createDataTableColumnHelper } from './data-table-features.js';
 
 type AttendanceRow = {
   id: string;
@@ -11,7 +10,7 @@ type AttendanceRow = {
   employeeName: string;
 };
 
-const helper = createColumnHelper<DataTableFeatures, AttendanceRow>();
+const helper = createDataTableColumnHelper<AttendanceRow>();
 const columns = helper.columns([
   helper.accessor('employeeName', { header: 'Employee' }),
   helper.accessor('clockIn', { header: 'Clock in' }),
@@ -306,4 +305,28 @@ it('should show the pagination summary when paginationSummary is given', () => {
   );
 
   expect(screen.getByText('2 records')).toBeInTheDocument();
+});
+
+it('should render the cell of a display column built with the column helper when the column has no accessor', () => {
+  const columnsWithDisplay = helper.columns([
+    helper.accessor('employeeName', { header: 'Employee' }),
+    helper.display({
+      id: 'clockInLabel',
+      header: 'Clock in label',
+      cell: ({ row }) => `In ${row.original.clockIn}`,
+    }),
+  ]);
+  render(
+    <DataTable
+      caption="Attendance records"
+      columns={columnsWithDisplay}
+      data={rows}
+      emptyMessage="No attendance."
+      getRowId={getRowId}
+      pagination={buildPagination({ pageCount: 1 })}
+    />,
+  );
+
+  expect(screen.getByRole('columnheader', { name: 'Clock in label' })).toBeInTheDocument();
+  expect(screen.getByRole('cell', { name: 'In 2026-11-02 09:10' })).toBeInTheDocument();
 });

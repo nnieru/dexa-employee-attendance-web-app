@@ -6,6 +6,8 @@ import type {
   EmployeeListQuery,
   MasterOption,
   OwnProfile,
+  PhotoThumbnailRequest,
+  PhotoThumbnailResponse,
   UpdateEmployeeRequest,
   UpdateOwnProfileRequest,
 } from '@dexa/contracts';
@@ -26,6 +28,10 @@ export interface IEmployeeServiceClient {
   getOwnPhoto(user: AuthenticatedUser): Promise<InternalBinaryResponse>;
   listEmployees(user: AuthenticatedUser, query: EmployeeListQuery): Promise<EmployeeListPage>;
   getEmployeePhoto(user: AuthenticatedUser, accountId: string): Promise<InternalBinaryResponse>;
+  getPhotoThumbnails(
+    user: AuthenticatedUser,
+    request: PhotoThumbnailRequest,
+  ): Promise<PhotoThumbnailResponse>;
 }
 
 export const EMPLOYEE_SERVICE_CLIENT = Symbol('IEmployeeServiceClient');

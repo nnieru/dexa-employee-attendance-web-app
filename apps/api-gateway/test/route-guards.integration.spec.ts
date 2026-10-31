@@ -16,6 +16,7 @@ import {
   type AttendanceMonitoringQuery,
   MAX_PHOTO_BYTES,
   PHOTO_CONTENT_TYPE,
+  PHOTO_THUMBNAIL_DATA_URL_PREFIX,
   Portal,
   Role,
   type CreateEmployeeRequest,
@@ -27,6 +28,8 @@ import {
   type Notification,
   type NotificationPage,
   type OwnProfile,
+  type PhotoThumbnailRequest,
+  type PhotoThumbnailResponse,
   type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
   type WorkCalendarDate,
@@ -98,6 +101,7 @@ const OWN_PROFILE_PATH = '/api/v1/employees/me';
 const OWN_PHOTO_PATH = '/api/v1/employees/me/photo';
 const EMPLOYEE_LIST_PATH = '/api/v1/employees';
 const EMPLOYEE_PHOTO_PATH = (accountId: string) => `/api/v1/employees/${accountId}/photo`;
+const THUMBNAIL_PATH = '/api/v1/employees/photo-thumbnails';
 const ATTENDANCE_LIST_PATH = '/api/v1/attendance';
 const ATTENDANCE_RECORD_PATH = `${ATTENDANCE_LIST_PATH}/${randomUUID()}`;
 const PHOTO_MULTIPART_OVERHEAD_BYTES = 64 * 1024;
@@ -233,6 +237,15 @@ const EMPLOYEE_PHOTO_FILE: InternalBinaryResponse = {
 };
 const listQueries: EmployeeListQuery[] = [];
 const requestedPhotoAccountIds: string[] = [];
+const photoThumbnailRequests: PhotoThumbnailRequest[] = [];
+const PHOTO_THUMBNAIL_PAGE: PhotoThumbnailResponse = {
+  items: [
+    {
+      accountId: LISTED_EMPLOYEE_ACCOUNT_ID,
+      thumbnail: `${PHOTO_THUMBNAIL_DATA_URL_PREFIX}${LISTED_EMPLOYEE_PHOTO_BYTES.toString('base64')}`,
+    },
+  ],
+};
 const updateRequests: { readonly accountId: string; readonly request: UpdateEmployeeRequest }[] =
   [];
 const UPDATED_EMPLOYEE: EmployeeDetail = {
@@ -302,6 +315,11 @@ const employeeServiceFake: IEmployeeServiceClient = {
     forwardedUsers.push(user);
     requestedPhotoAccountIds.push(accountId);
     return Promise.resolve(EMPLOYEE_PHOTO_FILE);
+  },
+  getPhotoThumbnails: (user: AuthenticatedUser, request: PhotoThumbnailRequest) => {
+    forwardedUsers.push(user);
+    photoThumbnailRequests.push(request);
+    return Promise.resolve(PHOTO_THUMBNAIL_PAGE);
   },
 };
 
@@ -1547,6 +1565,56 @@ describe('api-gateway route guards through a running auth-service', () => {
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
       expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
       expect(requestedPhotoAccountIds).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return the thumbnails and forward the HR token when HR asks for a page of thumbnails',
+    async () => {
+      forwardedUsers.length = 0;
+      photoThumbnailRequests.length = 0;
+      const thumbnailRequest = { accountIds: [LISTED_EMPLOYEE_ACCOUNT_ID] };
+
+      const response = await postWithToken(THUMBNAIL_PATH, hrToken, thumbnailRequest).expect(200);
+
+      expect(response.body).toEqual(PHOTO_THUMBNAIL_PAGE);
+      expect(forwardedAccountIds()).toEqual([hrToken].map(accountIdOf));
+      expect(photoThumbnailRequests).toEqual([thumbnailRequest]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 without calling employee-service when an employee token asks for thumbnails',
+    async () => {
+      forwardedUsers.length = 0;
+      photoThumbnailRequests.length = 0;
+
+      const response = await postWithToken(THUMBNAIL_PATH, employeeToken, {
+        accountIds: [LISTED_EMPLOYEE_ACCOUNT_ID],
+      }).expect(403);
+
+      expect(response.body).toMatchObject({ statusCode: 403, code: 'FORBIDDEN' });
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
+      expect(photoThumbnailRequests).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 400 without calling employee-service when the thumbnail request repeats an account ID',
+    async () => {
+      forwardedUsers.length = 0;
+      photoThumbnailRequests.length = 0;
+
+      const response = await postWithToken(THUMBNAIL_PATH, hrToken, {
+        accountIds: [LISTED_EMPLOYEE_ACCOUNT_ID, LISTED_EMPLOYEE_ACCOUNT_ID],
+      }).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedAccountIds()).toEqual([].map(accountIdOf));
+      expect(photoThumbnailRequests).toEqual([]);
     },
     TEST_TIMEOUT_MS,
   );

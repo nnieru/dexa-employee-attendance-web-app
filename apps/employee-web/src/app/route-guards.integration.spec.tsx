@@ -6,6 +6,7 @@ import {
   EMPLOYEE_ACCOUNT,
   accountCheckSucceeds,
   loginSucceeds,
+  ownProfileSucceeds,
   renderEmployeeApp,
   signInWith,
 } from '../test/employee-app-harness.js';
@@ -14,7 +15,7 @@ import { listenForWindowFocus } from '@dexa/session';
 let stopListeningForWindowFocus: () => void = () => undefined;
 
 beforeEach(() => {
-  mswServer.use(loginSucceeds(), accountCheckSucceeds());
+  mswServer.use(loginSucceeds(), accountCheckSucceeds(), ownProfileSucceeds());
   stopListeningForWindowFocus = listenForWindowFocus();
 });
 
@@ -138,7 +139,6 @@ describe('employee route guards', () => {
   it.each([
     ['/history', 'History'],
     ['/requests', 'Requests'],
-    ['/profile', 'Profile'],
   ])(
     'should show the coming-soon state on %s when the employee is signed in',
     async (path, title) => {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, open as openFile, rename, unlink } from 'node:fs/promises';
+import { mkdir, open as openFile, readFile, rename, unlink } from 'node:fs/promises';
 import type { Readable } from 'node:stream';
 import { join } from 'node:path';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
@@ -10,6 +10,8 @@ import type { IPhotoStorage } from './photo-storage.interface.js';
 
 // A partial file is written under this suffix, so it can never match a photo key and is renamed only when complete.
 const PARTIAL_SUFFIX = '.partial';
+// A cached thumbnail sits beside its photo. The full name never matches a photo key, so it cannot be opened as a photo.
+const THUMBNAIL_SUFFIX = '.thumb.jpg';
 const NOT_FOUND_CODE = 'ENOENT';
 
 /**
@@ -55,12 +57,29 @@ export class FilePhotoStorage implements IPhotoStorage, OnModuleInit {
     }
   }
 
-  async remove(photoKey: string): Promise<void> {
+  async readThumbnail(photoKey: string): Promise<Buffer | undefined> {
     try {
-      await unlink(this.resolvePath(photoKey));
+      return await readFile(this.resolveThumbnailPath(photoKey));
     } catch (error: unknown) {
-      if (!isErrorCode(error, NOT_FOUND_CODE)) throw error;
+      if (isErrorCode(error, NOT_FOUND_CODE)) return undefined;
+      throw error;
     }
+  }
+
+  async saveThumbnail(photoKey: string, thumbnail: Buffer): Promise<void> {
+    const partialPath = join(this.directory, `${randomUUID()}${PARTIAL_SUFFIX}`);
+    try {
+      await writeAndSync(partialPath, thumbnail);
+      await rename(partialPath, this.resolveThumbnailPath(photoKey));
+    } catch (error: unknown) {
+      await this.discardFailedSave([partialPath]);
+      throw error;
+    }
+  }
+
+  async remove(photoKey: string): Promise<void> {
+    await unlinkIfPresent(this.resolvePath(photoKey));
+    await unlinkIfPresent(this.resolveThumbnailPath(photoKey));
   }
 
   // The key is checked against the strict pattern before it becomes a path, so no key can name a file outside
@@ -68,6 +87,10 @@ export class FilePhotoStorage implements IPhotoStorage, OnModuleInit {
   private resolvePath(photoKey: string): string {
     if (!isPhotoKey(photoKey)) throw new Error('The photo key is malformed.');
     return join(this.directory, photoKey);
+  }
+
+  private resolveThumbnailPath(photoKey: string): string {
+    return `${this.resolvePath(photoKey)}${THUMBNAIL_SUFFIX}`;
   }
 
   // Cleanup must not hide the save failure, so a cleanup failure is logged by its error name only.
@@ -93,6 +116,14 @@ async function writeAndSync(path: string, photo: Buffer): Promise<void> {
     await handle.sync();
   } finally {
     await handle.close();
+  }
+}
+
+async function unlinkIfPresent(path: string): Promise<void> {
+  try {
+    await unlink(path);
+  } catch (error: unknown) {
+    if (!isErrorCode(error, NOT_FOUND_CODE)) throw error;
   }
 }
 
