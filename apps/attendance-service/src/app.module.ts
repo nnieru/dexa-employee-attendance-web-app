@@ -9,6 +9,7 @@ import { Module, type Type } from '@nestjs/common';
 import type { AttendanceServiceConfig } from './config/attendance-service-config.schema.js';
 import { ConfigModule } from './config/config.module.js';
 import { DatabaseModule } from './infrastructure/db/database.module.js';
+import { CalendarModule } from './calendar/calendar.module.js';
 import { AttendanceMonitoringModule } from './monitoring/attendance-monitoring.module.js';
 import { PunchesModule } from './punches/punches.module.js';
 import { SchedulesModule } from './schedules/schedules.module.js';
@@ -35,6 +36,7 @@ export function createAppModule(config: AttendanceServiceConfig): Type<unknown> 
       ClockModule,
       DatabaseModule,
       SchedulesModule,
+      CalendarModule,
       PunchesModule,
       AttendanceSummaryModule,
       AttendanceMonitoringModule,

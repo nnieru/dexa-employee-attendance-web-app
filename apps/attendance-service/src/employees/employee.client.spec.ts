@@ -31,6 +31,7 @@ function recordingHttpClient(
     patch: () => Promise.reject(new Error('The client never patches.')),
     putJson: () => Promise.reject(new Error('The client never puts JSON.')),
     put: () => Promise.reject(new Error('The client never puts.')),
+    delete: () => Promise.reject(new Error('The client never deletes.')),
   };
 }
 

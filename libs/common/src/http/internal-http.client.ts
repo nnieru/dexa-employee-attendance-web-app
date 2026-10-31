@@ -15,6 +15,7 @@ import type {
   IInternalHttpClient,
   InternalBinaryGetRequest,
   InternalBinaryResponse,
+  InternalDeleteRequest,
   InternalGetRequest,
   InternalJsonPutRequest,
   InternalMultipartFile,
@@ -111,6 +112,10 @@ export class InternalHttpClient implements IInternalHttpClient {
 
   putJson<TResponse>(request: InternalJsonPutRequest<TResponse>): Promise<TResponse> {
     return this.sendJson({ ...request, method: 'PUT', responseKind: 'json' });
+  }
+
+  delete<TResponse>(request: InternalDeleteRequest<TResponse>): Promise<TResponse> {
+    return this.sendJson({ ...request, method: 'DELETE', responseKind: 'json' });
   }
 
   put<TResponse>(request: InternalMultipartPutRequest<TResponse>): Promise<TResponse> {

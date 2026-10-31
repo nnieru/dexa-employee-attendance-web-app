@@ -406,3 +406,43 @@ describe('InternalHttpClient.putJson', () => {
     ).resolves.toBeUndefined();
   });
 });
+
+describe('InternalHttpClient.delete', () => {
+  const ACCOUNT_PATH = '/api/v1/internal/accounts/account-1';
+
+  it('should send a DELETE with this service token and resolve to undefined when the target answers 204', async () => {
+    script.respond = () => ({ status: 204 });
+    const client = createClient();
+
+    await expect(
+      client.delete({
+        target: ServiceName.EMPLOYEE_SERVICE,
+        path: ACCOUNT_PATH,
+        responseSchema: z.void(),
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      method: 'DELETE',
+      path: ACCOUNT_PATH,
+      authorization: `Bearer ${SERVICE_TOKEN}`,
+    });
+  });
+
+  it('should send the DELETE once and not retry when the answer is 503', async () => {
+    script.respond = () => jsonError(503, 'UNAVAILABLE', 'Busy.');
+    const client = createClient();
+
+    await expect(
+      client.delete({
+        target: ServiceName.EMPLOYEE_SERVICE,
+        path: ACCOUNT_PATH,
+        responseSchema: z.void(),
+      }),
+    ).rejects.toBeInstanceOf(DependencyUnavailableError);
+
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.method).toBe('DELETE');
+  });
+});

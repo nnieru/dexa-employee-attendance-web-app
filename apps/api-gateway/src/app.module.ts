@@ -11,6 +11,7 @@ import { GatewayAttendanceModule } from './attendance/attendance.module.js';
 import { GatewayAuthModule } from './auth/auth.module.js';
 import { GatewayEmployeesModule } from './employees/employees.module.js';
 import { GatewayWorkSchedulesModule } from './schedules/work-schedules.module.js';
+import { GatewayWorkCalendarDatesModule } from './schedules/work-calendar-dates.module.js';
 
 /**
  * Builds the root module from the validated config. AuthModule.forRoot and InternalHttpModule.forRoot take
@@ -34,6 +35,7 @@ export function createAppModule(config: ApiGatewayConfig): Type<unknown> {
       GatewayEmployeesModule,
       GatewayAttendanceModule,
       GatewayWorkSchedulesModule,
+      GatewayWorkCalendarDatesModule,
       HealthModule,
     ],
   })

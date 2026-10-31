@@ -143,6 +143,18 @@ export {
   type WorkScheduleVersionRequest,
 } from './schedules/work-schedule.schema.js';
 export {
+  WORK_CALENDAR_DATE_DESCRIPTION_MAX_LENGTH,
+  workCalendarDateListQuerySchema,
+  workCalendarDateParamSchema,
+  workCalendarDatePageSchema,
+  workCalendarDateRequestSchema,
+  workCalendarDateSchema,
+  type WorkCalendarDate,
+  type WorkCalendarDateListQuery,
+  type WorkCalendarDatePage,
+  type WorkCalendarDateRequest,
+} from './schedules/work-calendar-date.schema.js';
+export {
   todayAttendanceResponseSchema,
   todayStateSchema,
   type TodayAttendanceResponse,

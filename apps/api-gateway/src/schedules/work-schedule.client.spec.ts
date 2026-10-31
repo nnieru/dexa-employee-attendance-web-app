@@ -68,6 +68,7 @@ function createRecordingHttpClient(
       return Promise.resolve().then(() => request.responseSchema.parse(response));
     },
     put: () => Promise.reject(new Error('The client never puts.')),
+    delete: () => Promise.reject(new Error('The client never deletes.')),
   };
 }
 

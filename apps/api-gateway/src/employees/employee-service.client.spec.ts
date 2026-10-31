@@ -32,6 +32,7 @@ function recordingHttpClient(recorded: InternalGetRequest<unknown>[]): IInternal
     patch: () => Promise.reject(new Error('The client never patches.')),
     putJson: () => Promise.reject(new Error('The client never puts JSON.')),
     put: () => Promise.reject(new Error('The client never puts.')),
+    delete: () => Promise.reject(new Error('The client never deletes.')),
   };
 }
 
@@ -77,6 +78,7 @@ describe('EmployeeServiceClient.updateOwnProfile', () => {
       },
       putJson: () => Promise.reject(new Error('The client never puts JSON here.')),
       put: () => Promise.reject(new Error('The client never puts here.')),
+      delete: () => Promise.reject(new Error('The client never deletes.')),
     };
     const client = new EmployeeServiceClient(httpClient);
 
@@ -187,6 +189,7 @@ function rejectingHttpClient(): IInternalHttpClient {
     patch: () => Promise.reject(new Error('The client never patches.')),
     putJson: () => Promise.reject(new Error('The client never puts JSON here.')),
     put: () => Promise.reject(new Error('The client never puts here.')),
+    delete: () => Promise.reject(new Error('The client never deletes.')),
   };
 }
 

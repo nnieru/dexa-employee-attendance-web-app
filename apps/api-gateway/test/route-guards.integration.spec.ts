@@ -26,6 +26,10 @@ import {
   type OwnProfile,
   type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
+  type WorkCalendarDate,
+  type WorkCalendarDateListQuery,
+  type WorkCalendarDatePage,
+  type WorkCalendarDateRequest,
   type WorkScheduleVersion,
   type WorkScheduleVersionRequest,
 } from '@dexa/contracts';
@@ -43,6 +47,10 @@ import {
   WORK_SCHEDULE_CLIENT,
   type IWorkScheduleClient,
 } from '../src/schedules/work-schedule-client.interface.js';
+import {
+  WORK_CALENDAR_DATE_CLIENT,
+  type IWorkCalendarDateClient,
+} from '../src/schedules/work-calendar-date-client.interface.js';
 import {
   EMPLOYEE_SERVICE_CLIENT,
   type IEmployeeServiceClient,
@@ -74,6 +82,7 @@ const HR_ROUTE_PATH = '/api/v1/route-guard-tests/hr';
 const POSITIONS_PATH = '/api/v1/positions';
 const EMPLOYEE_STATUSES_PATH = '/api/v1/employee-statuses';
 const WORK_SCHEDULES_PATH = '/api/v1/work-schedules';
+const WORK_CALENDAR_DATES_PATH = '/api/v1/work-calendar-dates';
 const CREATE_EMPLOYEE_PATH = '/api/v1/employees';
 const OWN_PROFILE_PATH = '/api/v1/employees/me';
 const OWN_PHOTO_PATH = '/api/v1/employees/me/photo';
@@ -338,6 +347,42 @@ const workScheduleClientFake: IWorkScheduleClient = {
   },
 };
 
+// Stands in for attendance-service's calendar exception routes. The query and the request are recorded so a test can
+// show what reached it.
+const CALENDAR_DATE: WorkCalendarDate = {
+  date: '2026-11-09',
+  isWorkingDay: false,
+  description: 'Public holiday',
+};
+const CALENDAR_DATE_PAGE: WorkCalendarDatePage = {
+  items: [CALENDAR_DATE],
+  page: 1,
+  pageSize: 20,
+  totalItems: 1,
+  totalPages: 1,
+};
+const calendarDateListQueries: WorkCalendarDateListQuery[] = [];
+const calendarDateUpserts: { readonly date: string; readonly request: WorkCalendarDateRequest }[] =
+  [];
+const calendarDateDeletes: string[] = [];
+const workCalendarDateClientFake: IWorkCalendarDateClient = {
+  listDates: (accessToken: string, query: WorkCalendarDateListQuery) => {
+    forwardedTokens.push(accessToken);
+    calendarDateListQueries.push(query);
+    return Promise.resolve(CALENDAR_DATE_PAGE);
+  },
+  upsertDate: (accessToken: string, date: string, request: WorkCalendarDateRequest) => {
+    forwardedTokens.push(accessToken);
+    calendarDateUpserts.push({ date, request });
+    return Promise.resolve(CALENDAR_DATE);
+  },
+  deleteDate: (accessToken: string, date: string) => {
+    forwardedTokens.push(accessToken);
+    calendarDateDeletes.push(date);
+    return Promise.resolve();
+  },
+};
+
 @Controller('route-guard-tests/self-service')
 class StubSelfServiceController {
   @Roles(Role.EMPLOYEE, Role.HR)
@@ -455,6 +500,8 @@ describe('api-gateway route guards through a running auth-service', () => {
       .useValue(attendanceServiceFake)
       .overrideProvider(WORK_SCHEDULE_CLIENT)
       .useValue(workScheduleClientFake)
+      .overrideProvider(WORK_CALENDAR_DATE_CLIENT)
+      .useValue(workCalendarDateClientFake)
       .compile();
     app = moduleRef.createNestApplication();
     configureApp(app, { CORS_ORIGINS: [] });
@@ -520,6 +567,10 @@ describe('api-gateway route guards through a running auth-service', () => {
       .put(path)
       .set('Authorization', `Bearer ${accessToken}`)
       .send(body as object);
+  }
+
+  function deleteWithToken(path: string, accessToken: string) {
+    return request(app.getHttpServer()).delete(path).set('Authorization', `Bearer ${accessToken}`);
   }
 
   function patchWithToken(path: string, accessToken: string, body: unknown) {
@@ -1420,6 +1471,203 @@ describe('api-gateway route guards through a running auth-service', () => {
       expect(Buffer.isBuffer(body) && body.equals(STORED_PHOTO_BYTES)).toBe(true);
       expect(requestedPhotoAccountIds).toEqual([]);
       expect(forwardedTokens).toEqual([hrToken, hrToken]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 204 and forward the HR token when an HR token deletes a calendar date',
+    async () => {
+      forwardedTokens.length = 0;
+      calendarDateDeletes.length = 0;
+
+      const response = await deleteWithToken(
+        `${WORK_CALENDAR_DATES_PATH}/2026-11-09`,
+        hrToken,
+      ).expect(204);
+
+      expect(response.text).toBe('');
+      expect(forwardedTokens).toEqual([hrToken]);
+      expect(calendarDateDeletes).toEqual(['2026-11-09']);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 FORBIDDEN without calling attendance-service when an employee token deletes a calendar date',
+    async () => {
+      forwardedTokens.length = 0;
+      calendarDateDeletes.length = 0;
+
+      const response = await deleteWithToken(
+        `${WORK_CALENDAR_DATES_PATH}/2026-11-09`,
+        employeeToken,
+      ).expect(403);
+
+      expect(response.body).toEqual({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Your role cannot use this action.',
+      });
+      expect(forwardedTokens).toEqual([]);
+      expect(calendarDateDeletes).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 400 VALIDATION_FAILED without calling attendance-service when the delete date is not an ISO date',
+    async () => {
+      forwardedTokens.length = 0;
+      calendarDateDeletes.length = 0;
+
+      const response = await deleteWithToken(
+        `${WORK_CALENDAR_DATES_PATH}/next-monday`,
+        hrToken,
+      ).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(calendarDateDeletes).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return the page and forward the range, page and HR token when HR lists calendar dates',
+    async () => {
+      forwardedTokens.length = 0;
+      calendarDateListQueries.length = 0;
+
+      const response = await getWithToken(
+        `${WORK_CALENDAR_DATES_PATH}?from=2026-11-01&to=2026-11-30&page=1&pageSize=20`,
+        hrToken,
+      ).expect(200);
+
+      expect(response.body).toEqual(CALENDAR_DATE_PAGE);
+      expect(forwardedTokens).toEqual([hrToken]);
+      expect(calendarDateListQueries).toEqual([
+        { from: '2026-11-01', to: '2026-11-30', page: 1, pageSize: 20 },
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 FORBIDDEN without calling attendance-service when an employee token lists calendar dates',
+    async () => {
+      forwardedTokens.length = 0;
+      calendarDateListQueries.length = 0;
+
+      const response = await getWithToken(
+        `${WORK_CALENDAR_DATES_PATH}?from=2026-11-01&to=2026-11-30`,
+        employeeToken,
+      ).expect(403);
+
+      expect(response.body).toEqual({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Your role cannot use this action.',
+      });
+      expect(forwardedTokens).toEqual([]);
+      expect(calendarDateListQueries).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 401 UNAUTHORIZED without calling attendance-service when no token lists calendar dates',
+    async () => {
+      forwardedTokens.length = 0;
+      calendarDateListQueries.length = 0;
+
+      const response = await request(app.getHttpServer())
+        .get(`${WORK_CALENDAR_DATES_PATH}?from=2026-11-01&to=2026-11-30`)
+        .expect(401);
+
+      expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(calendarDateListQueries).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 400 VALIDATION_FAILED without calling attendance-service when the list has no from bound',
+    async () => {
+      forwardedTokens.length = 0;
+      calendarDateListQueries.length = 0;
+
+      const response = await getWithToken(
+        `${WORK_CALENDAR_DATES_PATH}?to=2026-11-30`,
+        hrToken,
+      ).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(calendarDateListQueries).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 200 with the exception and forward the HR token when an HR token saves a calendar date',
+    async () => {
+      forwardedTokens.length = 0;
+      calendarDateUpserts.length = 0;
+
+      const response = await putWithToken(`${WORK_CALENDAR_DATES_PATH}/2026-11-09`, hrToken, {
+        isWorkingDay: false,
+        description: 'Public holiday',
+      }).expect(200);
+
+      expect(response.body).toEqual(CALENDAR_DATE);
+      expect(forwardedTokens).toEqual([hrToken]);
+      expect(calendarDateUpserts).toEqual([
+        {
+          date: '2026-11-09',
+          request: { isWorkingDay: false, description: 'Public holiday' },
+        },
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 403 FORBIDDEN without calling attendance-service when an employee token saves a calendar date',
+    async () => {
+      forwardedTokens.length = 0;
+      calendarDateUpserts.length = 0;
+
+      const response = await putWithToken(`${WORK_CALENDAR_DATES_PATH}/2026-11-09`, employeeToken, {
+        isWorkingDay: false,
+      }).expect(403);
+
+      expect(response.body).toEqual({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Your role cannot use this action.',
+      });
+      expect(forwardedTokens).toEqual([]);
+      expect(calendarDateUpserts).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should return 400 VALIDATION_FAILED without calling attendance-service when the save carries the date in its body',
+    async () => {
+      forwardedTokens.length = 0;
+      calendarDateUpserts.length = 0;
+
+      const response = await putWithToken(`${WORK_CALENDAR_DATES_PATH}/2026-11-09`, hrToken, {
+        isWorkingDay: false,
+        date: '2026-11-10',
+      }).expect(400);
+
+      expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      expect(forwardedTokens).toEqual([]);
+      expect(calendarDateUpserts).toEqual([]);
     },
     TEST_TIMEOUT_MS,
   );

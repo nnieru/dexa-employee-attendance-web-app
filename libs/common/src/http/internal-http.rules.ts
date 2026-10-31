@@ -12,7 +12,7 @@ import {
   type DomainErrorOptions,
 } from '../errors/domain.errors.js';
 
-export type InternalHttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT';
+export type InternalHttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 /**
  * Why one attempt produced no usable answer. A timeout and a refused connection are both

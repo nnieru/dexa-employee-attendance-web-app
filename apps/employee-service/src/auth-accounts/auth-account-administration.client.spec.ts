@@ -26,6 +26,7 @@ function recordingHttpClient(
       return Promise.resolve(request.responseSchema.parse(answer));
     },
     put: () => Promise.reject(new Error('The client never sends multipart.')),
+    delete: () => Promise.reject(new Error('The client never deletes.')),
   };
 }
 

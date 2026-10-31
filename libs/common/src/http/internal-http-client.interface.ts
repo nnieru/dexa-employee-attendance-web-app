@@ -11,6 +11,7 @@ export interface IInternalHttpClient {
   post<TResponse>(request: InternalPostRequest<TResponse>): Promise<TResponse>;
   patch<TResponse>(request: InternalPatchRequest<TResponse>): Promise<TResponse>;
   putJson<TResponse>(request: InternalJsonPutRequest<TResponse>): Promise<TResponse>;
+  delete<TResponse>(request: InternalDeleteRequest<TResponse>): Promise<TResponse>;
   put<TResponse>(request: InternalMultipartPutRequest<TResponse>): Promise<TResponse>;
 }
 
@@ -55,6 +56,10 @@ export type InternalPostRequest<TResponse> = InternalRequest<TResponse> & {
 export type InternalPatchRequest<TResponse> = InternalRequest<TResponse> & {
   readonly body: unknown;
 };
+
+// A DELETE has no body and is never retried: the target may have removed the row when the answer was lost. A 204
+// answer has no body, so its response schema accepts undefined (z.void()).
+export type InternalDeleteRequest<TResponse> = InternalRequest<TResponse>;
 
 // A PUT with a JSON body is never retried either: the target may have applied it when the answer was lost.
 export type InternalJsonPutRequest<TResponse> = InternalRequest<TResponse> & {

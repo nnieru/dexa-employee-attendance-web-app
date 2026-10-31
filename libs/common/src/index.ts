@@ -55,6 +55,7 @@ export {
   type IInternalHttpClient,
   type InternalBinaryGetRequest,
   type InternalBinaryResponse,
+  type InternalDeleteRequest,
   type InternalGetRequest,
   type InternalJsonPutRequest,
   type InternalMultipartFile,

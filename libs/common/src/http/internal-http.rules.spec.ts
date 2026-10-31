@@ -100,6 +100,20 @@ describe('shouldRetry', () => {
       expected: false,
     },
     {
+      condition: 'a DELETE got no response',
+      method: 'DELETE',
+      failure: { kind: 'no_response' },
+      attempt: 1,
+      expected: false,
+    },
+    {
+      condition: 'a DELETE got 503',
+      method: 'DELETE',
+      failure: { kind: 'server_error', status: HttpStatus.SERVICE_UNAVAILABLE },
+      attempt: 1,
+      expected: false,
+    },
+    {
       condition: 'a PATCH got 503',
       method: 'PATCH',
       failure: { kind: 'server_error', status: HttpStatus.SERVICE_UNAVAILABLE },
