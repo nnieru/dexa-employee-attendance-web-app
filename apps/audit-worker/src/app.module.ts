@@ -4,6 +4,7 @@ import { AuditModule } from './audit/audit.module.js';
 import { ConfigModule } from './config/config.module.js';
 import type { AuditWorkerConfig } from './config/audit-worker-config.schema.js';
 import { DatabaseModule } from './infrastructure/db/database.module.js';
+import { DeadLetterModule } from './dlq/dead-letter.module.js';
 import { ClockModule } from './time/clock.module.js';
 
 /**
@@ -12,7 +13,14 @@ import { ClockModule } from './time/clock.module.js';
  */
 export function createAppModule(config: AuditWorkerConfig): Type<unknown> {
   @Module({
-    imports: [ConfigModule.forRoot(config), DatabaseModule, ClockModule, AuditModule, HealthModule],
+    imports: [
+      ConfigModule.forRoot(config),
+      DatabaseModule,
+      ClockModule,
+      AuditModule,
+      DeadLetterModule,
+      HealthModule,
+    ],
   })
   class AppModule {}
   return AppModule;
