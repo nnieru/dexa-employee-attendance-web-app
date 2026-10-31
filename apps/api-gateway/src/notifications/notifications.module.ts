@@ -1,4 +1,7 @@
 import { Module, type DynamicModule } from '@nestjs/common';
+import { NotificationInboxClient } from './notification-inbox.client.js';
+import { NOTIFICATION_INBOX_CLIENT } from './notification-inbox-client.interface.js';
+import { NotificationInboxController } from './notification-inbox.controller.js';
 import { NotificationStreamClient } from './notification-stream.client.js';
 import {
   NOTIFICATION_SERVICE_BASE_URL,
@@ -23,7 +26,7 @@ export class GatewayNotificationsModule {
   static forRoot(options: GatewayNotificationsModuleOptions): DynamicModule {
     return {
       module: GatewayNotificationsModule,
-      controllers: [NotificationsController],
+      controllers: [NotificationsController, NotificationInboxController],
       providers: [
         { provide: NOTIFICATION_SERVICE_BASE_URL, useValue: options.notificationServiceBaseUrl },
         {
@@ -35,6 +38,7 @@ export class GatewayNotificationsModule {
           useValue: ACCOUNT_CHECK_MILLISECONDS,
         },
         { provide: NOTIFICATION_STREAM_CLIENT, useClass: NotificationStreamClient },
+        { provide: NOTIFICATION_INBOX_CLIENT, useClass: NotificationInboxClient },
       ],
     };
   }

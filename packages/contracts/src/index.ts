@@ -190,6 +190,17 @@ export {
   type Notification,
 } from './notifications/notification.schema.js';
 export {
+  NOTIFICATION_CURSOR_MAX_LENGTH,
+  notificationIdParamSchema,
+  notificationListQuerySchema,
+  notificationPageSchema,
+  notificationUnreadCountSchema,
+  type NotificationIdParam,
+  type NotificationListQuery,
+  type NotificationPage,
+  type NotificationUnreadCount,
+} from './notifications/notification-inbox.schema.js';
+export {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   createPageSchema,

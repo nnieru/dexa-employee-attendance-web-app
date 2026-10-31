@@ -24,6 +24,8 @@ import {
   type EmployeeListQuery,
   type EmployeeProvisioningIncompleteDetails,
   type MasterOption,
+  type Notification,
+  type NotificationPage,
   type OwnProfile,
   type UpdateEmployeeRequest,
   type UpdateOwnProfileRequest,
@@ -104,6 +106,23 @@ const SELF_SERVICE_ROUTE_PATH = '/api/v1/route-guard-tests/self-service';
 const SIGNED_TOKEN_LIFETIME_SECONDS = 300;
 const NOTIFICATION_STREAM_PATH = '/api/v1/notifications/stream';
 const FIRST_NOTIFICATION_FRAME = 'event: notification\ndata: {"id":"first"}\n\n';
+const INBOX_LIST_PATH = '/api/v1/notifications';
+const INBOX_UNREAD_COUNT_PATH = '/api/v1/notifications/unread-count';
+const INBOX_CURSOR = 'b3BhcXVlLWN1cnNvcg';
+const EMPTY_INBOX_ANSWER = { status: 200, body: { items: [], nextCursor: null } };
+const INBOX_ID = randomUUID();
+const INBOX_READ_PATH = `${INBOX_LIST_PATH}/${INBOX_ID}/read`;
+const INBOX_NOTIFICATION: Notification = {
+  id: INBOX_ID,
+  eventType: 'employee.profile.updated',
+  title: 'Budi Santoso updated: phone number',
+  body: 'Changed fields: phone number.',
+  data: { changedFields: ['phoneNumber'] },
+  occurredAt: '2026-10-30T02:05:00.000Z',
+  createdAt: '2026-10-30T02:05:01.000Z',
+  readAt: null,
+};
+const INBOX_PAGE: NotificationPage = { items: [INBOX_NOTIFICATION], nextCursor: INBOX_CURSOR };
 const SECOND_NOTIFICATION_FRAME = 'event: notification\ndata: {"id":"second"}\n\n';
 // A relayed frame that does not arrive in this time means the gateway is holding it back.
 const RELAY_TIMEOUT_MS = 5_000;
@@ -543,6 +562,7 @@ describe('api-gateway route guards through a running auth-service', () => {
   afterEach(() => {
     createEmployeeOutcome = DEFAULT_CREATE_OUTCOME;
     updateEmployeeOutcome = DEFAULT_UPDATE_OUTCOME;
+    notificationService.answerInbox(EMPTY_INBOX_ANSWER);
   });
 
   beforeAll(async () => {
@@ -1910,6 +1930,166 @@ describe('api-gateway route guards through a running auth-service', () => {
         const requestsBefore = notificationService.requestCount();
 
         await request(app.getHttpServer()).get(NOTIFICATION_STREAM_PATH).expect(401);
+
+        expect(notificationService.requestCount()).toBe(requestsBefore);
+      },
+      TEST_TIMEOUT_MS,
+    );
+  });
+
+  describe('HR notification inbox', () => {
+    // The gateway forwards each inbox call as its own request, so a test reads only the calls made after its start.
+    function inboxCallsSince(before: number) {
+      return notificationService.inboxRequests().slice(before);
+    }
+
+    function singleCallOf(calls: ReturnType<typeof inboxCallsSince>) {
+      expect(calls).toHaveLength(1);
+      const [call] = calls;
+      if (call === undefined) throw new Error('The gateway forwarded no inbox request.');
+      return call;
+    }
+
+    it(
+      'should forward the limit and cursor with a gateway token for the HR user, and return the page',
+      async () => {
+        notificationService.answerInbox({ status: 200, body: INBOX_PAGE });
+        const before = notificationService.inboxRequests().length;
+
+        const response = await getWithToken(
+          `${INBOX_LIST_PATH}?limit=5&cursor=${INBOX_CURSOR}`,
+          hrToken,
+        ).expect(200);
+
+        expect(response.body).toEqual(INBOX_PAGE);
+        const call = singleCallOf(inboxCallsSince(before));
+        const forwardedUrl = new URL(call.url, 'http://notification-service.stub');
+        expect(call.method).toBe('GET');
+        expect(forwardedUrl.pathname).toBe(INBOX_LIST_PATH);
+        expect(forwardedUrl.searchParams.get('limit')).toBe('5');
+        expect(forwardedUrl.searchParams.get('cursor')).toBe(INBOX_CURSOR);
+        expect(
+          verifyGatewayToken(keys, call.authorization, ServiceName.NOTIFICATION_SERVICE),
+        ).toEqual({ accountId: accountIdOf(hrToken), role: Role.HR });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should forward the unread count request with a gateway token for the HR user',
+      async () => {
+        notificationService.answerInbox({ status: 200, body: { unreadCount: 4 } });
+        const before = notificationService.inboxRequests().length;
+
+        const response = await getWithToken(INBOX_UNREAD_COUNT_PATH, hrToken).expect(200);
+
+        expect(response.body).toEqual({ unreadCount: 4 });
+        const call = singleCallOf(inboxCallsSince(before));
+        expect(new URL(call.url, 'http://notification-service.stub').pathname).toBe(
+          INBOX_UNREAD_COUNT_PATH,
+        );
+        expect(
+          verifyGatewayToken(keys, call.authorization, ServiceName.NOTIFICATION_SERVICE),
+        ).toEqual({ accountId: accountIdOf(hrToken), role: Role.HR });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should forward the mark-read once as a POST and return the notification',
+      async () => {
+        notificationService.answerInbox({ status: 200, body: INBOX_NOTIFICATION });
+        const before = notificationService.inboxRequests().length;
+
+        const response = await request(app.getHttpServer())
+          .post(INBOX_READ_PATH)
+          .set('Authorization', `Bearer ${hrToken}`)
+          .expect(200);
+
+        expect(response.body).toEqual(INBOX_NOTIFICATION);
+        const call = singleCallOf(inboxCallsSince(before));
+        expect(call.method).toBe('POST');
+        expect(new URL(call.url, 'http://notification-service.stub').pathname).toBe(
+          INBOX_READ_PATH,
+        );
+        expect(
+          verifyGatewayToken(keys, call.authorization, ServiceName.NOTIFICATION_SERVICE),
+        ).toEqual({ accountId: accountIdOf(hrToken), role: Role.HR });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should retry a failed list read twice, then answer 503',
+      async () => {
+        notificationService.answerInbox({
+          status: 500,
+          body: { statusCode: 500, code: 'INTERNAL_ERROR', message: 'Internal error.' },
+        });
+        const before = notificationService.inboxRequests().length;
+
+        const response = await getWithToken(INBOX_LIST_PATH, hrToken).expect(503);
+
+        expect(response.body).toMatchObject({ statusCode: 503, code: 'DEPENDENCY_UNAVAILABLE' });
+        expect(inboxCallsSince(before)).toHaveLength(3);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should not retry a failed mark-read, because a repeated write is not a safe retry',
+      async () => {
+        notificationService.answerInbox({
+          status: 500,
+          body: { statusCode: 500, code: 'INTERNAL_ERROR', message: 'Internal error.' },
+        });
+        const before = notificationService.inboxRequests().length;
+
+        await request(app.getHttpServer())
+          .post(INBOX_READ_PATH)
+          .set('Authorization', `Bearer ${hrToken}`)
+          .expect(503);
+
+        expect(inboxCallsSince(before)).toHaveLength(1);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 403 without calling notification-service when an employee token lists the inbox',
+      async () => {
+        const requestsBefore = notificationService.requestCount();
+
+        await getWithToken(INBOX_LIST_PATH, employeeToken).expect(403);
+
+        expect(notificationService.requestCount()).toBe(requestsBefore);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 403 without calling notification-service when an employee token marks a notification read',
+      async () => {
+        const requestsBefore = notificationService.requestCount();
+
+        await request(app.getHttpServer())
+          .post(INBOX_READ_PATH)
+          .set('Authorization', `Bearer ${employeeToken}`)
+          .expect(403);
+
+        expect(notificationService.requestCount()).toBe(requestsBefore);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 400 without calling notification-service when the list query has an unknown key',
+      async () => {
+        const requestsBefore = notificationService.requestCount();
+
+        await getWithToken(`${INBOX_LIST_PATH}?recipientAccountId=${randomUUID()}`, hrToken).expect(
+          400,
+        );
 
         expect(notificationService.requestCount()).toBe(requestsBefore);
       },

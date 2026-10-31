@@ -30,6 +30,7 @@ export function createAppModule(config: ApiGatewayConfig): Type<unknown> {
           [ServiceName.AUTH_SERVICE]: config.AUTH_SERVICE_INTERNAL_URL,
           [ServiceName.EMPLOYEE_SERVICE]: config.EMPLOYEE_SERVICE_INTERNAL_URL,
           [ServiceName.ATTENDANCE_SERVICE]: config.ATTENDANCE_SERVICE_INTERNAL_URL,
+          [ServiceName.NOTIFICATION_SERVICE]: config.NOTIFICATION_SERVICE_INTERNAL_URL,
         },
         authConfig: config,
       }),

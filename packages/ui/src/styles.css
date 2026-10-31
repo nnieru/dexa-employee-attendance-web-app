@@ -299,3 +299,70 @@ body {
   background: var(--color-error-surface);
   border-color: var(--color-error);
 }
+
+.dexa-dialog {
+  box-sizing: border-box;
+  width: min(calc(100% - var(--layout-gutter) - var(--layout-gutter)), var(--layout-form-max));
+  max-height: calc(100% - var(--layout-gutter) - var(--layout-gutter));
+  margin: auto;
+  padding: var(--space-6);
+  overflow: auto;
+  border: none;
+  border-radius: var(--radius-card);
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-overlay);
+}
+
+.dexa-dialog::backdrop {
+  background: color-mix(in srgb, var(--color-text) 40%, transparent);
+}
+
+.dexa-dialog__header {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.dexa-dialog__title {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-brand);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  overflow-wrap: anywhere;
+}
+
+.dexa-dialog__description {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.dexa-dialog__body {
+  margin-block-start: var(--space-4);
+}
+
+.dexa-dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-block-start: var(--space-6);
+}
+
+.dexa-confirm-dialog__confirm--danger.dexa-button--primary,
+.dexa-confirm-dialog__confirm--danger.dexa-button--primary:hover:not(:disabled),
+.dexa-confirm-dialog__confirm--danger.dexa-button--primary[aria-busy='true']:disabled {
+  border-color: var(--color-error);
+  color: var(--color-text-on-brand);
+  background: var(--color-error);
+}
+
+@media (max-width: 767px) {
+  .dexa-dialog {
+    padding: var(--space-4);
+  }
+}
