@@ -29,3 +29,12 @@ export { Avatar } from './avatar.js';
 export type { AvatarProps } from './avatar.js';
 export { PhotoUploader } from './photo-uploader.js';
 export type { PhotoUploaderProps } from './photo-uploader.js';
+export { Textarea } from './textarea.js';
+export { AppShell } from './app-shell/app-shell.js';
+export type { AppShellProps } from './app-shell/app-shell.js';
+export type {
+  AppShellLinkProps,
+  AppShellNavCount,
+  AppShellNavItem,
+  AppShellRenderLink,
+} from './app-shell/app-shell-navigation.js';

@@ -1027,3 +1027,286 @@ body {
   height: 6rem;
   font-size: var(--font-size-h1);
 }
+
+.dexa-field__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Muted, regular weight, as the mockup's required marker; the native required attribute carries it to assistive technology. */
+.dexa-field__required {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+}
+
+/* Three body lines plus vertical padding; the minimum height keeps the textarea at least three lines tall. */
+.dexa-textarea {
+  min-height: calc(var(--font-size-body) * var(--line-height-body) * 3 + var(--space-3) * 2);
+  padding: var(--space-3);
+  resize: vertical;
+}
+
+/*
+ * App shell (DESIGN §6). The bottom bar is the default; the rail replaces it only in landscape at
+ * 1024px and wider. The mockup's counts, rail widths and 56px bottom bar are used where DESIGN is silent.
+ */
+.dexa-app-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--color-canvas);
+}
+
+.dexa-app-shell__skip-link {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: var(--z-popover);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-brand);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  transform: translateY(-200%);
+}
+
+.dexa-app-shell__skip-link:focus {
+  transform: none;
+}
+
+.dexa-app-shell__skip-link:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.dexa-app-shell__header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--layout-header-height);
+  padding-inline: var(--layout-gutter);
+  background: var(--color-brand);
+  color: var(--color-text-on-brand);
+}
+
+/* Focus on the red header is white, as DESIGN §10 requires for white-on-red surfaces. */
+.dexa-app-shell__header :focus-visible {
+  outline-color: var(--color-text-on-brand);
+}
+
+.dexa-app-shell__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  font-size: var(--font-size-lead);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.dexa-app-shell__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+.dexa-app-shell__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.dexa-app-shell__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-8) var(--layout-gutter) var(--space-12);
+}
+
+/* The main region is not a control; the skip link moves focus here and an outline would only add noise. */
+.dexa-app-shell__main:focus {
+  outline: none;
+}
+
+.dexa-app-shell__nav {
+  box-sizing: border-box;
+}
+
+.dexa-app-shell__nav--bottom {
+  display: flex;
+  flex: none;
+  padding: var(--space-1) var(--space-1) calc(var(--space-1) + env(safe-area-inset-bottom));
+  background: var(--color-surface);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.dexa-app-shell__nav--rail {
+  display: none;
+  flex: none;
+  flex-direction: column;
+  width: var(--layout-sidebar);
+  padding: var(--space-4) var(--space-3);
+  background: var(--color-surface);
+  border-inline-end: var(--border-width) solid var(--color-border);
+}
+
+.dexa-app-shell__list {
+  display: flex;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dexa-app-shell__nav--bottom .dexa-app-shell__list {
+  width: 100%;
+  gap: 2px;
+}
+
+.dexa-app-shell__nav--rail .dexa-app-shell__list {
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.dexa-app-shell__list-item {
+  display: flex;
+  min-width: 0;
+}
+
+/* Bottom bar columns size to their caption; a column never shrinks below the 44px target. */
+.dexa-app-shell__nav--bottom .dexa-app-shell__list-item {
+  flex: 1 1 auto;
+  min-width: var(--control-height);
+}
+
+.dexa-app-shell__nav--rail .dexa-app-shell__list-item--logout {
+  margin-top: auto;
+}
+
+.dexa-app-shell__item {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--control-height);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.dexa-app-shell__item:hover {
+  background: var(--color-surface-muted);
+}
+
+/* The active destination is marked by aria-current and by text and background, not by color alone. */
+.dexa-app-shell__item[aria-current='page'] {
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.dexa-app-shell__item:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.dexa-app-shell__nav--bottom .dexa-app-shell__item {
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 3.5rem;
+  padding: var(--space-1) 2px;
+  font-size: var(--font-size-caption);
+  line-height: 1.2;
+  text-align: center;
+}
+
+.dexa-app-shell__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dexa-app-shell__count {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  margin-inline-start: auto;
+  padding-inline: var(--space-1);
+  border-radius: 0.625rem;
+  background: var(--color-brand);
+  color: var(--color-text-on-brand);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+/* The count is a badge over the icon in the bottom bar, and sits at the end of the row in the rail. */
+.dexa-app-shell__nav--bottom .dexa-app-shell__count {
+  position: absolute;
+  inset-block-start: 0.25rem;
+  inset-inline-start: calc(50% + 0.5rem);
+  margin: 0;
+}
+
+/* Keeps the count available to assistive technology while the visible badge is aria-hidden. */
+.dexa-app-shell__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 767px) {
+  .dexa-app-shell__main {
+    padding-block: var(--space-6) var(--space-10);
+  }
+}
+
+@media (min-width: 1024px) and (orientation: landscape) {
+  .dexa-app-shell__body {
+    flex-direction: row;
+  }
+
+  .dexa-app-shell__nav--rail {
+    display: flex;
+  }
+
+  .dexa-app-shell__nav--bottom {
+    display: none;
+  }
+}

@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 
 type PageShellProps = {
+  /**
+   * The page's landmark element. Use 'div' inside AppShell, which already renders the page's single <main>; a
+   * standalone page such as the login screen keeps the default 'main'.
+   */
+  as?: 'main' | 'div';
   children?: ReactNode;
   className?: string;
   description?: ReactNode;
@@ -9,6 +14,7 @@ type PageShellProps = {
 };
 
 export function PageShell({
+  as: Container = 'main',
   children,
   className = '',
   description,
@@ -16,7 +22,7 @@ export function PageShell({
   title,
 }: PageShellProps) {
   return (
-    <main className={`dexa-page-shell dexa-page-shell--${layout} ${className}`.trim()}>
+    <Container className={`dexa-page-shell dexa-page-shell--${layout} ${className}`.trim()}>
       <div className="dexa-page-shell__inner">
         <header className="dexa-page-shell__heading">
           <h1>{title}</h1>
@@ -24,6 +30,6 @@ export function PageShell({
         </header>
         {children}
       </div>
-    </main>
+    </Container>
   );
 }
