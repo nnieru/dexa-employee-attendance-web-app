@@ -1,15 +1,17 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
-import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
-import { routeTree } from '../routeTree.gen.js';
+import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
+import { createAppRouter } from './router.js';
 
 describe('employee-web shell', () => {
   it('renders the shared page shell on the home route', async () => {
-    const router = createRouter({
-      routeTree,
-      history: createMemoryHistory({ initialEntries: ['/'] }),
-    });
+    const router = createAppRouter(createMemoryHistory({ initialEntries: ['/'] }));
 
-    render(<RouterProvider router={router} />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Dexa Employee' }),

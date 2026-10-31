@@ -1,2 +1,17 @@
 @import '@dexa/ui/styles.css';
 @source "../../../packages/ui/src";
+
+/* Login panel: a genuine task group, so it is a white surface with no shadow (DESIGN §7). */
+.employee-login-panel {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+@media (max-width: 767px) {
+  .employee-login-panel {
+    padding: var(--space-4);
+  }
+}
