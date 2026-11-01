@@ -136,7 +136,7 @@ describe('employee route guards', () => {
     );
   });
 
-  it.each([['/requests', 'Requests']])(
+  it.each([['/requests/overtime/new', 'Request overtime']])(
     'should show the coming-soon state on %s when the employee is signed in',
     async (path, title) => {
       const { router } = await signInFrom('/login');

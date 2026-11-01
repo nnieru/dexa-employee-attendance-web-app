@@ -1,13 +1,31 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ComingSoonPage } from '../../app/coming-soon-page.js';
+import { RequestsPage } from '../../features/requests/components/requests-page.js';
+import {
+  requestsSearchSchema,
+  resolveRequestsSearch,
+} from '../../features/requests/types/requests-search.schema.js';
 
-// Placeholder until the requests page (T-REQ-15) is built.
+// The tab, the status and the page live in the URL, so a reload or a shared link shows the same list (PRD APR-6).
 export const Route = createFileRoute('/_authenticated/requests')({
-  component: RequestsPlaceholderPage,
+  validateSearch: requestsSearchSchema,
+  component: RequestsRoute,
 });
 
-function RequestsPlaceholderPage() {
+function RequestsRoute() {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+
   return (
-    <ComingSoonPage title="Requests" description="Ask for overtime or an attendance correction." />
+    <RequestsPage
+      search={resolveRequestsSearch(search)}
+      // Changing the type or the status starts again on page 1; the page only re-reads the URL state.
+      onTabChange={(tab) =>
+        void navigate({ search: (previous) => ({ ...previous, tab, page: undefined }) })
+      }
+      onStatusChange={(status) =>
+        void navigate({ search: (previous) => ({ ...previous, status, page: undefined }) })
+      }
+      onPageChange={(page) => void navigate({ search: (previous) => ({ ...previous, page }) })}
+    />
   );
 }

@@ -16,6 +16,8 @@ import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authentic
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedRequestsRouteImport } from './routes/_authenticated/requests'
+import { Route as AuthenticatedRequestsCorrectionsNewRouteImport } from './routes/_authenticated/requests_.corrections.new'
+import { Route as AuthenticatedRequestsOvertimeNewRouteImport } from './routes/_authenticated/requests_.overtime.new'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -51,6 +53,18 @@ const AuthenticatedRequestsRoute = AuthenticatedRequestsRouteImport.update({
   path: '/requests',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedRequestsCorrectionsNewRoute =
+  AuthenticatedRequestsCorrectionsNewRouteImport.update({
+    id: '/requests_/corrections/new',
+    path: '/requests/corrections/new',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedRequestsOvertimeNewRoute =
+  AuthenticatedRequestsOvertimeNewRouteImport.update({
+    id: '/requests_/overtime/new',
+    path: '/requests/overtime/new',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,6 +73,8 @@ export interface FileRoutesByFullPath {
   '/history': typeof AuthenticatedHistoryRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/requests': typeof AuthenticatedRequestsRoute
+  '/requests/corrections/new': typeof AuthenticatedRequestsCorrectionsNewRoute
+  '/requests/overtime/new': typeof AuthenticatedRequestsOvertimeNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,6 +83,8 @@ export interface FileRoutesByTo {
   '/history': typeof AuthenticatedHistoryRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/requests': typeof AuthenticatedRequestsRoute
+  '/requests/corrections/new': typeof AuthenticatedRequestsCorrectionsNewRoute
+  '/requests/overtime/new': typeof AuthenticatedRequestsOvertimeNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,13 +95,30 @@ export interface FileRoutesById {
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/requests': typeof AuthenticatedRequestsRoute
+  '/_authenticated/requests_/corrections/new': typeof AuthenticatedRequestsCorrectionsNewRoute
+  '/_authenticated/requests_/overtime/new': typeof AuthenticatedRequestsOvertimeNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/login' | '/attendance' | '/history' | '/profile' | '/requests'
+    | '/'
+    | '/login'
+    | '/attendance'
+    | '/history'
+    | '/profile'
+    | '/requests'
+    | '/requests/corrections/new'
+    | '/requests/overtime/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/attendance' | '/history' | '/profile' | '/requests'
+  to:
+    | '/'
+    | '/login'
+    | '/attendance'
+    | '/history'
+    | '/profile'
+    | '/requests'
+    | '/requests/corrections/new'
+    | '/requests/overtime/new'
   id:
     | '__root__'
     | '/'
@@ -93,6 +128,8 @@ export interface FileRouteTypes {
     | '/_authenticated/history'
     | '/_authenticated/profile'
     | '/_authenticated/requests'
+    | '/_authenticated/requests_/corrections/new'
+    | '/_authenticated/requests_/overtime/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -152,6 +189,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRequestsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/requests_/corrections/new': {
+      id: '/_authenticated/requests_/corrections/new'
+      path: '/requests/corrections/new'
+      fullPath: '/requests/corrections/new'
+      preLoaderRoute: typeof AuthenticatedRequestsCorrectionsNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/requests_/overtime/new': {
+      id: '/_authenticated/requests_/overtime/new'
+      path: '/requests/overtime/new'
+      fullPath: '/requests/overtime/new'
+      preLoaderRoute: typeof AuthenticatedRequestsOvertimeNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -160,6 +211,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedRequestsRoute: typeof AuthenticatedRequestsRoute
+  AuthenticatedRequestsCorrectionsNewRoute: typeof AuthenticatedRequestsCorrectionsNewRoute
+  AuthenticatedRequestsOvertimeNewRoute: typeof AuthenticatedRequestsOvertimeNewRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -167,6 +220,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedRequestsRoute: AuthenticatedRequestsRoute,
+  AuthenticatedRequestsCorrectionsNewRoute:
+    AuthenticatedRequestsCorrectionsNewRoute,
+  AuthenticatedRequestsOvertimeNewRoute: AuthenticatedRequestsOvertimeNewRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
