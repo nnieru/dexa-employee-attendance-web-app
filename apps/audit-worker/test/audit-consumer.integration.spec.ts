@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import { EventName } from '@dexa/contracts';
+import {
+  EventName,
+  type AttendanceRequestEventPayload,
+  type AttendanceRequestResourceType,
+} from '@dexa/contracts';
 import { createDatabase, type Database } from '@dexa/db';
 import {
   deadLetterQueueName,
@@ -40,6 +44,12 @@ const OCCURRED_AT = '2026-10-30T02:05:00.000Z';
 const ACCOUNT_ID = '5b7e2c1a-9f3d-4e6b-8a2c-1d0e9f8a7b6c';
 const ACTOR_ACCOUNT_ID = '2c9d4f7e-1a3b-4c5d-9e8f-0a1b2c3d4e5f';
 const EMPLOYEE_NAME = 'Ada Lovelace';
+const REQUEST_ID = '3f7e2d1c-8b4a-4e9f-9c0d-1a2b3c4d5e6f';
+const BUSINESS_DATE = '2026-11-02';
+type AttendanceRequestEventType =
+  | typeof EventName.ATTENDANCE_REQUEST_SUBMITTED
+  | typeof EventName.ATTENDANCE_REQUEST_APPROVED
+  | typeof EventName.ATTENDANCE_REQUEST_REJECTED;
 
 function uniqueQueueName(): string {
   return `audit.profile-changes.${randomUUID()}`;
@@ -69,6 +79,32 @@ function passwordChangedEvent(): EventMessage {
       actorAccountId: ACCOUNT_ID,
       changedFields: ['password'],
     },
+  };
+}
+
+// Strict contract shape from attendance-service: identity and business date only, changedFields always empty.
+function attendanceRequestPayload(
+  resourceType: AttendanceRequestResourceType,
+): AttendanceRequestEventPayload {
+  return {
+    accountId: ACCOUNT_ID,
+    actorAccountId: ACTOR_ACCOUNT_ID,
+    resourceType,
+    resourceId: REQUEST_ID,
+    businessDate: BUSINESS_DATE,
+    changedFields: [],
+  };
+}
+
+function attendanceRequestEvent(
+  eventType: AttendanceRequestEventType,
+  resourceType: AttendanceRequestResourceType,
+): EventMessage {
+  return {
+    eventId: randomUUID(),
+    type: eventType,
+    occurredAt: OCCURRED_AT,
+    payload: attendanceRequestPayload(resourceType),
   };
 }
 
@@ -261,6 +297,76 @@ describe('audit consumer on the Nest RMQ transport', () => {
     );
   });
 
+  describe('attendance request redelivery', () => {
+    it.each([
+      {
+        condition: 'attendance.request.submitted for an overtime request',
+        eventType: EventName.ATTENDANCE_REQUEST_SUBMITTED,
+        resourceType: 'overtime_request',
+      },
+      {
+        condition: 'attendance.request.approved for a correction request',
+        eventType: EventName.ATTENDANCE_REQUEST_APPROVED,
+        resourceType: 'attendance_adjustment_request',
+      },
+      {
+        condition: 'attendance.request.rejected for an overtime request',
+        eventType: EventName.ATTENDANCE_REQUEST_REJECTED,
+        resourceType: 'overtime_request',
+      },
+    ] satisfies ReadonlyArray<{
+      condition: string;
+      eventType: AttendanceRequestEventType;
+      resourceType: AttendanceRequestResourceType;
+    }>)(
+      'should keep one row with resource identity and no values when $condition is redelivered',
+      async ({ eventType, resourceType }) => {
+        const queue = uniqueQueueName();
+        const databaseUrl = await createEmptyDatabaseUri(postgres.getConnectionUri());
+        const database = openDatabase(databaseUrl);
+        const writer = new ScriptedAuditLogWriter(new AuditLogRepository(database), 0);
+        startedApps.push(
+          await startAuditConsumerApp({
+            databaseUrl,
+            rabbitMqUrl: rabbitMq.getAmqpUrl(),
+            queue,
+            auditLogWriter: writer,
+          }),
+        );
+        const event = attendanceRequestEvent(eventType, resourceType);
+
+        await publisher.publish(event);
+        await publisher.publish(event);
+
+        await waitFor(async () => writer.successes === 2, 'both deliveries to commit');
+        await waitFor(
+          async () => (await readyMessageCount(observerChannel, queue)) === 0,
+          'the queue to drain',
+        );
+        const rows = await database.db
+          .select()
+          .from(auditLogs)
+          .where(eq(auditLogs.eventId, event.eventId));
+        expect(rows).toEqual([
+          {
+            eventId: event.eventId,
+            eventType,
+            resourceType,
+            resourceId: REQUEST_ID,
+            sourceService: 'attendance-service',
+            accountId: ACCOUNT_ID,
+            actorAccountId: ACTOR_ACCOUNT_ID,
+            changedFields: [],
+            occurredAt: new Date(OCCURRED_AT),
+            processedAt: PROCESSED_AT,
+          },
+        ]);
+        expect(await observerChannel.get(deadLetterQueueName(queue), { noAck: true })).toBe(false);
+      },
+      TEST_TIMEOUT_MS,
+    );
+  });
+
   describe('invalid messages', () => {
     const profilePayload = {
       accountId: ACCOUNT_ID,
@@ -296,6 +402,26 @@ describe('audit consumer on the Nest RMQ transport', () => {
             actorAccountId: ACCOUNT_ID,
             changedFields: ['password', 'phoneNumber'],
           },
+        }),
+      },
+      {
+        condition: 'the attendance request payload carries a free-text reason',
+        routingKey: EventName.ATTENDANCE_REQUEST_SUBMITTED,
+        body: nestBody(EventName.ATTENDANCE_REQUEST_SUBMITTED, {
+          eventId: randomUUID(),
+          type: EventName.ATTENDANCE_REQUEST_SUBMITTED,
+          occurredAt: OCCURRED_AT,
+          payload: { ...attendanceRequestPayload('overtime_request'), reason: 'Family emergency' },
+        }),
+      },
+      {
+        condition: 'the attendance decision lists a changed field',
+        routingKey: EventName.ATTENDANCE_REQUEST_APPROVED,
+        body: nestBody(EventName.ATTENDANCE_REQUEST_APPROVED, {
+          eventId: randomUUID(),
+          type: EventName.ATTENDANCE_REQUEST_APPROVED,
+          occurredAt: OCCURRED_AT,
+          payload: { ...attendanceRequestPayload('overtime_request'), changedFields: ['status'] },
         }),
       },
     ];
