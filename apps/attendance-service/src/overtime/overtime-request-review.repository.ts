@@ -54,6 +54,27 @@ export class OvertimeRequestReviewRepository implements IOvertimeRequestReviewRe
     return { records, totalItems: totals?.total ?? 0 };
   }
 
+  async findReviewRequestById(requestId: string): Promise<StoredOvertimeReviewRequest | undefined> {
+    const [row] = await this.database.db
+      .select({
+        ...storedOvertimeRequestColumns,
+        attendanceDayId: overtimeRequests.attendanceDayId,
+        requesterAccountId: overtimeRequests.requestedByAccountId,
+      })
+      .from(overtimeRequests)
+      .innerJoin(attendanceDays, eq(attendanceDays.id, overtimeRequests.attendanceDayId))
+      .where(eq(overtimeRequests.id, requestId))
+      .limit(1);
+    if (row === undefined) return undefined;
+    const approvedMinutesByDay = await this.findApprovedMinutesByDay([row.attendanceDayId]);
+    const { attendanceDayId, requesterAccountId, ...storedRow } = row;
+    return {
+      ...toStoredOvertimeRequest(storedRow),
+      requesterAccountId,
+      approvedMinutes: approvedMinutesByDay.get(attendanceDayId) ?? 0,
+    };
+  }
+
   // Empty for an empty page, because an IN list needs at least one day.
   private async findApprovedMinutesByDay(
     attendanceDayIds: ReadonlyArray<string>,

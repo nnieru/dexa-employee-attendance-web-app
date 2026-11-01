@@ -18,6 +18,7 @@ import { Route as AuthenticatedEmployeesRouteImport } from './routes/_authentica
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
 import { Route as AuthenticatedEmployeesNewRouteImport } from './routes/_authenticated/employees_.new'
+import { Route as AuthenticatedApprovalsRequestTypeRequestIdRouteImport } from './routes/_authenticated/approvals_.$requestType.$requestId'
 import { Route as AuthenticatedEmployeesEmployeeIdEditRouteImport } from './routes/_authenticated/employees_.$employeeId.edit'
 
 const IndexRoute = IndexRouteImport.update({
@@ -66,6 +67,12 @@ const AuthenticatedEmployeesNewRoute =
     path: '/employees/new',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedApprovalsRequestTypeRequestIdRoute =
+  AuthenticatedApprovalsRequestTypeRequestIdRouteImport.update({
+    id: '/approvals_/$requestType/$requestId',
+    path: '/approvals/$requestType/$requestId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedEmployeesEmployeeIdEditRoute =
   AuthenticatedEmployeesEmployeeIdEditRouteImport.update({
     id: '/employees_/$employeeId/edit',
@@ -82,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
+  '/approvals/$requestType/$requestId': typeof AuthenticatedApprovalsRequestTypeRequestIdRoute
   '/employees/$employeeId/edit': typeof AuthenticatedEmployeesEmployeeIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +101,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
+  '/approvals/$requestType/$requestId': typeof AuthenticatedApprovalsRequestTypeRequestIdRoute
   '/employees/$employeeId/edit': typeof AuthenticatedEmployeesEmployeeIdEditRoute
 }
 export interface FileRoutesById {
@@ -106,6 +115,7 @@ export interface FileRoutesById {
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/employees_/new': typeof AuthenticatedEmployeesNewRoute
+  '/_authenticated/approvals_/$requestType/$requestId': typeof AuthenticatedApprovalsRequestTypeRequestIdRoute
   '/_authenticated/employees_/$employeeId/edit': typeof AuthenticatedEmployeesEmployeeIdEditRoute
 }
 export interface FileRouteTypes {
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedule'
     | '/employees/new'
+    | '/approvals/$requestType/$requestId'
     | '/employees/$employeeId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedule'
     | '/employees/new'
+    | '/approvals/$requestType/$requestId'
     | '/employees/$employeeId/edit'
   id:
     | '__root__'
@@ -142,6 +154,7 @@ export interface FileRouteTypes {
     | '/_authenticated/notifications'
     | '/_authenticated/schedule'
     | '/_authenticated/employees_/new'
+    | '/_authenticated/approvals_/$requestType/$requestId'
     | '/_authenticated/employees_/$employeeId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -216,6 +229,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployeesNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/approvals_/$requestType/$requestId': {
+      id: '/_authenticated/approvals_/$requestType/$requestId'
+      path: '/approvals/$requestType/$requestId'
+      fullPath: '/approvals/$requestType/$requestId'
+      preLoaderRoute: typeof AuthenticatedApprovalsRequestTypeRequestIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/employees_/$employeeId/edit': {
       id: '/_authenticated/employees_/$employeeId/edit'
       path: '/employees/$employeeId/edit'
@@ -233,6 +253,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
   AuthenticatedEmployeesNewRoute: typeof AuthenticatedEmployeesNewRoute
+  AuthenticatedApprovalsRequestTypeRequestIdRoute: typeof AuthenticatedApprovalsRequestTypeRequestIdRoute
   AuthenticatedEmployeesEmployeeIdEditRoute: typeof AuthenticatedEmployeesEmployeeIdEditRoute
 }
 
@@ -243,6 +264,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
   AuthenticatedEmployeesNewRoute: AuthenticatedEmployeesNewRoute,
+  AuthenticatedApprovalsRequestTypeRequestIdRoute:
+    AuthenticatedApprovalsRequestTypeRequestIdRoute,
   AuthenticatedEmployeesEmployeeIdEditRoute:
     AuthenticatedEmployeesEmployeeIdEditRoute,
 }

@@ -19,6 +19,23 @@ export const ON_TIME_ROW: AttendanceMonitoringItem = {
   clockOutStatus: 'LATE_CHECKOUT',
 };
 
+// An approved correction on this day: the effective punches are 08:02 and 19:00 WIB, while the raw punches stay
+// 08:10 and 18:30 WIB. The row must show both, because HR needs the raw punch as well as the value in effect (ADM-4).
+export const CORRECTED_ROW: AttendanceMonitoringItem = {
+  accountId: '9e4c2b7a-5d3f-4a1b-8c6e-0f2d4b6a8c1e',
+  employee: { name: 'Siti Rahma', positionName: 'Product Analyst' },
+  businessDate: '2026-11-11',
+  dayStatus: 'PRESENT',
+  approvedOvertimeMinutes: 90.5,
+  rawClockInAt: '2026-11-11T01:10:00.000Z',
+  rawClockOutAt: '2026-11-11T11:30:00.000Z',
+  isCorrected: true,
+  clockInAt: '2026-11-11T01:02:00.000Z',
+  clockInStatus: 'ON_TIME_CHECKIN',
+  clockOutAt: '2026-11-11T12:00:00.000Z',
+  clockOutStatus: 'LATE_CHECKOUT',
+};
+
 // A day with a late clock in and no clock out yet: the Clock out cell is empty (PRD ADM-4).
 export const CLOCK_IN_ONLY_ROW: AttendanceMonitoringItem = {
   accountId: '3a7d9c4e-1b2f-4c8a-8d5e-6f7a8b9c0d1e',

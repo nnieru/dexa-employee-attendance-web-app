@@ -3,6 +3,7 @@ import type {
   ApproveOvertimeRequest,
   OvertimeRequest,
   OvertimeRequestPage,
+  OvertimeRequestReviewItem,
   OvertimeRequestReviewPage,
   OwnRequestListQuery,
   RejectOvertimeRequest,
@@ -21,6 +22,7 @@ export interface IOvertimeRequestClient {
     user: AuthenticatedUser,
     query: RequestReviewQueueQuery,
   ): Promise<OvertimeRequestReviewPage>;
+  getReviewRequest(user: AuthenticatedUser, requestId: string): Promise<OvertimeRequestReviewItem>;
   approveOvertime(
     user: AuthenticatedUser,
     requestId: string,

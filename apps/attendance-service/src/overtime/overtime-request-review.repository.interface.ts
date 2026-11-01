@@ -19,4 +19,5 @@ export type StoredOvertimeReviewPage = {
 /** Read-only access to the overtime review queue. Writes belong to IOvertimeRequestTransaction. */
 export interface IOvertimeRequestReviewReader {
   findReviewPage(criteria: RequestReviewQueueCriteria): Promise<StoredOvertimeReviewPage>;
+  findReviewRequestById(requestId: string): Promise<StoredOvertimeReviewRequest | undefined>;
 }

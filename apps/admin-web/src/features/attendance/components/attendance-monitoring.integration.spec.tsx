@@ -5,15 +5,16 @@ import { mswServer } from '../../../test/msw-server.js';
 import { accountCheckSucceeds, loginSucceeds } from '../../../test/admin-app-harness.js';
 import {
   answerWithAttendancePage,
-  getCellUnderHeader,
   getEmployeeSelect,
   getRowForDate,
   openAttendancePage,
   recordAttendanceRequests,
 } from '../../../test/attendance-monitoring-test-helpers.js';
+import { getCellUnderHeader } from '../../../test/data-table-test-helpers.js';
 import {
   ATTENDANCE_MONITORING_URL,
   CLOCK_IN_ONLY_ROW,
+  CORRECTED_ROW,
   NO_CHECK_IN_DAY_OFF_ROW,
   NO_CHECK_IN_ROW,
   ON_TIME_ROW,
@@ -216,6 +217,43 @@ describe('attendance rows', () => {
     const dayOffRow = getRowForDate('2026-11-08');
     expect(getCellUnderHeader(dayOffRow, 'Clock in').textContent).toBe('');
     expect(getCellUnderHeader(dayOffRow, 'Clock-in status')).toHaveTextContent('Not required');
+  });
+
+  it('should show the day status and the approved overtime for each row', async () => {
+    mswServer.use(
+      http.get(ATTENDANCE_MONITORING_URL, () =>
+        answerWithAttendancePage({ items: [CORRECTED_ROW], totalItems: 1 }),
+      ),
+    );
+    await openAttendancePage('/attendance');
+
+    const row = await screen.findByRole('row', { name: /2026-11-11/ });
+    expect(getCellUnderHeader(row, 'Day status')).toHaveTextContent('Present');
+    expect(getCellUnderHeader(row, 'Approved overtime')).toHaveTextContent('90.5 min');
+  });
+
+  it('should show the original punches beside the effective times when the day was corrected', async () => {
+    mswServer.use(
+      http.get(ATTENDANCE_MONITORING_URL, () =>
+        answerWithAttendancePage({ items: [ON_TIME_ROW, CORRECTED_ROW], totalItems: 2 }),
+      ),
+    );
+    await openAttendancePage('/attendance');
+
+    const correctedRow = await screen.findByRole('row', { name: /2026-11-11/ });
+    expect(within(correctedRow).getByText('Corrected')).toHaveClass('dexa-status-label--info');
+    expect(getCellUnderHeader(correctedRow, 'Clock in')).toHaveTextContent('2026-11-11 08:02');
+    expect(getCellUnderHeader(correctedRow, 'Clock in')).toHaveTextContent(
+      'Original: 2026-11-11 08:10',
+    );
+    expect(getCellUnderHeader(correctedRow, 'Clock out')).toHaveTextContent('2026-11-11 19:00');
+    expect(getCellUnderHeader(correctedRow, 'Clock out')).toHaveTextContent(
+      'Original: 2026-11-11 18:30',
+    );
+
+    const uncorrectedRow = getRowForDate('2026-11-13');
+    expect(within(uncorrectedRow).queryByText('Corrected')).not.toBeInTheDocument();
+    expect(getCellUnderHeader(uncorrectedRow, 'Clock in')).not.toHaveTextContent('Original:');
   });
 
   it('should render no buttons, links, or form fields in any attendance row', async () => {

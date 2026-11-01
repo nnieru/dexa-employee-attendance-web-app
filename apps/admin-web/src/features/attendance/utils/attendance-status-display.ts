@@ -1,4 +1,4 @@
-import type { AttendanceMonitoringItem } from '@dexa/contracts';
+import type { AttendanceDayStatus, AttendanceMonitoringItem } from '@dexa/contracts';
 import type { StatusLabelProps } from '@dexa/ui';
 
 export type AttendanceStatusDisplay = {
@@ -35,4 +35,18 @@ export function getCheckInStatusDisplay(status: ClockInStatus): AttendanceStatus
 
 export function getCheckOutStatusDisplay(status: ClockOutStatus): AttendanceStatusDisplay {
   return CHECK_OUT_STATUS_DISPLAY[status];
+}
+
+// The DAY status is the stored attendance state (PRD ADM-4, SUM-6), separate from the two timing classifications.
+const DAY_STATUS_DISPLAY: Readonly<Record<AttendanceDayStatus, AttendanceStatusDisplay>> = {
+  PENDING: { text: 'Pending', tone: 'neutral' },
+  PRESENT: { text: 'Present', tone: 'success' },
+  NOT_ATTEND: { text: 'Not attended', tone: 'error' },
+  SICK_LEAVE: { text: 'Sick leave', tone: 'info' },
+  LEAVE: { text: 'Leave', tone: 'info' },
+  DAY_OFF: { text: 'Day off', tone: 'neutral' },
+};
+
+export function getDayStatusDisplay(status: AttendanceDayStatus): AttendanceStatusDisplay {
+  return DAY_STATUS_DISPLAY[status];
 }

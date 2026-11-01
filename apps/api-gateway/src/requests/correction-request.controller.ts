@@ -10,6 +10,7 @@ import {
   type ApproveCorrectionRequest,
   type CorrectionRequest,
   type CorrectionRequestPage,
+  type CorrectionRequestReviewItem,
   type CorrectionRequestReviewPage,
   type OwnRequestListQuery,
   type RejectCorrectionRequest,
@@ -70,6 +71,16 @@ export class CorrectionRequestController {
     @Query(new ZodValidationPipe(requestReviewQueueQuerySchema)) query: RequestReviewQueueQuery,
   ): Promise<CorrectionRequestReviewPage> {
     return this.correctionRequests.listReviewQueue(user, query);
+  }
+
+  // HR only. The same review item as the queue, so the detail screen shows the current values and isOwnRequest.
+  @Roles(Role.HR)
+  @Get(':id')
+  getReviewRequest(
+    @Param('id', new ZodValidationPipe(requestIdSchema)) requestId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<CorrectionRequestReviewItem> {
+    return this.correctionRequests.getReviewRequest(user, requestId);
   }
 
   // HR only. The gateway checks the role, and attendance-service checks it again and refuses a reviewer who is the

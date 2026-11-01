@@ -1,7 +1,12 @@
-import type { OvertimeRequestReviewPage, RequestReviewQueueQuery } from '@dexa/contracts';
+import type {
+  OvertimeRequestReviewItem,
+  OvertimeRequestReviewPage,
+  RequestReviewQueueQuery,
+} from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { EMPLOYEE_CLIENT, type IEmployeeClient } from '../employees/employee-client.interface.js';
 import { findEmployeeNamesByAccountId } from '../employees/employee-name-lookup.js';
+import { RequestNotFoundError } from '../requests/request-decision.errors.js';
 import {
   OVERTIME_REQUEST_REVIEW_READER,
   type IOvertimeRequestReviewReader,
@@ -40,5 +45,17 @@ export class OvertimeRequestReviewService implements IOvertimeRequestReviewServi
       toOvertimeRequestReviewItem(record, reviewerAccountId, nameByAccountId),
     );
     return toOvertimeRequestReviewPage(items, query, totalItems);
+  }
+
+  async getReviewRequest(
+    reviewerAccountId: string,
+    requestId: string,
+  ): Promise<OvertimeRequestReviewItem> {
+    const record = await this.reader.findReviewRequestById(requestId);
+    if (record === undefined) throw new RequestNotFoundError();
+    const nameByAccountId = await findEmployeeNamesByAccountId(this.employees, [
+      record.requesterAccountId,
+    ]);
+    return toOvertimeRequestReviewItem(record, reviewerAccountId, nameByAccountId);
   }
 }

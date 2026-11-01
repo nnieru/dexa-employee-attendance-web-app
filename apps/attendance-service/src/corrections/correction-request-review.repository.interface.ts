@@ -24,4 +24,5 @@ export type StoredCorrectionReviewPage = {
 /** Read-only access to the correction review queue. Writes belong to ICorrectionRequestTransaction. */
 export interface ICorrectionRequestReviewReader {
   findReviewPage(criteria: RequestReviewQueueCriteria): Promise<StoredCorrectionReviewPage>;
+  findReviewRequestById(requestId: string): Promise<StoredCorrectionReviewRequest | undefined>;
 }

@@ -176,21 +176,6 @@ describe('HR route guards', () => {
     expect(navigation.getByRole('link', { name: 'Employees' })).not.toHaveAttribute('aria-current');
   });
 
-  it.each([['/approvals', 'Approvals']])(
-    'should show the coming-soon state on %s when the HR user is signed in',
-    async (path, title) => {
-      const { router } = await signInFrom('/login');
-      await screen.findByRole('heading', { level: 1, name: 'Employees' });
-
-      await act(async () => {
-        await router.navigate({ href: path });
-      });
-
-      expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument();
-      expect(screen.getByText('Coming soon')).toBeInTheDocument();
-    },
-  );
-
   it('should show the employee list on Employees when the HR user is signed in', async () => {
     await signInFrom('/login');
 

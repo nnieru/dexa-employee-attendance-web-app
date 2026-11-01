@@ -10,6 +10,7 @@ import {
   type ApproveOvertimeRequest,
   type OvertimeRequest,
   type OvertimeRequestPage,
+  type OvertimeRequestReviewItem,
   type OvertimeRequestReviewPage,
   type OwnRequestListQuery,
   type RejectOvertimeRequest,
@@ -69,6 +70,16 @@ export class OvertimeRequestController {
     @Query(new ZodValidationPipe(requestReviewQueueQuerySchema)) query: RequestReviewQueueQuery,
   ): Promise<OvertimeRequestReviewPage> {
     return this.overtimeRequests.listReviewQueue(user, query);
+  }
+
+  // HR only. The same review item as the queue, so the detail screen shows the current values and isOwnRequest.
+  @Roles(Role.HR)
+  @Get(':id')
+  getReviewRequest(
+    @Param('id', new ZodValidationPipe(requestIdSchema)) requestId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<OvertimeRequestReviewItem> {
+    return this.overtimeRequests.getReviewRequest(user, requestId);
   }
 
   // HR only. The gateway checks the role, and attendance-service checks it again and refuses a reviewer who is the

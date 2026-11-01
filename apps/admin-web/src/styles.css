@@ -100,6 +100,99 @@
   margin-block: var(--space-4);
 }
 
+/* Approval filters: status and employee side by side, wrapping on narrow screens (DESIGN §7). */
+.approval-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block: var(--space-4);
+}
+
+.approval-filters .dexa-field {
+  flex: 1 1 14rem;
+  max-width: 26rem;
+}
+
+/* Approval detail: the requester and the decision actions above the requested and current values. */
+.approval-detail {
+  display: grid;
+  gap: var(--space-4);
+  margin-block: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 var(--border-width) var(--color-border);
+}
+
+.approval-detail__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.approval-detail__type {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.approval-detail__requester {
+  font-size: var(--font-size-heading-3);
+}
+
+.approval-detail__section-heading {
+  font-size: var(--font-size-heading-4);
+}
+
+.approval-detail__reason,
+.approval-detail__review-reason {
+  max-width: 60ch;
+  overflow-wrap: anywhere;
+}
+
+.approval-detail__note {
+  color: var(--color-text-muted);
+}
+
+.approval-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* Side-by-side current and requested values. The header row names each column, so colour is never the only cue. */
+.approval-comparison {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.approval-comparison th,
+.approval-comparison td {
+  padding: var(--space-2);
+  border-bottom: var(--border-width) solid var(--color-border);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.approval-comparison thead th {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+/* The original punch stays visible below the effective time after an approved correction (ADM-4, T-REQ-21). */
+.attendance-original-time {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.attendance-corrected-label {
+  display: inline-block;
+  margin-inline-start: var(--space-2);
+}
+
 /* HR notification inbox: a list of entries, each with a status, the time, the title and the summary (DESIGN §7). */
 .notification-list {
   display: grid;

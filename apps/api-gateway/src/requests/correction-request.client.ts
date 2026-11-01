@@ -7,11 +7,13 @@ import {
 import {
   API_PREFIX,
   correctionRequestPageSchema,
+  correctionRequestReviewItemSchema,
   correctionRequestReviewPageSchema,
   correctionRequestSchema,
   type ApproveCorrectionRequest,
   type CorrectionRequest,
   type CorrectionRequestPage,
+  type CorrectionRequestReviewItem,
   type CorrectionRequestReviewPage,
   type OwnRequestListQuery,
   type RejectCorrectionRequest,
@@ -77,6 +79,19 @@ export class CorrectionRequestClient implements ICorrectionRequestClient {
       query: toRequestReviewQueueQueryParameters(query),
       onBehalfOf: user,
       responseSchema: correctionRequestReviewPageSchema,
+    });
+  }
+
+  // HR only: the gateway guard and attendance-service both check the role. A read, so it is not retried.
+  getReviewRequest(
+    user: AuthenticatedUser,
+    requestId: string,
+  ): Promise<CorrectionRequestReviewItem> {
+    return this.httpClient.get({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: `${CORRECTION_REQUESTS_PATH}/${requestId}`,
+      onBehalfOf: user,
+      responseSchema: correctionRequestReviewItemSchema,
     });
   }
 

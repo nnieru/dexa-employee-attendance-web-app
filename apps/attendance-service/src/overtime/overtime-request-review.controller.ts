@@ -6,12 +6,14 @@ import {
   type AuthenticatedUser,
 } from '@dexa/common';
 import {
+  requestIdSchema,
   requestReviewQueueQuerySchema,
   Role,
+  type OvertimeRequestReviewItem,
   type OvertimeRequestReviewPage,
   type RequestReviewQueueQuery,
 } from '@dexa/contracts';
-import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, Param, Query, UseGuards } from '@nestjs/common';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 import {
   OVERTIME_REQUEST_REVIEW_SERVICE,
@@ -35,5 +37,13 @@ export class OvertimeRequestReviewController {
     @Query(new ZodValidationPipe(requestReviewQueueQuerySchema)) query: RequestReviewQueueQuery,
   ): Promise<OvertimeRequestReviewPage> {
     return this.overtimeRequestReviews.listReviewQueue(user.accountId, query);
+  }
+
+  @Get(':id')
+  getReviewRequest(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ZodValidationPipe(requestIdSchema)) requestId: string,
+  ): Promise<OvertimeRequestReviewItem> {
+    return this.overtimeRequestReviews.getReviewRequest(user.accountId, requestId);
   }
 }

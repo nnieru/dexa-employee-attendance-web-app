@@ -1,7 +1,12 @@
-import type { CorrectionRequestReviewPage, RequestReviewQueueQuery } from '@dexa/contracts';
+import type {
+  CorrectionRequestReviewItem,
+  CorrectionRequestReviewPage,
+  RequestReviewQueueQuery,
+} from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { EMPLOYEE_CLIENT, type IEmployeeClient } from '../employees/employee-client.interface.js';
 import { findEmployeeNamesByAccountId } from '../employees/employee-name-lookup.js';
+import { RequestNotFoundError } from '../requests/request-decision.errors.js';
 import {
   CORRECTION_REQUEST_REVIEW_READER,
   type ICorrectionRequestReviewReader,
@@ -41,5 +46,17 @@ export class CorrectionRequestReviewService implements ICorrectionRequestReviewS
       toCorrectionRequestReviewItem(record, reviewerAccountId, nameByAccountId),
     );
     return toCorrectionRequestReviewPage(items, query, totalItems);
+  }
+
+  async getReviewRequest(
+    reviewerAccountId: string,
+    requestId: string,
+  ): Promise<CorrectionRequestReviewItem> {
+    const record = await this.reader.findReviewRequestById(requestId);
+    if (record === undefined) throw new RequestNotFoundError();
+    const nameByAccountId = await findEmployeeNamesByAccountId(this.employees, [
+      record.requesterAccountId,
+    ]);
+    return toCorrectionRequestReviewItem(record, reviewerAccountId, nameByAccountId);
   }
 }

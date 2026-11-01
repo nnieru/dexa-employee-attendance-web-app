@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, http } from 'msw';
 import { mswServer } from './msw-server.js';
@@ -43,20 +43,6 @@ export async function openAttendancePage(path: string) {
 
 export function getRowForDate(businessDate: string): HTMLElement {
   return screen.getByRole('row', { name: new RegExp(businessDate) });
-}
-
-/** The cell under a column header, found by the header's text so the test does not depend on column order. */
-export function getCellUnderHeader(row: HTMLElement, headerText: string): HTMLElement {
-  const table = row.closest('table');
-  if (table === null) throw new Error('The row is not inside a table.');
-  const headerTexts = within(table)
-    .getAllByRole('columnheader')
-    .map((header) => header.textContent);
-  const columnIndex = headerTexts.indexOf(headerText);
-  if (columnIndex === -1) throw new Error(`No column named "${headerText}".`);
-  const cell = within(row).getAllByRole('cell')[columnIndex];
-  if (cell === undefined) throw new Error(`The row has no cell for "${headerText}".`);
-  return cell;
 }
 
 export function getEmployeeSelect(): HTMLElement {

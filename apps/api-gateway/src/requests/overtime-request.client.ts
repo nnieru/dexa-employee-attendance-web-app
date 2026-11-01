@@ -7,11 +7,13 @@ import {
 import {
   API_PREFIX,
   overtimeRequestPageSchema,
+  overtimeRequestReviewItemSchema,
   overtimeRequestReviewPageSchema,
   overtimeRequestSchema,
   type ApproveOvertimeRequest,
   type OvertimeRequest,
   type OvertimeRequestPage,
+  type OvertimeRequestReviewItem,
   type OvertimeRequestReviewPage,
   type OwnRequestListQuery,
   type RejectOvertimeRequest,
@@ -77,6 +79,16 @@ export class OvertimeRequestClient implements IOvertimeRequestClient {
       query: toRequestReviewQueueQueryParameters(query),
       onBehalfOf: user,
       responseSchema: overtimeRequestReviewPageSchema,
+    });
+  }
+
+  // HR only: the gateway guard and attendance-service both check the role. A read, so it is not retried.
+  getReviewRequest(user: AuthenticatedUser, requestId: string): Promise<OvertimeRequestReviewItem> {
+    return this.httpClient.get({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: `${OVERTIME_REQUESTS_PATH}/${requestId}`,
+      onBehalfOf: user,
+      responseSchema: overtimeRequestReviewItemSchema,
     });
   }
 

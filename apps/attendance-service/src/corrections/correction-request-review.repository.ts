@@ -64,6 +64,32 @@ export class CorrectionRequestReviewRepository implements ICorrectionRequestRevi
       .where(condition);
     return { records: rows.map(toStoredCorrectionReviewRequest), totalItems: totals?.total ?? 0 };
   }
+
+  async findReviewRequestById(
+    requestId: string,
+  ): Promise<StoredCorrectionReviewRequest | undefined> {
+    const [row] = await this.database.db
+      .select({
+        ...storedCorrectionRequestColumns,
+        requesterAccountId: attendanceAdjustmentRequests.requestedByAccountId,
+        currentCheckinAt: attendanceDays.effectiveCheckinAt,
+        currentCheckoutAt: attendanceDays.effectiveCheckoutAt,
+        currentDayStatus: currentDayStatuses.code,
+      })
+      .from(attendanceAdjustmentRequests)
+      .innerJoin(
+        attendanceDays,
+        eq(attendanceDays.id, attendanceAdjustmentRequests.attendanceDayId),
+      )
+      .innerJoin(
+        requestedStatuses,
+        eq(requestedStatuses.id, attendanceAdjustmentRequests.requestedDayStatusId),
+      )
+      .innerJoin(currentDayStatuses, eq(currentDayStatuses.id, attendanceDays.dayStatusId))
+      .where(eq(attendanceAdjustmentRequests.id, requestId))
+      .limit(1);
+    return row === undefined ? undefined : toStoredCorrectionReviewRequest(row);
+  }
 }
 
 // The outcome, status, and day status are varchars until they are narrowed where the row is read.

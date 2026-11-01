@@ -8,10 +8,14 @@ import {
   type IAccountStatusReader,
 } from '@dexa/common';
 import {
+  correctionRequestReviewItemSchema,
   correctionRequestReviewPageSchema,
+  overtimeRequestReviewItemSchema,
   overtimeRequestReviewPageSchema,
   Role,
+  type CorrectionRequestReviewItem,
   type CorrectionRequestReviewPage,
+  type OvertimeRequestReviewItem,
   type OvertimeRequestReviewPage,
 } from '@dexa/contracts';
 import type { INestApplication } from '@nestjs/common';
@@ -127,6 +131,21 @@ const EMPTY_OVERTIME_PAGE: OvertimeRequestReviewPage = {
   totalPages: 0,
 };
 
+const OVERTIME_ITEM: OvertimeRequestReviewItem = {
+  id: '7b2d4f6a-8c0e-4a2b-9d1f-3e5c7a9b1d3f',
+  businessDate: '2026-11-12',
+  startAt: '2026-11-12T11:00:00.000Z',
+  endAt: '2026-11-12T13:00:00.000Z',
+  reason: 'Release deployment',
+  status: 'PENDING',
+  reviewReason: null,
+  reviewedAt: null,
+  createdAt: '2026-11-12T10:00:00.000Z',
+  requester: { accountId: EMPLOYEE_ID, name: 'Nadia Rahma' },
+  isOwnRequest: false,
+  current: { approvedMinutes: 60 },
+};
+
 const CORRECTION_PAGE: CorrectionRequestReviewPage = {
   items: [
     {
@@ -234,6 +253,42 @@ describe('api-gateway HR review queue', () => {
         page: '2',
         pageSize: '5',
       });
+      expect(
+        verifyGatewayToken(keys, forwarded?.authorization, ServiceName.ATTENDANCE_SERVICE),
+      ).toEqual({ accountId: hrAccountId, role: Role.HR });
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it.each([
+    {
+      label: 'overtime',
+      path: OVERTIME_QUEUE_PATH,
+      item: OVERTIME_ITEM,
+      parse: overtimeRequestReviewItemSchema.parse,
+    },
+    {
+      label: 'correction',
+      path: CORRECTION_QUEUE_PATH,
+      item: CORRECTION_PAGE.items[0] as CorrectionRequestReviewItem,
+      parse: correctionRequestReviewItemSchema.parse,
+    },
+  ])(
+    'should forward the $label detail path with the HR token and answer the contract item',
+    async ({ path, item, parse }) => {
+      const hrAccountId = randomUUID();
+      attendanceService.answerWith(200, item);
+      const callsBefore = attendanceService.calls.length;
+
+      const response = await getQueue(
+        `${path}/${item.id}`,
+        signEndUserJwt(keys, hrAccountId, Role.HR),
+        '',
+      ).expect(200);
+
+      expect(parse(response.body)).toEqual(item);
+      const forwarded = attendanceService.calls.at(callsBefore);
+      expect(forwarded).toMatchObject({ method: 'GET', path: `${path}/${item.id}` });
       expect(
         verifyGatewayToken(keys, forwarded?.authorization, ServiceName.ATTENDANCE_SERVICE),
       ).toEqual({ accountId: hrAccountId, role: Role.HR });

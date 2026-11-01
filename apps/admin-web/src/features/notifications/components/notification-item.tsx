@@ -1,11 +1,17 @@
+import { Link } from '@tanstack/react-router';
 import type { Notification } from '@dexa/contracts';
 import { Button, StatusLabel } from '@dexa/ui';
 import {
   MARK_AS_READ_LABEL,
+  OPEN_REQUEST_LABEL,
   READ_STATUS_TEXT,
   UNREAD_STATUS_TEXT,
 } from '../utils/notification-inbox-messages.js';
 import { formatNotificationTime } from '../utils/format-notification-time.js';
+import {
+  getNotificationRequestLink,
+  getNotificationRequestParams,
+} from '../utils/notification-request-link.js';
 
 type NotificationItemProps = {
   notification: Notification;
@@ -23,6 +29,8 @@ export function NotificationItem({
   onMarkRead,
 }: NotificationItemProps) {
   const isUnread = notification.readAt === null;
+  const requestLink = getNotificationRequestLink(notification.data);
+  const requestParams = getNotificationRequestParams(notification.data);
   return (
     <li className="notification-item">
       <div className="notification-item__meta">
@@ -43,6 +51,15 @@ export function NotificationItem({
         {notification.title}
       </p>
       <p className="notification-item__body">{notification.body}</p>
+      {requestLink !== undefined && requestParams !== undefined && (
+        <Link
+          to={requestLink}
+          params={requestParams}
+          className="dexa-button dexa-button--secondary"
+        >
+          {OPEN_REQUEST_LABEL}
+        </Link>
+      )}
       {isUnread && (
         <Button
           variant="secondary"

@@ -3,6 +3,7 @@ import type {
   ApproveCorrectionRequest,
   CorrectionRequest,
   CorrectionRequestPage,
+  CorrectionRequestReviewItem,
   CorrectionRequestReviewPage,
   OwnRequestListQuery,
   RejectCorrectionRequest,
@@ -24,6 +25,10 @@ export interface ICorrectionRequestClient {
     user: AuthenticatedUser,
     query: RequestReviewQueueQuery,
   ): Promise<CorrectionRequestReviewPage>;
+  getReviewRequest(
+    user: AuthenticatedUser,
+    requestId: string,
+  ): Promise<CorrectionRequestReviewItem>;
   approveCorrection(
     user: AuthenticatedUser,
     requestId: string,

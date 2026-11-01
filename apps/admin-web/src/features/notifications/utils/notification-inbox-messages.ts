@@ -10,6 +10,7 @@ export const NO_NOTIFICATIONS_ON_PAGE_MESSAGE =
 export const LOADING_NOTIFICATIONS_MESSAGE = 'Loading notifications…';
 export const REFRESHING_NOTIFICATIONS_MESSAGE = 'Updating notifications…';
 export const MARK_AS_READ_LABEL = 'Mark as read';
+export const OPEN_REQUEST_LABEL = 'Open request';
 export const UNREAD_STATUS_TEXT = 'Unread';
 export const READ_STATUS_TEXT = 'Read';
 export const NOTIFICATION_PAGER_LABEL = 'Notification pages';
