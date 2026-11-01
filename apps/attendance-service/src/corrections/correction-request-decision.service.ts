@@ -4,7 +4,9 @@ import type {
   CorrectionRequest,
   RejectCorrectionRequest,
 } from '@dexa/contracts';
+import { OUTBOX_WRITER, type IOutboxWriter } from '@dexa/messaging';
 import { Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import {
   RequestNotFoundError,
   toRequestDecisionError,
@@ -14,6 +16,10 @@ import {
   REQUEST_STATUS,
   type TerminalRequestStatus,
 } from '../requests/request-decision.rules.js';
+import {
+  attendanceRequestDecisionEventType,
+  buildAttendanceRequestEvent,
+} from '../requests/attendance-request-event.rules.js';
 import { applyCorrectionToDay } from './correction-apply.rules.js';
 import { AttendanceDayChangedError } from './correction-request.errors.js';
 import { toCorrectionRequest } from './correction-request.rules.js';
@@ -37,6 +43,7 @@ export class CorrectionRequestDecisionService implements ICorrectionRequestDecis
   constructor(
     @Inject(CORRECTION_REQUEST_DECISION_REPOSITORY)
     private readonly decisions: ICorrectionRequestDecisionRepository,
+    @Inject(OUTBOX_WRITER) private readonly outbox: IOutboxWriter,
     @Inject(CLOCK) private readonly clock: IClock,
   ) {}
 
@@ -68,47 +75,59 @@ export class CorrectionRequestDecisionService implements ICorrectionRequestDecis
 
   private async decide(command: DecisionCommand): Promise<CorrectionRequest> {
     const decided = await this.decisions.runInTransaction((transaction) =>
-      decideInTransaction(transaction, command, this.clock),
+      this.decideInTransaction(transaction, command),
     );
     return toCorrectionRequest(decided);
   }
-}
 
-// The request is locked before the rule runs, so the status it judges is the one that will be stored. A replay returns
-// the recorded request and writes nothing. Only a first approval touches the day (DATABASE §5.8).
-async function decideInTransaction(
-  transaction: ICorrectionRequestDecisionTransaction,
-  command: DecisionCommand,
-  clock: IClock,
-): Promise<LockedCorrectionRequest> {
-  const locked = await transaction.findRequestForUpdate(command.requestId);
-  if (locked === undefined) throw new RequestNotFoundError();
+  // The request is locked before the rule runs, so the status it judges is the one that will be stored. A replay returns
+  // the recorded request and writes nothing. Only a first approval touches the day (DATABASE §5.8).
+  private async decideInTransaction(
+    transaction: ICorrectionRequestDecisionTransaction,
+    command: DecisionCommand,
+  ): Promise<LockedCorrectionRequest> {
+    const locked = await transaction.findRequestForUpdate(command.requestId);
+    if (locked === undefined) throw new RequestNotFoundError();
 
-  const reviewReason = normalizeReviewReason(command.reviewReason);
-  const outcome = evaluateRequestDecision({
-    currentStatus: locked.status,
-    targetStatus: command.targetStatus,
-    requestedByAccountId: locked.requesterAccountId,
-    reviewerAccountId: command.reviewerAccountId,
-    reviewReason,
-  });
-  if (outcome.kind === 'violation') throw toRequestDecisionError(outcome.violation);
-  if (outcome.kind === 'replay') return locked;
+    const reviewReason = normalizeReviewReason(command.reviewReason);
+    const outcome = evaluateRequestDecision({
+      currentStatus: locked.status,
+      targetStatus: command.targetStatus,
+      requestedByAccountId: locked.requesterAccountId,
+      reviewerAccountId: command.reviewerAccountId,
+      reviewReason,
+    });
+    if (outcome.kind === 'violation') throw toRequestDecisionError(outcome.violation);
+    if (outcome.kind === 'replay') return locked;
 
-  const appliedRevision =
-    outcome.nextStatus === REQUEST_STATUS.APPROVED
-      ? await applyApprovedCorrection(transaction, locked)
-      : null;
-  const reviewedAt = clock.now();
-  await transaction.recordDecision({
-    requestId: command.requestId,
-    status: outcome.nextStatus,
-    reviewerAccountId: command.reviewerAccountId,
-    reviewedAt,
-    reviewReason,
-    appliedRevision,
-  });
-  return { ...locked, status: outcome.nextStatus, reviewReason, reviewedAt };
+    const appliedRevision =
+      outcome.nextStatus === REQUEST_STATUS.APPROVED
+        ? await applyApprovedCorrection(transaction, locked)
+        : null;
+    const reviewedAt = this.clock.now();
+    await transaction.recordDecision({
+      requestId: command.requestId,
+      status: outcome.nextStatus,
+      reviewerAccountId: command.reviewerAccountId,
+      reviewedAt,
+      reviewReason,
+      appliedRevision,
+    });
+    await this.outbox.add(
+      transaction,
+      buildAttendanceRequestEvent({
+        eventId: randomUUID(),
+        eventType: attendanceRequestDecisionEventType(outcome.nextStatus),
+        occurredAt: reviewedAt,
+        accountId: locked.requesterAccountId,
+        actorAccountId: command.reviewerAccountId,
+        resourceType: 'attendance_adjustment_request',
+        resourceId: locked.id,
+        businessDate: locked.businessDate,
+      }),
+    );
+    return { ...locked, status: outcome.nextStatus, reviewReason, reviewedAt };
+  }
 }
 
 // The day is locked after the request. A day that changed since submission is refused before anything is written, so

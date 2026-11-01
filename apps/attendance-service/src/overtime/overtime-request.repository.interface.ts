@@ -1,5 +1,6 @@
 import type { BusinessDate } from '@dexa/common';
 import type { RequestStatus } from '@dexa/contracts';
+import type { OutboxTransaction } from '@dexa/messaging';
 import type { AttendanceDayTransaction } from '../attendance-days/attendance-day.repository.interface.js';
 
 export const OVERTIME_REQUEST_REPOSITORY = Symbol('IOvertimeRequestRepository');
@@ -34,7 +35,7 @@ export type NewOvertimeRequest = {
  * The reads and writes that one overtime submission needs, inside one transaction. The day reads come from the
  * shared day creation (T-REQ-03), so the day is found or created, and locked, the same way as for a punch.
  */
-export interface IOvertimeRequestTransaction extends AttendanceDayTransaction {
+export interface IOvertimeRequestTransaction extends AttendanceDayTransaction, OutboxTransaction {
   /** The employee's request with this key, or undefined. The key is unique per requester (DATABASE §5.6). */
   findRequestByIdempotencyKey(
     accountId: string,

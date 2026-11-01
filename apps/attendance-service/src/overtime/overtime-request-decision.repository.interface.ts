@@ -1,3 +1,4 @@
+import type { OutboxTransaction } from '@dexa/messaging';
 import type { TerminalRequestStatus } from '../requests/request-decision.rules.js';
 import type { StoredOvertimeRequest } from './overtime-request.repository.interface.js';
 
@@ -18,7 +19,7 @@ export type NewRequestDecision = {
 };
 
 /** The reads and writes of one HR decision, inside one transaction. */
-export interface IOvertimeRequestDecisionTransaction {
+export interface IOvertimeRequestDecisionTransaction extends OutboxTransaction {
   /** Locks the request row (SELECT ... FOR UPDATE) so a concurrent decision waits for this one to commit. */
   findRequestForUpdate(requestId: string): Promise<LockedOvertimeRequest | undefined>;
   /**

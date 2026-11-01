@@ -1,3 +1,4 @@
+import type { OutboxTransaction } from '@dexa/messaging';
 import type { AppliedCorrectionDay } from './correction-apply.rules.js';
 import type { DaySchedule } from '../classification/punch-classification.rules.js';
 import type { TerminalRequestStatus } from '../requests/request-decision.rules.js';
@@ -35,7 +36,7 @@ export type NewRequestDecision = {
 };
 
 /** The reads and writes of one HR decision on a correction, inside one transaction. */
-export interface ICorrectionRequestDecisionTransaction {
+export interface ICorrectionRequestDecisionTransaction extends OutboxTransaction {
   /** Locks the request row (SELECT ... FOR UPDATE) so a concurrent decision waits for this one to commit. */
   findRequestForUpdate(requestId: string): Promise<LockedCorrectionRequest | undefined>;
   /** Locks the day row. Called only for an approval, after the request is locked. */

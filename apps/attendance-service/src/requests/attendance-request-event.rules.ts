@@ -4,6 +4,7 @@ import {
   type AttendanceRequestResourceType,
 } from '@dexa/contracts';
 import type { EventMessage } from '@dexa/messaging';
+import { REQUEST_STATUS, type TerminalRequestStatus } from './request-decision.rules.js';
 
 export type AttendanceRequestEventType =
   | typeof EventName.ATTENDANCE_REQUEST_SUBMITTED
@@ -20,6 +21,15 @@ export type AttendanceRequestEventInput = {
   readonly resourceId: string;
   readonly businessDate: string;
 };
+
+/** The event that reports a first decision. The caller passes only the status a decision can store. */
+export function attendanceRequestDecisionEventType(
+  nextStatus: TerminalRequestStatus,
+): AttendanceRequestEventType {
+  return nextStatus === REQUEST_STATUS.APPROVED
+    ? EventName.ATTENDANCE_REQUEST_APPROVED
+    : EventName.ATTENDANCE_REQUEST_REJECTED;
+}
 
 /**
  * Builds the event envelope for attendance request events (submitted, approved, rejected)

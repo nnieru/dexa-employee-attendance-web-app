@@ -1,5 +1,6 @@
 import type { BusinessDate } from '@dexa/common';
 import type { RequestStatus } from '@dexa/contracts';
+import type { OutboxTransaction } from '@dexa/messaging';
 import type { AttendanceDayTransaction } from '../attendance-days/attendance-day.repository.interface.js';
 import type { RequestedCorrectionOutcome } from './correction-policy.rules.js';
 
@@ -49,7 +50,7 @@ export type NewCorrectionRequest = {
  * The reads and writes that one correction submission needs, inside one transaction. The day is found or created, and
  * locked, by the shared day creation (T-REQ-03), the same way as for a punch and an overtime request.
  */
-export interface ICorrectionRequestTransaction extends AttendanceDayTransaction {
+export interface ICorrectionRequestTransaction extends AttendanceDayTransaction, OutboxTransaction {
   /** The employee's request with this key, or undefined. The key is unique per requester (DATABASE §5.6). */
   findRequestByIdempotencyKey(
     accountId: string,

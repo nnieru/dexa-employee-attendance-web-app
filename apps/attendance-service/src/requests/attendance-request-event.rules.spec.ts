@@ -1,8 +1,10 @@
 import { EventName } from '@dexa/contracts';
 import {
+  attendanceRequestDecisionEventType,
   buildAttendanceRequestEvent,
   type AttendanceRequestEventInput,
 } from './attendance-request-event.rules.js';
+import { REQUEST_STATUS } from './request-decision.rules.js';
 
 const VALID_INPUT: AttendanceRequestEventInput = {
   eventId: 'e2b1c4a0-7d3e-4b9a-8c1d-0e2f4a6b8c0d',
@@ -52,4 +54,16 @@ describe('buildAttendanceRequestEvent', () => {
     });
     expect(event.type).toBe(EventName.ATTENDANCE_REQUEST_REJECTED);
   });
+});
+
+describe('attendanceRequestDecisionEventType', () => {
+  it.each([
+    { nextStatus: REQUEST_STATUS.APPROVED, expected: EventName.ATTENDANCE_REQUEST_APPROVED },
+    { nextStatus: REQUEST_STATUS.REJECTED, expected: EventName.ATTENDANCE_REQUEST_REJECTED },
+  ])(
+    'should name the event $expected for a first decision to $nextStatus',
+    ({ nextStatus, expected }) => {
+      expect(attendanceRequestDecisionEventType(nextStatus)).toBe(expected);
+    },
+  );
 });

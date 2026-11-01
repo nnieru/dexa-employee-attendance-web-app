@@ -72,27 +72,6 @@ function passwordChangedEvent(): EventMessage {
   };
 }
 
-function attendanceRequestEvent(
-  type:
-    | typeof EventName.ATTENDANCE_REQUEST_SUBMITTED
-    | typeof EventName.ATTENDANCE_REQUEST_APPROVED
-    | typeof EventName.ATTENDANCE_REQUEST_REJECTED,
-): EventMessage {
-  return {
-    eventId: randomUUID(),
-    type,
-    occurredAt: OCCURRED_AT,
-    payload: {
-      accountId: ACCOUNT_ID,
-      actorAccountId: ACTOR_ACCOUNT_ID,
-      resourceType: 'overtime_request',
-      resourceId: '3f7e2d1c-8b4a-4e9f-9c0d-1a2b3c4d5e6f',
-      businessDate: '2026-11-02',
-      changedFields: [],
-    },
-  };
-}
-
 // The broker body is Nest's { pattern, data } envelope, with the event as data (libs/messaging).
 function nestBody(routingKey: string, data: unknown): Buffer {
   return Buffer.from(JSON.stringify({ pattern: routingKey, data }), 'utf8');

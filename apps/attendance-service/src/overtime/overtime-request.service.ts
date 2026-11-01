@@ -1,6 +1,8 @@
 import { CLOCK, type IClock } from '@dexa/common';
-import type { SubmitOvertimeRequest } from '@dexa/contracts';
+import { EventName, type SubmitOvertimeRequest } from '@dexa/contracts';
+import { OUTBOX_WRITER, type IOutboxWriter } from '@dexa/messaging';
 import { Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { CONFIG } from '../config/config.token.js';
 import type { AttendanceServiceConfig } from '../config/attendance-service-config.schema.js';
 import { findOrCreateAttendanceDayForUpdate } from '../attendance-days/find-or-create-attendance-day.js';
@@ -25,6 +27,7 @@ import type {
   IOvertimeRequestService,
   SubmitOvertimeRequestResult,
 } from './overtime-request.service.interface.js';
+import { buildAttendanceRequestEvent } from '../requests/attendance-request-event.rules.js';
 
 type SubmissionMoment = {
   readonly submission: OvertimeSubmission;
@@ -42,6 +45,7 @@ export class OvertimeRequestService implements IOvertimeRequestService {
   constructor(
     @Inject(OVERTIME_REQUEST_REPOSITORY)
     private readonly overtimeRequests: IOvertimeRequestRepository,
+    @Inject(OUTBOX_WRITER) private readonly outbox: IOutboxWriter,
     @Inject(CLOCK) private readonly clock: IClock,
     @Inject(CONFIG) private readonly config: Pick<AttendanceServiceConfig, 'BUSINESS_TIMEZONE'>,
   ) {}
@@ -66,52 +70,74 @@ export class OvertimeRequestService implements IOvertimeRequestService {
 
   private submitOnce(moment: SubmissionMoment): Promise<StoredSubmission> {
     return this.overtimeRequests.runInTransaction((transaction) =>
-      submitInTransaction(transaction, moment),
+      this.submitInTransaction(transaction, moment),
     );
   }
-}
 
-// Order matters: the day is locked first, so the idempotency lookup and the minute sum see every committed
-// submission for this day. A retry is answered before the policy runs, so it is not refused by a rule that changed later.
-async function submitInTransaction(
-  transaction: IOvertimeRequestTransaction,
-  moment: SubmissionMoment,
-): Promise<StoredSubmission> {
-  const { submission, submittedAt, businessTimezone } = moment;
-  const day = await findOrCreateAttendanceDayForUpdate(transaction, {
-    accountId: submission.accountId,
-    businessDate: submission.businessDate,
-    opening: 'REQUEST',
-  });
+  // Order matters: the day is locked first, so the idempotency lookup and the minute sum see every committed
+  // submission for this day. A retry is answered before the policy runs, so it is not refused by a rule that changed later.
+  private async submitInTransaction(
+    transaction: IOvertimeRequestTransaction,
+    moment: SubmissionMoment,
+  ): Promise<StoredSubmission> {
+    const { submission, submittedAt, businessTimezone } = moment;
+    const day = await findOrCreateAttendanceDayForUpdate(transaction, {
+      accountId: submission.accountId,
+      businessDate: submission.businessDate,
+      opening: 'REQUEST',
+    });
 
-  const stored = await transaction.findRequestByIdempotencyKey(
-    submission.accountId,
-    submission.idempotencyKey,
-  );
-  if (stored !== undefined) return replayOrRefuse(stored, submission);
+    const stored = await transaction.findRequestByIdempotencyKey(
+      submission.accountId,
+      submission.idempotencyKey,
+    );
+    if (stored !== undefined) return replayOrRefuse(stored, submission);
 
-  const existingActiveMinutes = await transaction.findActiveOvertimeMinutes(day.dayId);
-  const policy = evaluateOvertimePolicy({
-    now: submittedAt,
-    businessTimezone,
-    businessDate: submission.businessDate,
-    startAt: submission.startAt,
-    endAt: submission.endAt,
-    daySchedule: day.daySchedule,
-    existingActiveMinutes,
-  });
-  if (policy.kind === 'violation') throw new OvertimePolicyViolationError(policy.violation);
+    const existingActiveMinutes = await transaction.findActiveOvertimeMinutes(day.dayId);
+    const policy = evaluateOvertimePolicy({
+      now: submittedAt,
+      businessTimezone,
+      businessDate: submission.businessDate,
+      startAt: submission.startAt,
+      endAt: submission.endAt,
+      daySchedule: day.daySchedule,
+      existingActiveMinutes,
+    });
+    if (policy.kind === 'violation') throw new OvertimePolicyViolationError(policy.violation);
 
-  const inserted = await transaction.insertOvertimeRequest({
-    attendanceDayId: day.dayId,
-    accountId: submission.accountId,
-    businessDate: submission.businessDate,
-    startAt: submission.startAt,
-    endAt: submission.endAt,
-    reason: submission.reason,
-    idempotencyKey: submission.idempotencyKey,
-  });
-  return { created: true, request: inserted };
+    const inserted = await transaction.insertOvertimeRequest({
+      attendanceDayId: day.dayId,
+      accountId: submission.accountId,
+      businessDate: submission.businessDate,
+      startAt: submission.startAt,
+      endAt: submission.endAt,
+      reason: submission.reason,
+      idempotencyKey: submission.idempotencyKey,
+    });
+    await this.stageSubmittedEvent(transaction, moment, inserted);
+    return { created: true, request: inserted };
+  }
+
+  // The event joins the transaction, so it is stored only with the request it reports. A replay returns before this runs.
+  private stageSubmittedEvent(
+    transaction: IOvertimeRequestTransaction,
+    moment: SubmissionMoment,
+    request: StoredOvertimeRequest,
+  ): Promise<void> {
+    return this.outbox.add(
+      transaction,
+      buildAttendanceRequestEvent({
+        eventId: randomUUID(),
+        eventType: EventName.ATTENDANCE_REQUEST_SUBMITTED,
+        occurredAt: moment.submittedAt,
+        accountId: moment.submission.accountId,
+        actorAccountId: moment.submission.accountId,
+        resourceType: 'overtime_request',
+        resourceId: request.id,
+        businessDate: moment.submission.businessDate,
+      }),
+    );
+  }
 }
 
 function replayOrRefuse(

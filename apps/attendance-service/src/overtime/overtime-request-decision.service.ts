@@ -4,7 +4,9 @@ import type {
   OvertimeRequest,
   RejectOvertimeRequest,
 } from '@dexa/contracts';
+import { OUTBOX_WRITER, type IOutboxWriter } from '@dexa/messaging';
 import { Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import {
   RequestNotFoundError,
   toRequestDecisionError,
@@ -14,6 +16,10 @@ import {
   REQUEST_STATUS,
   type TerminalRequestStatus,
 } from '../requests/request-decision.rules.js';
+import {
+  attendanceRequestDecisionEventType,
+  buildAttendanceRequestEvent,
+} from '../requests/attendance-request-event.rules.js';
 import {
   OVERTIME_REQUEST_DECISION_REPOSITORY,
   type IOvertimeRequestDecisionRepository,
@@ -35,6 +41,7 @@ export class OvertimeRequestDecisionService implements IOvertimeRequestDecisionS
   constructor(
     @Inject(OVERTIME_REQUEST_DECISION_REPOSITORY)
     private readonly decisions: IOvertimeRequestDecisionRepository,
+    @Inject(OUTBOX_WRITER) private readonly outbox: IOutboxWriter,
     @Inject(CLOCK) private readonly clock: IClock,
   ) {}
 
@@ -66,42 +73,54 @@ export class OvertimeRequestDecisionService implements IOvertimeRequestDecisionS
 
   private async decide(command: DecisionCommand): Promise<OvertimeRequest> {
     const decided = await this.decisions.runInTransaction((transaction) =>
-      decideInTransaction(transaction, command, this.clock),
+      this.decideInTransaction(transaction, command),
     );
     return toOvertimeRequest(decided);
   }
-}
 
-// The row is locked before the rule runs, so the status it judges is the one that will be stored. The reviewed instant
-// is read after the lock, so it is never earlier than the decision it records.
-async function decideInTransaction(
-  transaction: IOvertimeRequestDecisionTransaction,
-  command: DecisionCommand,
-  clock: IClock,
-): Promise<LockedOvertimeRequest> {
-  const locked = await transaction.findRequestForUpdate(command.requestId);
-  if (locked === undefined) throw new RequestNotFoundError();
+  // The row is locked before the rule runs, so the status it judges is the one that will be stored. The reviewed instant
+  // is read after the lock, so it is never earlier than the decision it records.
+  private async decideInTransaction(
+    transaction: IOvertimeRequestDecisionTransaction,
+    command: DecisionCommand,
+  ): Promise<LockedOvertimeRequest> {
+    const locked = await transaction.findRequestForUpdate(command.requestId);
+    if (locked === undefined) throw new RequestNotFoundError();
 
-  const reviewReason = normalizeReviewReason(command.reviewReason);
-  const outcome = evaluateRequestDecision({
-    currentStatus: locked.status,
-    targetStatus: command.targetStatus,
-    requestedByAccountId: locked.requesterAccountId,
-    reviewerAccountId: command.reviewerAccountId,
-    reviewReason,
-  });
-  if (outcome.kind === 'violation') throw toRequestDecisionError(outcome.violation);
-  if (outcome.kind === 'replay') return locked;
+    const reviewReason = normalizeReviewReason(command.reviewReason);
+    const outcome = evaluateRequestDecision({
+      currentStatus: locked.status,
+      targetStatus: command.targetStatus,
+      requestedByAccountId: locked.requesterAccountId,
+      reviewerAccountId: command.reviewerAccountId,
+      reviewReason,
+    });
+    if (outcome.kind === 'violation') throw toRequestDecisionError(outcome.violation);
+    if (outcome.kind === 'replay') return locked;
 
-  const reviewedAt = clock.now();
-  await transaction.recordDecision({
-    requestId: command.requestId,
-    status: outcome.nextStatus,
-    reviewerAccountId: command.reviewerAccountId,
-    reviewedAt,
-    reviewReason,
-  });
-  return { ...locked, status: outcome.nextStatus, reviewReason, reviewedAt };
+    const reviewedAt = this.clock.now();
+    await transaction.recordDecision({
+      requestId: command.requestId,
+      status: outcome.nextStatus,
+      reviewerAccountId: command.reviewerAccountId,
+      reviewedAt,
+      reviewReason,
+    });
+    await this.outbox.add(
+      transaction,
+      buildAttendanceRequestEvent({
+        eventId: randomUUID(),
+        eventType: attendanceRequestDecisionEventType(outcome.nextStatus),
+        occurredAt: reviewedAt,
+        accountId: locked.requesterAccountId,
+        actorAccountId: command.reviewerAccountId,
+        resourceType: 'overtime_request',
+        resourceId: locked.id,
+        businessDate: locked.businessDate,
+      }),
+    );
+    return { ...locked, status: outcome.nextStatus, reviewReason, reviewedAt };
+  }
 }
 
 // A blank reason is no reason. For a rejection the rule then refuses it, and for an approval it is stored as null, so
