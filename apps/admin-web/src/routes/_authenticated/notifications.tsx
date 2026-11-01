@@ -1,13 +1,29 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ComingSoonPage } from '../../app/coming-soon-page.js';
+import { NotificationInboxPage } from '../../features/notifications/components/notification-inbox-page.js';
+import { notificationInboxSearchSchema } from '../../features/notifications/types/notification-inbox-search.schema.js';
 
-// Placeholder until the notification inbox (T-AWEB-08) is built.
+// The page's cursors live in the URL, so a reload or a Back press shows the same page of the inbox.
 export const Route = createFileRoute('/_authenticated/notifications')({
-  component: NotificationsPlaceholderPage,
+  validateSearch: notificationInboxSearchSchema,
+  component: NotificationsRoute,
 });
 
-function NotificationsPlaceholderPage() {
+function NotificationsRoute() {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+
   return (
-    <ComingSoonPage title="Notifications" description="Profile changes and other HR alerts." />
+    <NotificationInboxPage
+      search={search}
+      onCursorsChange={(cursors) =>
+        // No cursors leaves the parameter out, so the first page keeps a short address.
+        void navigate({
+          search: (previous) => ({
+            ...previous,
+            cursors: cursors.length > 0 ? [...cursors] : undefined,
+          }),
+        })
+      }
+    />
   );
 }

@@ -179,7 +179,6 @@ describe('HR route guards', () => {
   it.each([
     ['/approvals', 'Approvals'],
     ['/schedule', 'Schedule'],
-    ['/notifications', 'Notifications'],
   ])(
     'should show the coming-soon state on %s when the HR user is signed in',
     async (path, title) => {

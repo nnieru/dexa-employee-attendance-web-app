@@ -5,8 +5,11 @@ import { API_BASE_URL } from '../app/api-base-url.js';
 import { useSession } from '@dexa/session';
 import { useNotificationStream } from '../features/notifications/hooks/use-notification-stream.js';
 import { LiveUpdatesStatus } from '../features/notifications/components/live-updates-status.js';
+import { useUnreadNotificationCount } from '../features/notifications/hooks/use-unread-notification-count.js';
+import { getUnreadNavigationCount } from '../features/notifications/utils/unread-navigation-count.js';
 
 const HR_BRAND_NAME = 'Dexa HR';
+const NOTIFICATIONS_NAVIGATION_ID = 'notifications';
 
 // Pathless layout: every HR page under it needs a signed-in HR session (AUTH-3). The API enforces
 // authorization; this guard only decides which screen the HR user sees.
@@ -34,6 +37,7 @@ function AuthenticatedLayout() {
   const matchRoute = useMatchRoute();
   // Mounted once for the whole signed-in shell, so one stream serves every HR page (ADM-5).
   const liveUpdatesState = useNotificationStream({ apiBaseUrl: API_BASE_URL });
+  const unreadCount = useUnreadNotificationCount();
   const navItems = ADMIN_NAVIGATION.map((entry) => ({
     id: entry.id,
     label: entry.label,
@@ -41,6 +45,10 @@ function AuthenticatedLayout() {
     href: entry.to,
     // Fuzzy, so Employees stays current on the add page under it (/employees/new).
     isActive: matchRoute({ to: entry.to, fuzzy: true }) !== false,
+    count:
+      entry.id === NOTIFICATIONS_NAVIGATION_ID
+        ? getUnreadNavigationCount(unreadCount.data?.unreadCount)
+        : undefined,
   }));
 
   return (
