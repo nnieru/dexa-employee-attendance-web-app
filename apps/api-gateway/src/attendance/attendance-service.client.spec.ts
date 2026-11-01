@@ -47,6 +47,11 @@ const MONITORING_PAGE: AttendanceMonitoringPage = {
       accountId: '5f3c2a1e-7b4d-4c8e-9a6f-2d1b0e9c8a7f',
       employee: { name: 'Sari Lestari', positionName: 'HR Staff' },
       businessDate: '2026-11-02',
+      dayStatus: 'PRESENT',
+      approvedOvertimeMinutes: 0,
+      rawClockInAt: '2026-11-02T02:30:00.000Z',
+      rawClockOutAt: null,
+      isCorrected: false,
       clockInAt: '2026-11-02T02:30:00.000Z',
       clockInStatus: 'LATE_CHECKIN',
       clockOutAt: null,
@@ -56,6 +61,11 @@ const MONITORING_PAGE: AttendanceMonitoringPage = {
       accountId: '0b9e8d7c-6a5f-4e3d-8c2b-1a0f9e8d7c6b',
       employee: null,
       businessDate: '2026-11-02',
+      dayStatus: 'PRESENT',
+      approvedOvertimeMinutes: 90.5,
+      rawClockInAt: '2026-11-02T02:05:00.000Z',
+      rawClockOutAt: '2026-11-02T11:00:00.000Z',
+      isCorrected: true,
       clockInAt: '2026-11-02T02:05:00.000Z',
       clockInStatus: 'ON_TIME_CHECKIN',
       clockOutAt: '2026-11-02T11:00:00.000Z',
@@ -72,6 +82,8 @@ const SUMMARY_PAGE: AttendanceSummaryPage = {
   items: [
     {
       businessDate: '2026-11-02',
+      dayStatus: 'PRESENT',
+      approvedOvertimeMinutes: 0,
       clockInAt: '2026-11-02T02:30:00.000Z',
       clockInStatus: 'LATE_CHECKIN',
       clockOutAt: null,
@@ -83,6 +95,11 @@ const SUMMARY_PAGE: AttendanceSummaryPage = {
   totalItems: 6,
   totalPages: 2,
 };
+
+// Drops one field from a row, so a test can show the client refuses a row that lacks a required field.
+function withoutField(row: object, field: string): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(row).filter(([key]) => key !== field));
+}
 
 // Answers every get and post with the given response, parsed by the schema the client passes, and records the requests.
 function createRecordingHttpClient(
@@ -217,6 +234,8 @@ describe('AttendanceServiceClient.listOwnSummary', () => {
       items: [
         {
           businessDate: '2026-11-07',
+          dayStatus: 'DAY_OFF',
+          approvedOvertimeMinutes: 60,
           clockInAt: null,
           clockInStatus: 'CHECKIN_NOT_REQUIRED',
           clockOutAt: null,
@@ -229,6 +248,20 @@ describe('AttendanceServiceClient.listOwnSummary', () => {
     const response = await client.listOwnSummary(USER, { page: 1, pageSize: 20 });
 
     expect(response).toEqual(page);
+  });
+
+  it.each([
+    { condition: 'the day status is missing', field: 'dayStatus' },
+    { condition: 'the approved overtime minutes are missing', field: 'approvedOvertimeMinutes' },
+  ])('should reject the response when a row has no $condition', async ({ field }) => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const malformedPage = {
+      ...SUMMARY_PAGE,
+      items: [withoutField(SUMMARY_PAGE.items[0] ?? {}, field)],
+    };
+    const client = new AttendanceServiceClient(createRecordingHttpClient(malformedPage, recorded));
+
+    await expect(client.listOwnSummary(USER, { page: 1, pageSize: 20 })).rejects.toThrow();
   });
 
   it('should reject the response when attendance-service answers a row the contract does not define', async () => {
@@ -321,6 +354,9 @@ describe('AttendanceServiceClient.listAttendance', () => {
       items: [
         {
           ...MONITORING_PAGE.items[0],
+          dayStatus: 'PENDING',
+          rawClockInAt: null,
+          rawClockOutAt: null,
           clockInAt: null,
           clockInStatus: 'PENDING_CHECKIN',
           clockOutAt: null,
@@ -333,6 +369,23 @@ describe('AttendanceServiceClient.listAttendance', () => {
     const response = await client.listAttendance(USER, { page: 1, pageSize: 20 });
 
     expect(response).toEqual(page);
+  });
+
+  it.each([
+    { condition: 'the day status is missing', field: 'dayStatus' },
+    { condition: 'the raw clock-in is missing', field: 'rawClockInAt' },
+    { condition: 'the raw clock-out is missing', field: 'rawClockOutAt' },
+    { condition: 'the corrected flag is missing', field: 'isCorrected' },
+    { condition: 'the approved overtime minutes are missing', field: 'approvedOvertimeMinutes' },
+  ])('should reject the response when a row has no $condition', async ({ field }) => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const malformedPage = {
+      ...MONITORING_PAGE,
+      items: [withoutField(MONITORING_PAGE.items[0] ?? {}, field)],
+    };
+    const client = new AttendanceServiceClient(createRecordingHttpClient(malformedPage, recorded));
+
+    await expect(client.listAttendance(USER, { page: 1, pageSize: 20 })).rejects.toThrow();
   });
 
   it('should reject the response when attendance-service answers a row without an account ID', async () => {

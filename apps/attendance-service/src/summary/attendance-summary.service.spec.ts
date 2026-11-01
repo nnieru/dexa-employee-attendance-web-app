@@ -126,6 +126,8 @@ describe('AttendanceSummaryService.listOwnSummary', () => {
       items: [
         {
           businessDate: '2026-11-02',
+          dayStatus: 'PRESENT',
+          approvedOvertimeMinutes: 0,
           clockInAt: '2026-11-02T02:30:00.000Z',
           clockInStatus: 'LATE_CHECKIN',
           clockOutAt: null,
@@ -133,6 +135,8 @@ describe('AttendanceSummaryService.listOwnSummary', () => {
         },
         {
           businessDate: '2026-11-01',
+          dayStatus: 'PRESENT',
+          approvedOvertimeMinutes: 60,
           clockInAt: '2026-11-01T01:55:00.000Z',
           clockInStatus: 'ON_TIME_CHECKIN',
           clockOutAt: '2026-11-01T11:00:00.000Z',
@@ -153,16 +157,20 @@ function emptyPage(): AttendanceSummaryRecordPage {
 
 const CLOCK_IN_ONLY_DAY: AttendanceSummaryRecord = {
   businessDate: '2026-11-02',
+  dayStatusCode: 'PRESENT',
   effectiveCheckinAt: new Date('2026-11-02T02:30:00Z'),
   checkinStatusCode: 'LATE_CHECKIN',
   effectiveCheckoutAt: null,
   checkoutStatusCode: 'PENDING_CHECKOUT',
+  approvedOvertimeMinutes: 0,
 };
 
 const WORKED_DAY: AttendanceSummaryRecord = {
   businessDate: '2026-11-01',
+  dayStatusCode: 'PRESENT',
   effectiveCheckinAt: new Date('2026-11-01T01:55:00Z'),
   checkinStatusCode: 'ON_TIME_CHECKIN',
   effectiveCheckoutAt: new Date('2026-11-01T11:00:00Z'),
   checkoutStatusCode: 'ON_TIME_CHECKOUT',
+  approvedOvertimeMinutes: 60,
 };

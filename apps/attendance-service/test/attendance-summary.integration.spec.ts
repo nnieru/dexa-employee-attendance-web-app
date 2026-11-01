@@ -272,6 +272,8 @@ describe('attendance own summary', () => {
       expect(page.items).toEqual([
         {
           businessDate: TUESDAY,
+          dayStatus: 'PRESENT',
+          approvedOvertimeMinutes: 0,
           clockInAt: TUESDAY_ON_TIME_CHECKIN_INSTANT.toISOString(),
           clockInStatus: 'ON_TIME_CHECKIN',
           clockOutAt: null,
@@ -294,6 +296,8 @@ describe('attendance own summary', () => {
       expect(page.items).toEqual([
         {
           businessDate: THURSDAY,
+          dayStatus: 'PRESENT',
+          approvedOvertimeMinutes: 0,
           clockInAt: THURSDAY_ON_TIME_CHECKIN_INSTANT.toISOString(),
           clockInStatus: 'ON_TIME_CHECKIN',
           clockOutAt: THURSDAY_ON_TIME_CHECKOUT_INSTANT.toISOString(),
@@ -301,6 +305,8 @@ describe('attendance own summary', () => {
         },
         {
           businessDate: WEDNESDAY_HOLIDAY,
+          dayStatus: 'PRESENT',
+          approvedOvertimeMinutes: 0,
           clockInAt: WEDNESDAY_HOLIDAY_INSTANT.toISOString(),
           clockInStatus: 'CHECKIN_NOT_REQUIRED',
           clockOutAt: null,
@@ -309,6 +315,8 @@ describe('attendance own summary', () => {
         expect.objectContaining({ businessDate: TUESDAY, clockInStatus: 'ON_TIME_CHECKIN' }),
         {
           businessDate: MONDAY,
+          dayStatus: 'PRESENT',
+          approvedOvertimeMinutes: 0,
           clockInAt: MONDAY_LATE_CHECKIN_INSTANT.toISOString(),
           clockInStatus: 'LATE_CHECKIN',
           clockOutAt: MONDAY_ON_TIME_CHECKOUT_INSTANT.toISOString(),
@@ -383,6 +391,8 @@ describe('attendance own summary', () => {
       expect(page.items).toEqual([
         {
           businessDate: FRIDAY_REQUEST_DATE,
+          dayStatus: 'PENDING',
+          approvedOvertimeMinutes: 0,
           clockInAt: null,
           clockInStatus: 'PENDING_CHECKIN',
           clockOutAt: null,
@@ -412,6 +422,8 @@ describe('attendance own summary', () => {
       expect(page.items).toEqual([
         {
           businessDate: SATURDAY_REQUEST_DATE,
+          dayStatus: 'DAY_OFF',
+          approvedOvertimeMinutes: 0,
           clockInAt: null,
           clockInStatus: 'CHECKIN_NOT_REQUIRED',
           clockOutAt: null,

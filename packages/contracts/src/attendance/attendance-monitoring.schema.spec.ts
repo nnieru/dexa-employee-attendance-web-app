@@ -11,11 +11,33 @@ const MONITORED_DAY = {
   accountId: ACCOUNT_ID,
   employee: { name: 'Nadia Rahma', positionName: 'Fullstack Developer' },
   businessDate: '2026-11-02',
+  dayStatus: 'PRESENT',
+  approvedOvertimeMinutes: 0,
+  rawClockInAt: '2026-11-02T02:30:00.000Z',
+  rawClockOutAt: '2026-11-02T11:00:00.000Z',
+  isCorrected: false,
   clockInAt: '2026-11-02T02:30:00.000Z',
   clockInStatus: 'LATE_CHECKIN',
   clockOutAt: '2026-11-02T11:00:00.000Z',
   clockOutStatus: 'ON_TIME_CHECKOUT',
 };
+
+// A correction moved both effective times, and the raw punches stay as the employee made them (ADM-4).
+const CORRECTED_DAY = {
+  ...MONITORED_DAY,
+  rawClockInAt: '2026-11-02T03:10:00.000Z',
+  rawClockOutAt: null,
+  isCorrected: true,
+  clockInAt: '2026-11-02T02:20:00.000Z',
+  clockInStatus: 'ON_TIME_CHECKIN',
+  clockOutAt: '2026-11-02T10:00:00.000Z',
+  clockOutStatus: 'EARLY_CHECKOUT',
+};
+
+// Drops one field from a row, so a test can show the schema refuses a row that lacks it.
+function omit(day: Record<string, unknown>, key: string): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(day).filter(([name]) => name !== key));
+}
 
 describe('attendanceMonitoringQuerySchema', () => {
   it('should default to the first page of the default size when no query is given', () => {
@@ -73,11 +95,47 @@ describe('attendanceMonitoringItemSchema', () => {
     expect(attendanceMonitoringItemSchema.parse(day)).toEqual(day);
   });
 
+  it('should accept a corrected day with its raw punches next to the effective ones', () => {
+    expect(attendanceMonitoringItemSchema.parse(CORRECTED_DAY)).toEqual(CORRECTED_DAY);
+  });
+
+  it('should accept a day with no punch, such as an approved leave, whose raw punches are null', () => {
+    const day = {
+      ...MONITORED_DAY,
+      dayStatus: 'SICK_LEAVE',
+      rawClockInAt: null,
+      rawClockOutAt: null,
+      isCorrected: true,
+      clockInAt: null,
+      clockInStatus: 'CHECKIN_NOT_REQUIRED',
+      clockOutAt: null,
+      clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+    };
+
+    expect(attendanceMonitoringItemSchema.parse(day)).toEqual(day);
+  });
+
   it.each([
     { condition: 'the account ID is missing', day: { ...MONITORED_DAY, accountId: undefined } },
     {
       condition: 'the check-out time is null with a classified status',
       day: { ...MONITORED_DAY, clockOutAt: null },
+    },
+    { condition: 'the raw clock-in is missing', day: omit(MONITORED_DAY, 'rawClockInAt') },
+    { condition: 'the raw clock-out is missing', day: omit(MONITORED_DAY, 'rawClockOutAt') },
+    { condition: 'the isCorrected flag is missing', day: omit(MONITORED_DAY, 'isCorrected') },
+    {
+      condition: 'the isCorrected flag is not a boolean',
+      day: { ...MONITORED_DAY, isCorrected: 'false' },
+    },
+    { condition: 'the day status is missing', day: omit(MONITORED_DAY, 'dayStatus') },
+    {
+      condition: 'the approved overtime minutes are missing',
+      day: omit(MONITORED_DAY, 'approvedOvertimeMinutes'),
+    },
+    {
+      condition: 'the raw clock-in has a local offset instead of Z',
+      day: { ...MONITORED_DAY, rawClockInAt: '2026-11-02T09:30:00+07:00' },
     },
   ])('should reject the row when $condition', ({ day }) => {
     expect(attendanceMonitoringItemSchema.safeParse(day).success).toBe(false);

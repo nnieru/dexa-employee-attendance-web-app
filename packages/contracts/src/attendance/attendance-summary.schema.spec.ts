@@ -7,11 +7,18 @@ import {
 
 const WORKED_DAY = {
   businessDate: '2026-11-02',
+  dayStatus: 'PRESENT',
+  approvedOvertimeMinutes: 0,
   clockInAt: '2026-11-02T02:30:00.000Z',
   clockInStatus: 'LATE_CHECKIN',
   clockOutAt: '2026-11-02T11:00:00.000Z',
   clockOutStatus: 'ON_TIME_CHECKOUT',
 };
+
+// Drops one field from a row, so a test can show the schema refuses a row that lacks it.
+function omit(day: Record<string, unknown>, key: string): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(day).filter(([name]) => name !== key));
+}
 
 describe('attendanceSummaryQuerySchema', () => {
   it('should default to the first page of the default size when no query is given', () => {
@@ -71,7 +78,7 @@ describe('attendanceSummaryItemSchema', () => {
 
   it('should accept a day with only a check-in when the check-out is pending on a working day', () => {
     const day = {
-      businessDate: '2026-11-02',
+      ...WORKED_DAY,
       clockInAt: '2026-11-02T02:30:00.000Z',
       clockInStatus: 'LATE_CHECKIN',
       clockOutAt: null,
@@ -84,6 +91,8 @@ describe('attendanceSummaryItemSchema', () => {
   it('should accept a day off with only a check-in, whose check-out is not required', () => {
     const day = {
       businessDate: '2026-11-04',
+      dayStatus: 'DAY_OFF',
+      approvedOvertimeMinutes: 0,
       clockInAt: '2026-11-04T02:00:00.000Z',
       clockInStatus: 'CHECKIN_NOT_REQUIRED',
       clockOutAt: null,
@@ -98,6 +107,8 @@ describe('attendanceSummaryItemSchema', () => {
       condition: 'a request created a working day with no punch',
       day: {
         businessDate: '2026-11-06',
+        dayStatus: 'PENDING',
+        approvedOvertimeMinutes: 0,
         clockInAt: null,
         clockInStatus: 'PENDING_CHECKIN',
         clockOutAt: null,
@@ -108,6 +119,32 @@ describe('attendanceSummaryItemSchema', () => {
       condition: 'a request created a day off with no punch',
       day: {
         businessDate: '2026-11-07',
+        dayStatus: 'DAY_OFF',
+        approvedOvertimeMinutes: 120,
+        clockInAt: null,
+        clockInStatus: 'CHECKIN_NOT_REQUIRED',
+        clockOutAt: null,
+        clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+      },
+    },
+    {
+      condition: 'an approved sick leave has no punch',
+      day: {
+        businessDate: '2026-11-08',
+        dayStatus: 'SICK_LEAVE',
+        approvedOvertimeMinutes: 0,
+        clockInAt: null,
+        clockInStatus: 'CHECKIN_NOT_REQUIRED',
+        clockOutAt: null,
+        clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+      },
+    },
+    {
+      condition: 'an approved leave has no punch',
+      day: {
+        businessDate: '2026-11-09',
+        dayStatus: 'LEAVE',
+        approvedOvertimeMinutes: 0,
         clockInAt: null,
         clockInStatus: 'CHECKIN_NOT_REQUIRED',
         clockOutAt: null,
@@ -115,6 +152,35 @@ describe('attendanceSummaryItemSchema', () => {
       },
     },
   ])('should accept a row with no check-in when $condition', ({ day }) => {
+    expect(attendanceSummaryItemSchema.parse(day)).toEqual(day);
+  });
+
+  it.each([
+    { condition: 'the day status is missing', day: omit(WORKED_DAY, 'dayStatus') },
+    {
+      condition: 'the day status is not a DAY status',
+      day: { ...WORKED_DAY, dayStatus: 'ON_TIME_CHECKIN' },
+    },
+    { condition: 'the day status is lowercase', day: { ...WORKED_DAY, dayStatus: 'present' } },
+    {
+      condition: 'the approved overtime minutes are missing',
+      day: omit(WORKED_DAY, 'approvedOvertimeMinutes'),
+    },
+    {
+      condition: 'the approved overtime minutes are negative',
+      day: { ...WORKED_DAY, approvedOvertimeMinutes: -1 },
+    },
+    {
+      condition: 'the approved overtime minutes are a string',
+      day: { ...WORKED_DAY, approvedOvertimeMinutes: '60' },
+    },
+  ])('should reject the row when $condition', ({ day }) => {
+    expect(attendanceSummaryItemSchema.safeParse(day).success).toBe(false);
+  });
+
+  it('should accept fractional approved overtime minutes, which keep their seconds', () => {
+    const day = { ...WORKED_DAY, approvedOvertimeMinutes: 90.5 };
+
     expect(attendanceSummaryItemSchema.parse(day)).toEqual(day);
   });
 

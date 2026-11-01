@@ -1,4 +1,5 @@
 import {
+  attendanceDayStatusSchema,
   checkInClassificationSchema,
   checkOutClassificationSchema,
   type AttendanceSummaryItem,
@@ -6,28 +7,48 @@ import {
 } from '@dexa/contracts';
 import type { AttendanceSummaryRecord } from './attendance-summary.repository.interface.js';
 
+type DayFields = Pick<
+  AttendanceSummaryItem,
+  'businessDate' | 'dayStatus' | 'approvedOvertimeMinutes'
+>;
+
+type NoCheckInTimes = Pick<
+  Extract<AttendanceSummaryItem, { clockInAt: null }>,
+  'clockInAt' | 'clockInStatus' | 'clockOutAt' | 'clockOutStatus'
+>;
+
 /**
- * Maps one stored day to its summary row (PRD SUM-3, SUM-4). The times are the effective ones, and the statuses are
- * the stored codes. A day with no check-in or no check-out keeps the pending or not-required status it was stored with.
+ * Maps one stored day to its summary row (PRD SUM-3, SUM-4, SUM-6). The times are the effective ones, and the statuses
+ * are the stored codes. A day with no check-in or no check-out keeps the pending or not-required status it was stored
+ * with. The day status and the approved overtime come from the same stored day, so every row carries them.
  */
 export function toAttendanceSummaryItem(record: AttendanceSummaryRecord): AttendanceSummaryItem {
-  if (record.effectiveCheckinAt === null) return toNoCheckInItem(record);
-  const base = {
-    businessDate: record.businessDate,
+  const day = toDayFields(record);
+  if (record.effectiveCheckinAt === null) return { ...day, ...toNoCheckInTimes(record) };
+  const checkedIn = {
+    ...day,
     clockInAt: record.effectiveCheckinAt.toISOString(),
     clockInStatus: checkInClassificationSchema.parse(record.checkinStatusCode),
   };
   if (record.effectiveCheckoutAt === null) {
     return {
-      ...base,
+      ...checkedIn,
       clockOutAt: null,
       clockOutStatus: pendingCheckoutStatusCode(record.checkoutStatusCode),
     };
   }
   return {
-    ...base,
+    ...checkedIn,
     clockOutAt: record.effectiveCheckoutAt.toISOString(),
     clockOutStatus: checkOutClassificationSchema.parse(record.checkoutStatusCode),
+  };
+}
+
+function toDayFields(record: AttendanceSummaryRecord): DayFields {
+  return {
+    businessDate: record.businessDate,
+    dayStatus: attendanceDayStatusSchema.parse(record.dayStatusCode),
+    approvedOvertimeMinutes: record.approvedOvertimeMinutes,
   };
 }
 
@@ -47,14 +68,11 @@ export function toAttendanceSummaryPage(
 
 // A day that a request created has no punch, so it has no check-in time (DATABASE §5.4, D-59). A check-out without a
 // check-in is a broken row, which the database also refuses, so it is refused here too.
-function toNoCheckInItem(
-  record: AttendanceSummaryRecord,
-): Extract<AttendanceSummaryItem, { clockInAt: null }> {
+function toNoCheckInTimes(record: AttendanceSummaryRecord): NoCheckInTimes {
   if (record.effectiveCheckoutAt !== null) {
     throw new Error('The attendance day has a check-out but no check-in.');
   }
   return {
-    businessDate: record.businessDate,
     clockInAt: null,
     clockInStatus: pendingCheckinStatusCode(record.checkinStatusCode),
     clockOutAt: null,

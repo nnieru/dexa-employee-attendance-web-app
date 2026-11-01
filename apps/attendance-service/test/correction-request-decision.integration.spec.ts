@@ -271,6 +271,8 @@ describe('correction request decisions', () => {
         expect(items).toEqual([
           {
             businessDate: TUESDAY,
+            dayStatus: 'PRESENT',
+            approvedOvertimeMinutes: 0,
             clockInAt: '2026-11-03T02:20:00.000Z',
             clockInStatus: 'LATE_CHECKIN',
             clockOutAt: '2026-11-03T10:00:00.000Z',
@@ -339,6 +341,8 @@ describe('correction request decisions', () => {
         expect(await readSummaryItems(employee)).toEqual([
           {
             businessDate: TUESDAY,
+            dayStatus: requestedDayStatus,
+            approvedOvertimeMinutes: 0,
             clockInAt: null,
             clockInStatus: 'CHECKIN_NOT_REQUIRED',
             clockOutAt: null,

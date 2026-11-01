@@ -21,6 +21,8 @@ const DEFAULT_QUERY = { from: '2026-11-01', to: '2026-11-15', page: '1', pageSiz
 
 const ON_TIME_DAY: AttendanceSummaryItem = {
   businessDate: '2026-11-13',
+  dayStatus: 'PRESENT',
+  approvedOvertimeMinutes: 0,
   clockInAt: '2026-11-13T01:02:00.000Z',
   clockInStatus: 'ON_TIME_CHECKIN',
   clockOutAt: '2026-11-13T11:30:00.000Z',
@@ -28,6 +30,8 @@ const ON_TIME_DAY: AttendanceSummaryItem = {
 };
 const CLOCK_IN_ONLY_DAY: AttendanceSummaryItem = {
   businessDate: '2026-11-14',
+  dayStatus: 'PRESENT',
+  approvedOvertimeMinutes: 0,
   clockInAt: '2026-11-14T02:20:00.000Z',
   clockInStatus: 'LATE_CHECKIN',
   clockOutAt: null,
@@ -35,6 +39,8 @@ const CLOCK_IN_ONLY_DAY: AttendanceSummaryItem = {
 };
 const DAY_OFF: AttendanceSummaryItem = {
   businessDate: '2026-11-07',
+  dayStatus: 'DAY_OFF',
+  approvedOvertimeMinutes: 0,
   clockInAt: '2026-11-07T01:00:00.000Z',
   clockInStatus: 'CHECKIN_NOT_REQUIRED',
   clockOutAt: '2026-11-07T10:00:00.000Z',
@@ -42,6 +48,8 @@ const DAY_OFF: AttendanceSummaryItem = {
 };
 const EARLY_DAY: AttendanceSummaryItem = {
   businessDate: '2026-11-12',
+  dayStatus: 'PRESENT',
+  approvedOvertimeMinutes: 0,
   clockInAt: '2026-11-12T00:45:00.000Z',
   clockInStatus: 'EARLY_CHECKIN',
   clockOutAt: '2026-11-12T10:00:00.000Z',
@@ -50,6 +58,8 @@ const EARLY_DAY: AttendanceSummaryItem = {
 // A request created these days with no punch, so neither has a clock-in time (D-59).
 const REQUEST_WORKING_DAY_NO_CHECK_IN: AttendanceSummaryItem = {
   businessDate: '2026-11-10',
+  dayStatus: 'PENDING',
+  approvedOvertimeMinutes: 0,
   clockInAt: null,
   clockInStatus: 'PENDING_CHECKIN',
   clockOutAt: null,
@@ -57,6 +67,8 @@ const REQUEST_WORKING_DAY_NO_CHECK_IN: AttendanceSummaryItem = {
 };
 const REQUEST_DAY_OFF_NO_CHECK_IN: AttendanceSummaryItem = {
   businessDate: '2026-11-08',
+  dayStatus: 'DAY_OFF',
+  approvedOvertimeMinutes: 0,
   clockInAt: null,
   clockInStatus: 'CHECKIN_NOT_REQUIRED',
   clockOutAt: null,

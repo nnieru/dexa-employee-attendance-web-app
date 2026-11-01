@@ -63,10 +63,15 @@ function dayOf(accountId: string, businessDate: string): AttendanceMonitoringRec
   return {
     accountId,
     businessDate,
+    dayStatusCode: 'PRESENT',
     effectiveCheckinAt: new Date(`${businessDate}T02:00:00Z`),
     checkinStatusCode: 'ON_TIME_CHECKIN',
     effectiveCheckoutAt: null,
     checkoutStatusCode: 'PENDING_CHECKOUT',
+    approvedOvertimeMinutes: 0,
+    rawClockInAt: new Date(`${businessDate}T02:00:00Z`),
+    rawClockOutAt: null,
+    isCorrected: false,
   };
 }
 
@@ -165,6 +170,11 @@ describe('AttendanceMonitoringService.listAttendance', () => {
           accountId: NADIA_ACCOUNT_ID,
           employee: { name: 'Nadia Rahma', positionName: 'Fullstack Developer' },
           businessDate: '2026-11-03',
+          dayStatus: 'PRESENT',
+          approvedOvertimeMinutes: 0,
+          rawClockInAt: '2026-11-03T02:00:00.000Z',
+          rawClockOutAt: null,
+          isCorrected: false,
           clockInAt: '2026-11-03T02:00:00.000Z',
           clockInStatus: 'ON_TIME_CHECKIN',
           clockOutAt: null,

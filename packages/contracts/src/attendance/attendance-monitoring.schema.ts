@@ -27,10 +27,16 @@ const monitoredEmployeeSchema = z.object({
 });
 
 // One row per recorded day of one account (PRD ADM-4), with the same times and classifications as the own summary.
+// rawClockInAt and rawClockOutAt are the original punches (DATABASE §5.5), null when the employee has no such punch.
+// They stay as punched after an approved correction. isCorrected is true when an approved correction has been applied
+// to the day (DATABASE §5.8, applied_revision). A correction can make the effective times differ from the raw ones.
 export const attendanceMonitoringItemSchema = z.intersection(
   z.object({
     accountId: z.uuid(),
     employee: monitoredEmployeeSchema.nullable(),
+    rawClockInAt: z.iso.datetime().nullable(),
+    rawClockOutAt: z.iso.datetime().nullable(),
+    isCorrected: z.boolean(),
   }),
   attendanceSummaryItemSchema,
 );

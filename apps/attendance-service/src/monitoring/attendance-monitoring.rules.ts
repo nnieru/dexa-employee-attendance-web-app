@@ -14,8 +14,9 @@ export function getDistinctAccountIds(
 }
 
 /**
- * Maps one stored day to its HR row (PRD ADM-4). The day fields follow the own summary. An account that Employee
- * does not know is shown as unavailable (null), so one missing profile never fails the page (DATABASE §8).
+ * Maps one stored day to its HR row (PRD ADM-4). The day fields follow the own summary, and the original punch times sit
+ * next to the effective ones. An account that Employee does not know is shown as unavailable (null), so one missing
+ * profile never fails the page (DATABASE §8).
  */
 export function toAttendanceMonitoringItem(
   record: AttendanceMonitoringRecord,
@@ -27,7 +28,14 @@ export function toAttendanceMonitoringItem(
     employee:
       employee === undefined ? null : { name: employee.name, positionName: employee.positionName },
     ...toAttendanceSummaryItem(record),
+    rawClockInAt: toNullableIsoString(record.rawClockInAt),
+    rawClockOutAt: toNullableIsoString(record.rawClockOutAt),
+    isCorrected: record.isCorrected,
   };
+}
+
+function toNullableIsoString(instant: Date | null): string | null {
+  return instant === null ? null : instant.toISOString();
 }
 
 export function toAttendanceMonitoringPage(

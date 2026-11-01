@@ -5,14 +5,17 @@ export const ATTENDANCE_SUMMARY_READER = Symbol('IAttendanceSummaryReader');
 /**
  * One stored day as the summary shows it. The times and status codes are the effective ones after any approved
  * correction (DATABASE §5.4). The status codes are the master codes as stored. A null check-in time is returned as
- * stored, and the rules decide what that means for the row.
+ * stored, and the rules decide what that means for the row. approvedOvertimeMinutes is the day's approved overtime
+ * (DATABASE §5.7), 0 when there is none.
  */
 export type AttendanceSummaryRecord = {
   readonly businessDate: BusinessDate;
+  readonly dayStatusCode: string;
   readonly effectiveCheckinAt: Date | null;
   readonly checkinStatusCode: string;
   readonly effectiveCheckoutAt: Date | null;
   readonly checkoutStatusCode: string;
+  readonly approvedOvertimeMinutes: number;
 };
 
 export type AttendanceSummaryCriteria = {

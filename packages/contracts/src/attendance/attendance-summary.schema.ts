@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createPageSchema, paginationQuerySchema } from '../pagination/pagination.schema.js';
+import { attendanceDayStatusSchema } from './attendance-day-status.schema.js';
 import { checkInClassificationSchema } from './clock-in.schema.js';
 import { checkOutClassificationSchema } from './clock-out.schema.js';
 
@@ -24,8 +25,13 @@ export const attendanceSummaryQuerySchema = paginationQuerySchema
 
 export type AttendanceSummaryQuery = z.infer<typeof attendanceSummaryQuerySchema>;
 
+// dayStatus is the stored DAY status (PRD SUM-6). approvedOvertimeMinutes is the total of the day's APPROVED overtime
+// intervals (DATABASE §5.7). It keeps the seconds of each interval, so it is not rounded, the same as the HR review
+// queue (OT-4). It is 0 when the day has no approved overtime.
 const attendanceSummaryBaseSchema = z.object({
   businessDate: z.iso.date(),
+  dayStatus: attendanceDayStatusSchema,
+  approvedOvertimeMinutes: z.number().nonnegative(),
 });
 
 // A day that a request created has no punch yet (DATABASE §5.4), so it has no check-in time. Its stored check-in
