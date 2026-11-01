@@ -13,12 +13,13 @@ import {
   time,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
 
 // Drizzle generates the tables, keys, and checks below into migrations. Hand-written SQL migrations add
-// the exclusion constraint, the weekday check function, the updated_at trigger, the immutability triggers,
+// the exclusion constraints, the weekday check function, the updated_at triggers, the immutability triggers,
 // and the status seed (see the migration files), because Drizzle does not model them.
 
 export const masterAttendanceStatuses = pgTable(
@@ -202,6 +203,186 @@ export const attendanceEntries = pgTable(
     // The leading column of this unique key also serves the foreign key, so no separate index is added.
     unique('attendance_entries_attendance_day_id_type_uq').on(table.attendanceDayId, table.type),
     check('attendance_entries_type_ck', sql`${table.type} in ('IN', 'OUT')`),
+  ],
+);
+
+// Overtime requests (DATABASE §5.6–5.7). accountId is the verified requester; it must own the day, which the
+// composite foreign key proves. The overlap exclusion constraint is hand-written SQL (migration 0005), because
+// Drizzle does not model exclusion constraints with a partial predicate.
+// The requester and the review fields are logical account references, so no cross-database foreign key exists.
+export const overtimeRequests = pgTable(
+  'overtime_requests',
+  {
+    id: uuid('id').notNull().defaultRandom(),
+    attendanceDayId: uuid('attendance_day_id').notNull(),
+    requestedByAccountId: uuid('requested_by_account_id').notNull(),
+    idempotencyKey: uuid('idempotency_key').notNull(),
+    reason: text('reason').notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('PENDING'),
+    reviewedByAccountId: uuid('reviewed_by_account_id'),
+    reviewReason: text('review_reason'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    requestedStartAt: timestamp('requested_start_at', { withTimezone: true }).notNull(),
+    requestedEndAt: timestamp('requested_end_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ name: 'overtime_requests_id_pk', columns: [table.id] }),
+    foreignKey({
+      name: 'overtime_requests_attendance_day_fk',
+      columns: [table.attendanceDayId, table.requestedByAccountId],
+      foreignColumns: [attendanceDays.id, attendanceDays.accountId],
+    }).onDelete('restrict'),
+    unique('overtime_requests_requester_idempotency_uq').on(
+      table.requestedByAccountId,
+      table.idempotencyKey,
+    ),
+    index('overtime_requests_status_created_at_idx').on(table.status, table.createdAt),
+    index('overtime_requests_attendance_day_created_at_idx').on(
+      table.attendanceDayId,
+      table.createdAt,
+    ),
+    check(
+      'overtime_requests_status_ck',
+      sql`${table.status} in ('PENDING', 'APPROVED', 'REJECTED')`,
+    ),
+    check('overtime_requests_reason_ck', sql`btrim(${table.reason}) <> ''`),
+    check(
+      'overtime_requests_review_identity_ck',
+      sql`(${table.status} = 'PENDING' and ${table.reviewedByAccountId} is null and ${table.reviewedAt} is null) or (${table.status} <> 'PENDING' and ${table.reviewedByAccountId} is not null and ${table.reviewedAt} is not null)`,
+    ),
+    check(
+      'overtime_requests_self_review_ck',
+      sql`${table.reviewedByAccountId} is null or ${table.reviewedByAccountId} <> ${table.requestedByAccountId}`,
+    ),
+    check(
+      'overtime_requests_reviewed_at_ck',
+      sql`${table.reviewedAt} is null or ${table.reviewedAt} >= ${table.createdAt}`,
+    ),
+    // A null review_reason must fail the rejection rule, so the NULL-safe form is written out. A CHECK that
+    // evaluates to NULL passes, so `btrim(NULL) <> ''` alone would let a rejection without a reason through.
+    check(
+      'overtime_requests_rejection_reason_ck',
+      sql`${table.status} <> 'REJECTED' or (${table.reviewReason} is not null and btrim(${table.reviewReason}) <> '')`,
+    ),
+    check(
+      'overtime_requests_pending_review_reason_ck',
+      sql`${table.status} <> 'PENDING' or ${table.reviewReason} is null`,
+    ),
+    check(
+      'overtime_requests_requested_order_ck',
+      sql`${table.requestedEndAt} > ${table.requestedStartAt}`,
+    ),
+  ],
+);
+
+// Attendance corrections (DATABASE §5.6, §5.8). The before-snapshot and the requested values are fixed at
+// submission; the request-immutability trigger in migration 0005 enforces that. The partial unique index keeps
+// one PENDING correction per day (COR-4).
+export const attendanceAdjustmentRequests = pgTable(
+  'attendance_adjustment_requests',
+  {
+    id: uuid('id').notNull().defaultRandom(),
+    attendanceDayId: uuid('attendance_day_id').notNull(),
+    requestedByAccountId: uuid('requested_by_account_id').notNull(),
+    idempotencyKey: uuid('idempotency_key').notNull(),
+    reason: text('reason').notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('PENDING'),
+    reviewedByAccountId: uuid('reviewed_by_account_id'),
+    reviewReason: text('review_reason'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    baseRevision: integer('base_revision').notNull(),
+    beforeCheckinAt: timestamp('before_checkin_at', { withTimezone: true }),
+    beforeCheckoutAt: timestamp('before_checkout_at', { withTimezone: true }),
+    // Stored constants that pin each status column to the DAY category, as attendance_days does (DATABASE §5.1).
+    beforeDayStatusCategory: varchar('before_day_status_category', { length: 20 })
+      .notNull()
+      .generatedAlwaysAs(sql`'DAY'`),
+    beforeDayStatusId: uuid('before_day_status_id').notNull(),
+    requestedCheckinAt: timestamp('requested_checkin_at', { withTimezone: true }),
+    requestedCheckoutAt: timestamp('requested_checkout_at', { withTimezone: true }),
+    requestedDayStatusCategory: varchar('requested_day_status_category', { length: 20 })
+      .notNull()
+      .generatedAlwaysAs(sql`'DAY'`),
+    requestedDayStatusId: uuid('requested_day_status_id').notNull(),
+    appliedRevision: integer('applied_revision'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ name: 'attendance_adjustment_requests_id_pk', columns: [table.id] }),
+    foreignKey({
+      name: 'attendance_adjustment_requests_attendance_day_fk',
+      columns: [table.attendanceDayId, table.requestedByAccountId],
+      foreignColumns: [attendanceDays.id, attendanceDays.accountId],
+    }).onDelete('restrict'),
+    foreignKey({
+      name: 'attendance_adjustment_requests_before_day_status_fk',
+      columns: [table.beforeDayStatusId, table.beforeDayStatusCategory],
+      foreignColumns: [masterAttendanceStatuses.id, masterAttendanceStatuses.category],
+    }),
+    foreignKey({
+      name: 'attendance_adjustment_requests_requested_day_status_fk',
+      columns: [table.requestedDayStatusId, table.requestedDayStatusCategory],
+      foreignColumns: [masterAttendanceStatuses.id, masterAttendanceStatuses.category],
+    }),
+    unique('attendance_adjustment_requests_requester_idempotency_uq').on(
+      table.requestedByAccountId,
+      table.idempotencyKey,
+    ),
+    // Only one PENDING correction per day (COR-4). Terminal requests do not count, so a new one can follow a rejection.
+    uniqueIndex('attendance_adjustment_requests_pending_day_uq')
+      .on(table.attendanceDayId)
+      .where(sql`${table.status} = 'PENDING'`),
+    index('attendance_adjustment_requests_status_created_at_idx').on(table.status, table.createdAt),
+    index('attendance_adjustment_requests_attendance_day_created_at_idx').on(
+      table.attendanceDayId,
+      table.createdAt,
+    ),
+    index('attendance_adjustment_requests_before_day_status_id_idx').on(table.beforeDayStatusId),
+    index('attendance_adjustment_requests_requested_day_status_id_idx').on(
+      table.requestedDayStatusId,
+    ),
+    check(
+      'attendance_adjustment_requests_status_ck',
+      sql`${table.status} in ('PENDING', 'APPROVED', 'REJECTED')`,
+    ),
+    check('attendance_adjustment_requests_reason_ck', sql`btrim(${table.reason}) <> ''`),
+    check(
+      'attendance_adjustment_requests_review_identity_ck',
+      sql`(${table.status} = 'PENDING' and ${table.reviewedByAccountId} is null and ${table.reviewedAt} is null) or (${table.status} <> 'PENDING' and ${table.reviewedByAccountId} is not null and ${table.reviewedAt} is not null)`,
+    ),
+    check(
+      'attendance_adjustment_requests_self_review_ck',
+      sql`${table.reviewedByAccountId} is null or ${table.reviewedByAccountId} <> ${table.requestedByAccountId}`,
+    ),
+    check(
+      'attendance_adjustment_requests_reviewed_at_ck',
+      sql`${table.reviewedAt} is null or ${table.reviewedAt} >= ${table.createdAt}`,
+    ),
+    // NULL-safe form for the same reason as overtime_requests_rejection_reason_ck.
+    check(
+      'attendance_adjustment_requests_rejection_reason_ck',
+      sql`${table.status} <> 'REJECTED' or (${table.reviewReason} is not null and btrim(${table.reviewReason}) <> '')`,
+    ),
+    check(
+      'attendance_adjustment_requests_pending_review_reason_ck',
+      sql`${table.status} <> 'PENDING' or ${table.reviewReason} is null`,
+    ),
+    check('attendance_adjustment_requests_base_revision_ck', sql`${table.baseRevision} >= 1`),
+    check(
+      'attendance_adjustment_requests_checkout_order_ck',
+      sql`${table.requestedCheckoutAt} is null or ${table.requestedCheckinAt} is null or ${table.requestedCheckoutAt} >= ${table.requestedCheckinAt}`,
+    ),
+    check(
+      'attendance_adjustment_requests_checkout_needs_checkin_ck',
+      sql`${table.requestedCheckoutAt} is null or ${table.requestedCheckinAt} is not null`,
+    ),
+    check(
+      'attendance_adjustment_requests_applied_revision_ck',
+      sql`(${table.status} = 'APPROVED') = (${table.appliedRevision} is not null)`,
+    ),
   ],
 );
 

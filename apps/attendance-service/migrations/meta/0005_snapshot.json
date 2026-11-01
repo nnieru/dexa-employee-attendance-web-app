@@ -1,0 +1,1169 @@
+{
+  "id": "26460219-1560-42e5-b782-aedad1eaaf05",
+  "prevId": "b3afca8b-9aaf-440b-9c08-aea432976741",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.attendance_adjustment_requests": {
+      "name": "attendance_adjustment_requests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "attendance_day_id": {
+          "name": "attendance_day_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_by_account_id": {
+          "name": "requested_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDING'"
+        },
+        "reviewed_by_account_id": {
+          "name": "reviewed_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_reason": {
+          "name": "review_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "base_revision": {
+          "name": "base_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "before_checkin_at": {
+          "name": "before_checkin_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "before_checkout_at": {
+          "name": "before_checkout_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "before_day_status_category": {
+          "name": "before_day_status_category",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "generated": {
+            "type": "stored",
+            "as": "'DAY'"
+          }
+        },
+        "before_day_status_id": {
+          "name": "before_day_status_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_checkin_at": {
+          "name": "requested_checkin_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requested_checkout_at": {
+          "name": "requested_checkout_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requested_day_status_category": {
+          "name": "requested_day_status_category",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "generated": {
+            "type": "stored",
+            "as": "'DAY'"
+          }
+        },
+        "requested_day_status_id": {
+          "name": "requested_day_status_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "applied_revision": {
+          "name": "applied_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "attendance_adjustment_requests_pending_day_uq": {
+          "name": "attendance_adjustment_requests_pending_day_uq",
+          "columns": [
+            {
+              "expression": "attendance_day_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"attendance_adjustment_requests\".\"status\" = 'PENDING'",
+          "concurrently": false
+        },
+        "attendance_adjustment_requests_status_created_at_idx": {
+          "name": "attendance_adjustment_requests_status_created_at_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "attendance_adjustment_requests_attendance_day_created_at_idx": {
+          "name": "attendance_adjustment_requests_attendance_day_created_at_idx",
+          "columns": [
+            {
+              "expression": "attendance_day_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "attendance_adjustment_requests_before_day_status_id_idx": {
+          "name": "attendance_adjustment_requests_before_day_status_id_idx",
+          "columns": [
+            {
+              "expression": "before_day_status_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "attendance_adjustment_requests_requested_day_status_id_idx": {
+          "name": "attendance_adjustment_requests_requested_day_status_id_idx",
+          "columns": [
+            {
+              "expression": "requested_day_status_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "attendance_adjustment_requests_attendance_day_fk": {
+          "name": "attendance_adjustment_requests_attendance_day_fk",
+          "tableFrom": "attendance_adjustment_requests",
+          "columnsFrom": ["attendance_day_id", "requested_by_account_id"],
+          "tableTo": "attendance_days",
+          "columnsTo": ["id", "account_id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "attendance_adjustment_requests_before_day_status_fk": {
+          "name": "attendance_adjustment_requests_before_day_status_fk",
+          "tableFrom": "attendance_adjustment_requests",
+          "columnsFrom": ["before_day_status_id", "before_day_status_category"],
+          "tableTo": "master_attendance_statuses",
+          "columnsTo": ["id", "category"],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "attendance_adjustment_requests_requested_day_status_fk": {
+          "name": "attendance_adjustment_requests_requested_day_status_fk",
+          "tableFrom": "attendance_adjustment_requests",
+          "columnsFrom": ["requested_day_status_id", "requested_day_status_category"],
+          "tableTo": "master_attendance_statuses",
+          "columnsTo": ["id", "category"],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "attendance_adjustment_requests_id_pk": {
+          "name": "attendance_adjustment_requests_id_pk",
+          "columns": ["id"]
+        }
+      },
+      "uniqueConstraints": {
+        "attendance_adjustment_requests_requester_idempotency_uq": {
+          "name": "attendance_adjustment_requests_requester_idempotency_uq",
+          "columns": ["requested_by_account_id", "idempotency_key"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "attendance_adjustment_requests_status_ck": {
+          "name": "attendance_adjustment_requests_status_ck",
+          "value": "\"attendance_adjustment_requests\".\"status\" in ('PENDING', 'APPROVED', 'REJECTED')"
+        },
+        "attendance_adjustment_requests_reason_ck": {
+          "name": "attendance_adjustment_requests_reason_ck",
+          "value": "btrim(\"attendance_adjustment_requests\".\"reason\") <> ''"
+        },
+        "attendance_adjustment_requests_review_identity_ck": {
+          "name": "attendance_adjustment_requests_review_identity_ck",
+          "value": "(\"attendance_adjustment_requests\".\"status\" = 'PENDING' and \"attendance_adjustment_requests\".\"reviewed_by_account_id\" is null and \"attendance_adjustment_requests\".\"reviewed_at\" is null) or (\"attendance_adjustment_requests\".\"status\" <> 'PENDING' and \"attendance_adjustment_requests\".\"reviewed_by_account_id\" is not null and \"attendance_adjustment_requests\".\"reviewed_at\" is not null)"
+        },
+        "attendance_adjustment_requests_self_review_ck": {
+          "name": "attendance_adjustment_requests_self_review_ck",
+          "value": "\"attendance_adjustment_requests\".\"reviewed_by_account_id\" is null or \"attendance_adjustment_requests\".\"reviewed_by_account_id\" <> \"attendance_adjustment_requests\".\"requested_by_account_id\""
+        },
+        "attendance_adjustment_requests_reviewed_at_ck": {
+          "name": "attendance_adjustment_requests_reviewed_at_ck",
+          "value": "\"attendance_adjustment_requests\".\"reviewed_at\" is null or \"attendance_adjustment_requests\".\"reviewed_at\" >= \"attendance_adjustment_requests\".\"created_at\""
+        },
+        "attendance_adjustment_requests_rejection_reason_ck": {
+          "name": "attendance_adjustment_requests_rejection_reason_ck",
+          "value": "\"attendance_adjustment_requests\".\"status\" <> 'REJECTED' or (\"attendance_adjustment_requests\".\"review_reason\" is not null and btrim(\"attendance_adjustment_requests\".\"review_reason\") <> '')"
+        },
+        "attendance_adjustment_requests_pending_review_reason_ck": {
+          "name": "attendance_adjustment_requests_pending_review_reason_ck",
+          "value": "\"attendance_adjustment_requests\".\"status\" <> 'PENDING' or \"attendance_adjustment_requests\".\"review_reason\" is null"
+        },
+        "attendance_adjustment_requests_base_revision_ck": {
+          "name": "attendance_adjustment_requests_base_revision_ck",
+          "value": "\"attendance_adjustment_requests\".\"base_revision\" >= 1"
+        },
+        "attendance_adjustment_requests_checkout_order_ck": {
+          "name": "attendance_adjustment_requests_checkout_order_ck",
+          "value": "\"attendance_adjustment_requests\".\"requested_checkout_at\" is null or \"attendance_adjustment_requests\".\"requested_checkin_at\" is null or \"attendance_adjustment_requests\".\"requested_checkout_at\" >= \"attendance_adjustment_requests\".\"requested_checkin_at\""
+        },
+        "attendance_adjustment_requests_checkout_needs_checkin_ck": {
+          "name": "attendance_adjustment_requests_checkout_needs_checkin_ck",
+          "value": "\"attendance_adjustment_requests\".\"requested_checkout_at\" is null or \"attendance_adjustment_requests\".\"requested_checkin_at\" is not null"
+        },
+        "attendance_adjustment_requests_applied_revision_ck": {
+          "name": "attendance_adjustment_requests_applied_revision_ck",
+          "value": "(\"attendance_adjustment_requests\".\"status\" = 'APPROVED') = (\"attendance_adjustment_requests\".\"applied_revision\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.attendance_days": {
+      "name": "attendance_days",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "work_schedule_id": {
+          "name": "work_schedule_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_timezone": {
+          "name": "business_timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_working_day": {
+          "name": "is_working_day",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scheduled_start_at": {
+          "name": "scheduled_start_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scheduled_end_at": {
+          "name": "scheduled_end_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "day_status_category": {
+          "name": "day_status_category",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "generated": {
+            "type": "stored",
+            "as": "'DAY'"
+          }
+        },
+        "day_status_id": {
+          "name": "day_status_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkin_status_category": {
+          "name": "checkin_status_category",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "generated": {
+            "type": "stored",
+            "as": "'CHECK_IN'"
+          }
+        },
+        "checkin_status_id": {
+          "name": "checkin_status_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkout_status_category": {
+          "name": "checkout_status_category",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "generated": {
+            "type": "stored",
+            "as": "'CHECK_OUT'"
+          }
+        },
+        "checkout_status_id": {
+          "name": "checkout_status_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_checkin_at": {
+          "name": "effective_checkin_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_checkout_at": {
+          "name": "effective_checkout_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "attendance_days_business_date_account_id_idx": {
+          "name": "attendance_days_business_date_account_id_idx",
+          "columns": [
+            {
+              "expression": "business_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "attendance_days_work_schedule_id_idx": {
+          "name": "attendance_days_work_schedule_id_idx",
+          "columns": [
+            {
+              "expression": "work_schedule_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "attendance_days_day_status_id_idx": {
+          "name": "attendance_days_day_status_id_idx",
+          "columns": [
+            {
+              "expression": "day_status_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "attendance_days_checkin_status_id_idx": {
+          "name": "attendance_days_checkin_status_id_idx",
+          "columns": [
+            {
+              "expression": "checkin_status_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "attendance_days_checkout_status_id_idx": {
+          "name": "attendance_days_checkout_status_id_idx",
+          "columns": [
+            {
+              "expression": "checkout_status_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "attendance_days_work_schedule_id_fk": {
+          "name": "attendance_days_work_schedule_id_fk",
+          "tableFrom": "attendance_days",
+          "columnsFrom": ["work_schedule_id"],
+          "tableTo": "work_schedules",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "attendance_days_day_status_fk": {
+          "name": "attendance_days_day_status_fk",
+          "tableFrom": "attendance_days",
+          "columnsFrom": ["day_status_id", "day_status_category"],
+          "tableTo": "master_attendance_statuses",
+          "columnsTo": ["id", "category"],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "attendance_days_checkin_status_fk": {
+          "name": "attendance_days_checkin_status_fk",
+          "tableFrom": "attendance_days",
+          "columnsFrom": ["checkin_status_id", "checkin_status_category"],
+          "tableTo": "master_attendance_statuses",
+          "columnsTo": ["id", "category"],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "attendance_days_checkout_status_fk": {
+          "name": "attendance_days_checkout_status_fk",
+          "tableFrom": "attendance_days",
+          "columnsFrom": ["checkout_status_id", "checkout_status_category"],
+          "tableTo": "master_attendance_statuses",
+          "columnsTo": ["id", "category"],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "attendance_days_id_pk": {
+          "name": "attendance_days_id_pk",
+          "columns": ["id"]
+        }
+      },
+      "uniqueConstraints": {
+        "attendance_days_account_id_business_date_uq": {
+          "name": "attendance_days_account_id_business_date_uq",
+          "columns": ["account_id", "business_date"],
+          "nullsNotDistinct": false
+        },
+        "attendance_days_id_account_id_uq": {
+          "name": "attendance_days_id_account_id_uq",
+          "columns": ["id", "account_id"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "attendance_days_business_timezone_ck": {
+          "name": "attendance_days_business_timezone_ck",
+          "value": "btrim(\"attendance_days\".\"business_timezone\") <> ''"
+        },
+        "attendance_days_revision_ck": {
+          "name": "attendance_days_revision_ck",
+          "value": "\"attendance_days\".\"revision\" >= 1"
+        },
+        "attendance_days_scheduled_order_ck": {
+          "name": "attendance_days_scheduled_order_ck",
+          "value": "\"attendance_days\".\"scheduled_start_at\" is null or \"attendance_days\".\"scheduled_end_at\" is null or \"attendance_days\".\"scheduled_start_at\" < \"attendance_days\".\"scheduled_end_at\""
+        },
+        "attendance_days_working_day_schedule_ck": {
+          "name": "attendance_days_working_day_schedule_ck",
+          "value": "not \"attendance_days\".\"is_working_day\" or (\"attendance_days\".\"scheduled_start_at\" is not null and \"attendance_days\".\"scheduled_end_at\" is not null)"
+        },
+        "attendance_days_effective_checkout_ck": {
+          "name": "attendance_days_effective_checkout_ck",
+          "value": "\"attendance_days\".\"effective_checkout_at\" is null or (\"attendance_days\".\"effective_checkin_at\" is not null and \"attendance_days\".\"effective_checkin_at\" <= \"attendance_days\".\"effective_checkout_at\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.attendance_entries": {
+      "name": "attendance_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "attendance_day_id": {
+          "name": "attendance_day_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "attendance_entries_attendance_day_id_fk": {
+          "name": "attendance_entries_attendance_day_id_fk",
+          "tableFrom": "attendance_entries",
+          "columnsFrom": ["attendance_day_id"],
+          "tableTo": "attendance_days",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "attendance_entries_id_pk": {
+          "name": "attendance_entries_id_pk",
+          "columns": ["id"]
+        }
+      },
+      "uniqueConstraints": {
+        "attendance_entries_attendance_day_id_type_uq": {
+          "name": "attendance_entries_attendance_day_id_type_uq",
+          "columns": ["attendance_day_id", "type"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "attendance_entries_type_ck": {
+          "name": "attendance_entries_type_ck",
+          "value": "\"attendance_entries\".\"type\" in ('IN', 'OUT')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.master_attendance_statuses": {
+      "name": "master_attendance_statuses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "master_attendance_statuses_id_pk": {
+          "name": "master_attendance_statuses_id_pk",
+          "columns": ["id"]
+        }
+      },
+      "uniqueConstraints": {
+        "master_attendance_statuses_code_uq": {
+          "name": "master_attendance_statuses_code_uq",
+          "columns": ["code"],
+          "nullsNotDistinct": false
+        },
+        "master_attendance_statuses_id_category_uq": {
+          "name": "master_attendance_statuses_id_category_uq",
+          "columns": ["id", "category"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "master_attendance_statuses_code_ck": {
+          "name": "master_attendance_statuses_code_ck",
+          "value": "\"master_attendance_statuses\".\"code\" ~ '^[A-Z0-9_]+$'"
+        },
+        "master_attendance_statuses_name_ck": {
+          "name": "master_attendance_statuses_name_ck",
+          "value": "btrim(\"master_attendance_statuses\".\"name\") <> ''"
+        },
+        "master_attendance_statuses_category_ck": {
+          "name": "master_attendance_statuses_category_ck",
+          "value": "\"master_attendance_statuses\".\"category\" in ('DAY', 'CHECK_IN', 'CHECK_OUT')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.overtime_requests": {
+      "name": "overtime_requests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "attendance_day_id": {
+          "name": "attendance_day_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_by_account_id": {
+          "name": "requested_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDING'"
+        },
+        "reviewed_by_account_id": {
+          "name": "reviewed_by_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_reason": {
+          "name": "review_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requested_start_at": {
+          "name": "requested_start_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_end_at": {
+          "name": "requested_end_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "overtime_requests_status_created_at_idx": {
+          "name": "overtime_requests_status_created_at_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "overtime_requests_attendance_day_created_at_idx": {
+          "name": "overtime_requests_attendance_day_created_at_idx",
+          "columns": [
+            {
+              "expression": "attendance_day_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "overtime_requests_attendance_day_fk": {
+          "name": "overtime_requests_attendance_day_fk",
+          "tableFrom": "overtime_requests",
+          "columnsFrom": ["attendance_day_id", "requested_by_account_id"],
+          "tableTo": "attendance_days",
+          "columnsTo": ["id", "account_id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "overtime_requests_id_pk": {
+          "name": "overtime_requests_id_pk",
+          "columns": ["id"]
+        }
+      },
+      "uniqueConstraints": {
+        "overtime_requests_requester_idempotency_uq": {
+          "name": "overtime_requests_requester_idempotency_uq",
+          "columns": ["requested_by_account_id", "idempotency_key"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "overtime_requests_status_ck": {
+          "name": "overtime_requests_status_ck",
+          "value": "\"overtime_requests\".\"status\" in ('PENDING', 'APPROVED', 'REJECTED')"
+        },
+        "overtime_requests_reason_ck": {
+          "name": "overtime_requests_reason_ck",
+          "value": "btrim(\"overtime_requests\".\"reason\") <> ''"
+        },
+        "overtime_requests_review_identity_ck": {
+          "name": "overtime_requests_review_identity_ck",
+          "value": "(\"overtime_requests\".\"status\" = 'PENDING' and \"overtime_requests\".\"reviewed_by_account_id\" is null and \"overtime_requests\".\"reviewed_at\" is null) or (\"overtime_requests\".\"status\" <> 'PENDING' and \"overtime_requests\".\"reviewed_by_account_id\" is not null and \"overtime_requests\".\"reviewed_at\" is not null)"
+        },
+        "overtime_requests_self_review_ck": {
+          "name": "overtime_requests_self_review_ck",
+          "value": "\"overtime_requests\".\"reviewed_by_account_id\" is null or \"overtime_requests\".\"reviewed_by_account_id\" <> \"overtime_requests\".\"requested_by_account_id\""
+        },
+        "overtime_requests_reviewed_at_ck": {
+          "name": "overtime_requests_reviewed_at_ck",
+          "value": "\"overtime_requests\".\"reviewed_at\" is null or \"overtime_requests\".\"reviewed_at\" >= \"overtime_requests\".\"created_at\""
+        },
+        "overtime_requests_rejection_reason_ck": {
+          "name": "overtime_requests_rejection_reason_ck",
+          "value": "\"overtime_requests\".\"status\" <> 'REJECTED' or (\"overtime_requests\".\"review_reason\" is not null and btrim(\"overtime_requests\".\"review_reason\") <> '')"
+        },
+        "overtime_requests_pending_review_reason_ck": {
+          "name": "overtime_requests_pending_review_reason_ck",
+          "value": "\"overtime_requests\".\"status\" <> 'PENDING' or \"overtime_requests\".\"review_reason\" is null"
+        },
+        "overtime_requests_requested_order_ck": {
+          "name": "overtime_requests_requested_order_ck",
+          "value": "\"overtime_requests\".\"requested_end_at\" > \"overtime_requests\".\"requested_start_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.work_calendar_dates": {
+      "name": "work_calendar_dates",
+      "schema": "",
+      "columns": {
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_working_day": {
+          "name": "is_working_day",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "work_calendar_dates_business_date_pk": {
+          "name": "work_calendar_dates_business_date_pk",
+          "columns": ["business_date"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "work_calendar_dates_description_ck": {
+          "name": "work_calendar_dates_description_ck",
+          "value": "\"work_calendar_dates\".\"description\" is null or btrim(\"work_calendar_dates\".\"description\") <> ''"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.work_schedules": {
+      "name": "work_schedules",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "working_weekdays": {
+          "name": "working_weekdays",
+          "type": "smallint[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_time": {
+          "name": "start_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_time": {
+          "name": "end_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "late_checkin_grace_minutes": {
+          "name": "late_checkin_grace_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "early_checkout_grace_minutes": {
+          "name": "early_checkout_grace_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "late_checkout_grace_minutes": {
+          "name": "late_checkout_grace_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_until": {
+          "name": "effective_until",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "work_schedules_id_pk": {
+          "name": "work_schedules_id_pk",
+          "columns": ["id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "work_schedules_name_ck": {
+          "name": "work_schedules_name_ck",
+          "value": "btrim(\"work_schedules\".\"name\") <> ''"
+        },
+        "work_schedules_timezone_ck": {
+          "name": "work_schedules_timezone_ck",
+          "value": "btrim(\"work_schedules\".\"timezone\") <> ''"
+        },
+        "work_schedules_time_order_ck": {
+          "name": "work_schedules_time_order_ck",
+          "value": "\"work_schedules\".\"start_time\" < \"work_schedules\".\"end_time\""
+        },
+        "work_schedules_late_checkin_grace_ck": {
+          "name": "work_schedules_late_checkin_grace_ck",
+          "value": "\"work_schedules\".\"late_checkin_grace_minutes\" >= 0"
+        },
+        "work_schedules_early_checkout_grace_ck": {
+          "name": "work_schedules_early_checkout_grace_ck",
+          "value": "\"work_schedules\".\"early_checkout_grace_minutes\" >= 0"
+        },
+        "work_schedules_late_checkout_grace_ck": {
+          "name": "work_schedules_late_checkout_grace_ck",
+          "value": "\"work_schedules\".\"late_checkout_grace_minutes\" >= 0"
+        },
+        "work_schedules_effective_until_ck": {
+          "name": "work_schedules_effective_until_ck",
+          "value": "\"work_schedules\".\"effective_until\" is null or \"work_schedules\".\"effective_until\" > \"work_schedules\".\"effective_from\""
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
