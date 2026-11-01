@@ -1,6 +1,7 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { Portal, Role } from '@dexa/contracts';
+import { ToastProvider } from '@dexa/ui';
 import { SessionProvider, useSession, type SessionConfig } from '@dexa/session';
 import { useCallback, useMemo } from 'react';
 import { API_BASE_URL } from './api-base-url.js';
@@ -34,7 +35,9 @@ export function EmployeeApp({ queryClient, router }: EmployeeAppProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <SessionProvider config={sessionConfig}>
-        <SessionRouter router={router} />
+        <ToastProvider>
+          <SessionRouter router={router} />
+        </ToastProvider>
       </SessionProvider>
     </QueryClientProvider>
   );

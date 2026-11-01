@@ -44,3 +44,23 @@ export const REQUESTED_OUTCOME_TEXT: Readonly<
   SICK_LEAVE: 'Sick leave',
   LEAVE: 'Leave',
 };
+
+export const OVERTIME_REQUEST_PAGE_TITLE = 'Request overtime';
+export const OVERTIME_REQUEST_PAGE_DESCRIPTION =
+  'Ask HR to approve extra working hours. HR reviews each request, and you can follow its status under Requests.';
+export const OVERTIME_REQUEST_SUBMITTED_MESSAGE = 'Overtime request submitted.';
+export const OVERTIME_BUSINESS_DATE_HINT = 'Today or up to 7 days back. Times are in WIB.';
+export const OVERTIME_START_TIME_HINT = 'Up to 4 hours per day, including pending requests.';
+export const OVERTIME_END_TIME_HELP_TEXT =
+  'Earlier than the start time means the overtime ends after midnight.';
+export const OVERTIME_REASON_LABEL = 'Reason';
+export const OVERTIME_SUBMIT_LABEL = 'Submit request';
+export const OVERTIME_CANCEL_LABEL = 'Cancel';
+/** Shown when the server has no schedule for the employee, so the employee cannot pick a valid day (OT-3). */
+export const OVERTIME_SCHEDULE_NOT_CONFIGURED_MESSAGE =
+  'Your work schedule is not set up yet, so overtime cannot be requested. Contact HR.';
+/** A key reused with other content. The form never does that, so this only happens when another attempt used the key. */
+export const OVERTIME_IDEMPOTENCY_CONFLICT_MESSAGE =
+  'This request conflicts with an earlier attempt. Reload the page and submit it again.';
+export const OVERTIME_REQUEST_CONTRACT_MESSAGE =
+  'The request could not be prepared. Check the entries and try again.';

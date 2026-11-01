@@ -136,7 +136,7 @@ describe('employee route guards', () => {
     );
   });
 
-  it.each([['/requests/overtime/new', 'Request overtime']])(
+  it.each([['/requests/corrections/new', 'Request correction']])(
     'should show the coming-soon state on %s when the employee is signed in',
     async (path, title) => {
       const { router } = await signInFrom('/login');
@@ -150,6 +150,35 @@ describe('employee route guards', () => {
       expect(screen.getByText('Coming soon')).toBeInTheDocument();
     },
   );
+
+  it('should redirect to login with the overtime request form requested when a signed-out employee opens it', async () => {
+    const router = await renderEmployeeApp('/requests/overtime/new');
+
+    expect(router.state.location.pathname).toBe('/login');
+    expect(router.state.location.search).toEqual({ redirect: '/requests/overtime/new' });
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('should keep Requests marked as the current page when the employee is on the overtime request form', async () => {
+    const { router } = await signInFrom('/login');
+    await screen.findByRole('heading', { level: 1, name: 'Attendance' });
+
+    await act(async () => {
+      await router.navigate({ href: '/requests/overtime/new' });
+    });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Request overtime' }),
+    ).toBeInTheDocument();
+    const navigation = within(getEmployeeNavigation());
+    expect(navigation.getByRole('link', { name: 'Requests' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(navigation.getByRole('link', { name: 'Attendance' })).not.toHaveAttribute(
+      'aria-current',
+    );
+  });
 
   it('should return to login with no session-ended message when the employee presses Logout', async () => {
     const { user, router } = await signInFrom('/login');

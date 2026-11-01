@@ -34,7 +34,8 @@ function AuthenticatedLayout() {
     label: entry.label,
     icon: entry.icon,
     href: entry.to,
-    isActive: matchRoute({ to: entry.to }) !== false,
+    // Fuzzy, so a page under a section (for example /requests/overtime/new) keeps its section highlighted.
+    isActive: matchRoute({ to: entry.to, fuzzy: true }) !== false,
   }));
 
   return (

@@ -223,6 +223,31 @@
   margin-block-end: var(--space-6);
 }
 
+/* Overtime request form: fields stack at 360px; the two times sit side by side from 480px. Actions wrap and keep 44px. */
+.employee-request-form {
+  display: grid;
+  gap: var(--space-5);
+  max-width: var(--layout-form-max);
+}
+
+.employee-request-form__times {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.employee-request-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+@media (min-width: 480px) {
+  .employee-request-form__times {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 /* Type switch: a tablist. The selected tab has red text, a red underline and soft red, not colour alone (DESIGN §7). */
 .requests-tabs {
   display: flex;
