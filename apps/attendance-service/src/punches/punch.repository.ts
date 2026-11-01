@@ -34,7 +34,7 @@ import type {
 const ENTRY_DAY_TYPE_CONSTRAINT = 'attendance_entries_attendance_day_id_type_uq';
 
 // Only the statements below run in the transaction, so the runner needs these methods.
-type PunchRunner = Pick<Database['db'], 'select' | 'insert' | 'update'>;
+export type PunchRunner = Pick<Database['db'], 'select' | 'insert' | 'update'>;
 
 @Injectable()
 export class PunchRepository implements IPunchRepository {
@@ -54,7 +54,7 @@ export class PunchRepository implements IPunchRepository {
   }
 }
 
-function createTransactionScope(runner: PunchRunner): IPunchTransaction {
+export function createTransactionScope(runner: PunchRunner): IPunchTransaction {
   return {
     findScheduleInEffect: (businessDate) => findScheduleInEffect(runner, businessDate),
     findCalendarException: (businessDate) => findCalendarException(runner, businessDate),

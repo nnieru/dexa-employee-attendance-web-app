@@ -12,6 +12,7 @@ import { GatewayAttendanceModule } from './attendance/attendance.module.js';
 import { GatewayAuthModule } from './auth/auth.module.js';
 import { GatewayEmployeesModule } from './employees/employees.module.js';
 import { GatewayNotificationsModule } from './notifications/notifications.module.js';
+import { GatewayRequestsModule } from './requests/requests.module.js';
 import { GatewayWorkSchedulesModule } from './schedules/work-schedules.module.js';
 import { GatewayWorkCalendarDatesModule } from './schedules/work-calendar-dates.module.js';
 
@@ -40,6 +41,7 @@ export function createAppModule(config: ApiGatewayConfig): Type<unknown> {
       GatewayAttendanceModule,
       GatewayWorkSchedulesModule,
       GatewayWorkCalendarDatesModule,
+      GatewayRequestsModule,
       GatewayNotificationsModule.forRoot({
         notificationServiceBaseUrl: config.NOTIFICATION_SERVICE_INTERNAL_URL,
       }),
