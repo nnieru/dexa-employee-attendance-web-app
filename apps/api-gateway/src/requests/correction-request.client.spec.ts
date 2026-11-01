@@ -9,7 +9,9 @@ import {
   Role,
   type CorrectionRequest,
   type CorrectionRequestPage,
+  type CorrectionRequestReviewPage,
   type OwnRequestListQuery,
+  type RequestReviewQueueQuery,
   type SubmitCorrectionRequest,
 } from '@dexa/contracts';
 import { CorrectionRequestClient } from './correction-request.client.js';
@@ -149,5 +151,83 @@ describe('CorrectionRequestClient.submitCorrection', () => {
     );
 
     await expect(client.submitCorrection(USER, SUBMIT_REQUEST)).rejects.toThrow();
+  });
+});
+
+describe('CorrectionRequestClient.listReviewQueue', () => {
+  const REVIEW_PAGE: CorrectionRequestReviewPage = {
+    items: [
+      {
+        ...SAVED_REQUEST,
+        requester: { accountId: USER.accountId, name: 'Rama Putra' },
+        isOwnRequest: false,
+        current: { clockInAt: null, clockOutAt: null, dayStatus: 'PENDING' },
+      },
+    ],
+    page: 1,
+    pageSize: 20,
+    totalItems: 1,
+    totalPages: 1,
+  };
+
+  it('should get the review queue from attendance-service with every filter and the user', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const client = new CorrectionRequestClient(createRecordingGetClient(REVIEW_PAGE, recorded));
+    const query: RequestReviewQueueQuery = {
+      status: 'APPROVED',
+      employeeId: USER.accountId,
+      from: '2026-11-01',
+      to: '2026-11-03',
+      page: 3,
+      pageSize: 10,
+    };
+
+    const response = await client.listReviewQueue(USER, query);
+
+    expect(response).toEqual(REVIEW_PAGE);
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: '/api/v1/attendance-corrections',
+      query: {
+        status: 'APPROVED',
+        employeeId: USER.accountId,
+        from: '2026-11-01',
+        to: '2026-11-03',
+        page: '3',
+        pageSize: '10',
+      },
+      onBehalfOf: USER,
+    });
+  });
+
+  it('should omit the absent filters from the forwarded query', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const client = new CorrectionRequestClient(createRecordingGetClient(REVIEW_PAGE, recorded));
+
+    await client.listReviewQueue(USER, { status: 'PENDING', page: 1, pageSize: 20 });
+
+    expect(recorded[0]?.query).toEqual({ status: 'PENDING', page: '1', pageSize: '20' });
+  });
+
+  it('should reject the page when attendance-service answers a day status the contract does not define', async () => {
+    const client = new CorrectionRequestClient(
+      createRecordingGetClient(
+        {
+          ...REVIEW_PAGE,
+          items: [
+            {
+              ...REVIEW_PAGE.items[0],
+              current: { clockInAt: null, clockOutAt: null, dayStatus: 'PENDING_CHECKIN' },
+            },
+          ],
+        },
+        [],
+      ),
+    );
+
+    await expect(
+      client.listReviewQueue(USER, { status: 'PENDING', page: 1, pageSize: 20 }),
+    ).rejects.toThrow();
   });
 });

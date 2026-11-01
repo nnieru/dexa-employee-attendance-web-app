@@ -7,15 +7,21 @@ import {
 import {
   API_PREFIX,
   correctionRequestPageSchema,
+  correctionRequestReviewPageSchema,
   correctionRequestSchema,
   type CorrectionRequest,
   type CorrectionRequestPage,
+  type CorrectionRequestReviewPage,
   type OwnRequestListQuery,
+  type RequestReviewQueueQuery,
   type SubmitCorrectionRequest,
 } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import type { ICorrectionRequestClient } from './correction-request-client.interface.js';
-import { toRequestListQueryParameters } from './request-list-query-parameters.js';
+import {
+  toRequestListQueryParameters,
+  toRequestReviewQueueQueryParameters,
+} from './request-list-query-parameters.js';
 
 const CORRECTION_REQUESTS_PATH = `/${API_PREFIX}/attendance-corrections`;
 const OWN_CORRECTION_REQUESTS_PATH = `${CORRECTION_REQUESTS_PATH}/me`;
@@ -51,6 +57,20 @@ export class CorrectionRequestClient implements ICorrectionRequestClient {
       query: toRequestListQueryParameters(query),
       onBehalfOf: user,
       responseSchema: correctionRequestPageSchema,
+    });
+  }
+
+  // HR only: the gateway guard and attendance-service both check the role. A read, so it is not retried.
+  listReviewQueue(
+    user: AuthenticatedUser,
+    query: RequestReviewQueueQuery,
+  ): Promise<CorrectionRequestReviewPage> {
+    return this.httpClient.get({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: CORRECTION_REQUESTS_PATH,
+      query: toRequestReviewQueueQueryParameters(query),
+      onBehalfOf: user,
+      responseSchema: correctionRequestReviewPageSchema,
     });
   }
 }

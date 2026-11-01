@@ -9,7 +9,9 @@ import {
   Role,
   type OvertimeRequest,
   type OvertimeRequestPage,
+  type OvertimeRequestReviewPage,
   type OwnRequestListQuery,
+  type RequestReviewQueueQuery,
   type SubmitOvertimeRequest,
 } from '@dexa/contracts';
 import { OvertimeRequestClient } from './overtime-request.client.js';
@@ -147,5 +149,73 @@ describe('OvertimeRequestClient.submitOvertime', () => {
     );
 
     await expect(client.submitOvertime(USER, SUBMIT_REQUEST)).rejects.toThrow();
+  });
+});
+
+describe('OvertimeRequestClient.listReviewQueue', () => {
+  const REVIEW_PAGE: OvertimeRequestReviewPage = {
+    items: [
+      {
+        ...SAVED_REQUEST,
+        requester: { accountId: USER.accountId, name: null },
+        isOwnRequest: true,
+        current: { approvedMinutes: 60 },
+      },
+    ],
+    page: 2,
+    pageSize: 5,
+    totalItems: 6,
+    totalPages: 2,
+  };
+
+  it('should get the review queue from attendance-service with every filter and the user', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const client = new OvertimeRequestClient(createRecordingGetClient(REVIEW_PAGE, recorded));
+    const query: RequestReviewQueueQuery = {
+      status: 'REJECTED',
+      employeeId: USER.accountId,
+      from: '2026-11-01',
+      to: '2026-11-03',
+      page: 2,
+      pageSize: 5,
+    };
+
+    const response = await client.listReviewQueue(USER, query);
+
+    expect(response).toEqual(REVIEW_PAGE);
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: '/api/v1/overtime-requests',
+      query: {
+        status: 'REJECTED',
+        employeeId: USER.accountId,
+        from: '2026-11-01',
+        to: '2026-11-03',
+        page: '2',
+        pageSize: '5',
+      },
+      onBehalfOf: USER,
+    });
+  });
+
+  it('should omit the absent filters from the forwarded query', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const client = new OvertimeRequestClient(createRecordingGetClient(REVIEW_PAGE, recorded));
+
+    await client.listReviewQueue(USER, { status: 'PENDING', page: 1, pageSize: 20 });
+
+    expect(recorded[0]?.query).toEqual({ status: 'PENDING', page: '1', pageSize: '20' });
+  });
+
+  it('should reject the page when attendance-service answers an item without a requester', async () => {
+    const itemWithoutRequester = { ...REVIEW_PAGE.items[0], requester: undefined };
+    const client = new OvertimeRequestClient(
+      createRecordingGetClient({ ...REVIEW_PAGE, items: [itemWithoutRequester] }, []),
+    );
+
+    await expect(
+      client.listReviewQueue(USER, { status: 'PENDING', page: 1, pageSize: 20 }),
+    ).rejects.toThrow();
   });
 });

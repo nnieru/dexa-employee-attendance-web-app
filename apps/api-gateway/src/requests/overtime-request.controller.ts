@@ -1,11 +1,14 @@
 import { CurrentUser, Roles, type AuthenticatedUser } from '@dexa/common';
 import {
   ownRequestListQuerySchema,
+  requestReviewQueueQuerySchema,
   Role,
   submitOvertimeRequestSchema,
   type OvertimeRequest,
   type OvertimeRequestPage,
+  type OvertimeRequestReviewPage,
   type OwnRequestListQuery,
+  type RequestReviewQueueQuery,
   type SubmitOvertimeRequest,
 } from '@dexa/contracts';
 import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
@@ -40,5 +43,16 @@ export class OvertimeRequestController {
     @Query(new ZodValidationPipe(ownRequestListQuerySchema)) query: OwnRequestListQuery,
   ): Promise<OvertimeRequestPage> {
     return this.overtimeRequests.listOwnRequests(user, query);
+  }
+
+  // HR only. The queue is read from attendance-service, which checks the role again and compares the requester with
+  // the token's account for isOwnRequest.
+  @Roles(Role.HR)
+  @Get()
+  listReviewQueue(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query(new ZodValidationPipe(requestReviewQueueQuerySchema)) query: RequestReviewQueueQuery,
+  ): Promise<OvertimeRequestReviewPage> {
+    return this.overtimeRequests.listReviewQueue(user, query);
   }
 }

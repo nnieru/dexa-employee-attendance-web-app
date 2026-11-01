@@ -7,15 +7,21 @@ import {
 import {
   API_PREFIX,
   overtimeRequestPageSchema,
+  overtimeRequestReviewPageSchema,
   overtimeRequestSchema,
   type OvertimeRequest,
   type OvertimeRequestPage,
+  type OvertimeRequestReviewPage,
   type OwnRequestListQuery,
+  type RequestReviewQueueQuery,
   type SubmitOvertimeRequest,
 } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import type { IOvertimeRequestClient } from './overtime-request-client.interface.js';
-import { toRequestListQueryParameters } from './request-list-query-parameters.js';
+import {
+  toRequestListQueryParameters,
+  toRequestReviewQueueQueryParameters,
+} from './request-list-query-parameters.js';
 
 const OVERTIME_REQUESTS_PATH = `/${API_PREFIX}/overtime-requests`;
 const OWN_OVERTIME_REQUESTS_PATH = `${OVERTIME_REQUESTS_PATH}/me`;
@@ -51,6 +57,20 @@ export class OvertimeRequestClient implements IOvertimeRequestClient {
       query: toRequestListQueryParameters(query),
       onBehalfOf: user,
       responseSchema: overtimeRequestPageSchema,
+    });
+  }
+
+  // HR only: the gateway guard and attendance-service both check the role. A read, so it is not retried.
+  listReviewQueue(
+    user: AuthenticatedUser,
+    query: RequestReviewQueueQuery,
+  ): Promise<OvertimeRequestReviewPage> {
+    return this.httpClient.get({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: OVERTIME_REQUESTS_PATH,
+      query: toRequestReviewQueueQueryParameters(query),
+      onBehalfOf: user,
+      responseSchema: overtimeRequestReviewPageSchema,
     });
   }
 }

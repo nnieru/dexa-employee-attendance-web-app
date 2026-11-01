@@ -1,11 +1,14 @@
 import { CurrentUser, Roles, type AuthenticatedUser } from '@dexa/common';
 import {
   ownRequestListQuerySchema,
+  requestReviewQueueQuerySchema,
   Role,
   submitCorrectionRequestSchema,
   type CorrectionRequest,
   type CorrectionRequestPage,
+  type CorrectionRequestReviewPage,
   type OwnRequestListQuery,
+  type RequestReviewQueueQuery,
   type SubmitCorrectionRequest,
 } from '@dexa/contracts';
 import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
@@ -41,5 +44,16 @@ export class CorrectionRequestController {
     @Query(new ZodValidationPipe(ownRequestListQuerySchema)) query: OwnRequestListQuery,
   ): Promise<CorrectionRequestPage> {
     return this.correctionRequests.listOwnRequests(user, query);
+  }
+
+  // HR only. The queue is read from attendance-service, which checks the role again and compares the requester with
+  // the token's account for isOwnRequest.
+  @Roles(Role.HR)
+  @Get()
+  listReviewQueue(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query(new ZodValidationPipe(requestReviewQueueQuerySchema)) query: RequestReviewQueueQuery,
+  ): Promise<CorrectionRequestReviewPage> {
+    return this.correctionRequests.listReviewQueue(user, query);
   }
 }

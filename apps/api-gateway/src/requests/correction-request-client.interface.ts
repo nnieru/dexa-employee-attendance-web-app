@@ -2,7 +2,9 @@ import type { AuthenticatedUser } from '@dexa/common';
 import type {
   CorrectionRequest,
   CorrectionRequestPage,
+  CorrectionRequestReviewPage,
   OwnRequestListQuery,
+  RequestReviewQueueQuery,
   SubmitCorrectionRequest,
 } from '@dexa/contracts';
 
@@ -16,6 +18,10 @@ export interface ICorrectionRequestClient {
     user: AuthenticatedUser,
     query: OwnRequestListQuery,
   ): Promise<CorrectionRequestPage>;
+  listReviewQueue(
+    user: AuthenticatedUser,
+    query: RequestReviewQueueQuery,
+  ): Promise<CorrectionRequestReviewPage>;
 }
 
 export const CORRECTION_REQUEST_CLIENT = Symbol('ICorrectionRequestClient');
