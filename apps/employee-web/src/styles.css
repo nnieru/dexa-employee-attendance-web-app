@@ -295,3 +295,120 @@
   font-size: var(--font-size-small);
   white-space: nowrap;
 }
+
+/* Correction request screen: the current record sits above the form on narrow screens and beside it from 960px. */
+.correction-request-layout {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .correction-request-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-8);
+  }
+}
+
+/* Current record for the chosen date: a genuine task group, so a white surface with no shadow (DESIGN §7). */
+.correction-current-record {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+@media (min-width: 768px) {
+  .correction-current-record {
+    padding: var(--space-6);
+  }
+}
+
+.correction-current-record__heading {
+  margin: 0;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+}
+
+.correction-current-record__text {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.correction-current-record__details {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.correction-current-record__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.correction-current-record__row dt {
+  color: var(--color-text-muted);
+}
+
+.correction-current-record__row dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* Requested outcome: a native radio group. Each option label is at least 44px high, so the whole row is the target. */
+.correction-outcome {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.correction-outcome__legend {
+  padding: 0;
+  margin-block-end: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+.correction-outcome__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  cursor: pointer;
+}
+
+.correction-outcome__input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--color-brand);
+}
+
+.correction-outcome__input:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* The History row action: a text link that keeps the 44px target and a visible underline (DESIGN §7, §10). */
+.summary-correction-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  color: var(--color-brand);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+}
+
+.summary-correction-link:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}

@@ -232,6 +232,7 @@ describe('summary table', () => {
       'Late clock-in',
       '',
       'Not recorded yet',
+      'Request a correction',
     ]);
     const onTimeRow = screen.getByRole('cell', { name: '2026-11-13' }).closest('tr') as HTMLElement;
     expect(within(onTimeRow).getByRole('cell', { name: '2026-11-13 18:30' })).toBeInTheDocument();
@@ -271,14 +272,21 @@ describe('summary table', () => {
       within(workingDayRow as HTMLElement)
         .getAllByRole('cell')
         .map((cell) => cell.textContent),
-    ).toEqual(['2026-11-10', '', 'Not recorded yet', '', 'Not recorded yet']);
+    ).toEqual([
+      '2026-11-10',
+      '',
+      'Not recorded yet',
+      '',
+      'Not recorded yet',
+      'Request a correction',
+    ]);
     const dayOffRow = screen.getByRole('cell', { name: '2026-11-08' }).closest('tr');
     expect(dayOffRow).not.toBeNull();
     expect(
       within(dayOffRow as HTMLElement)
         .getAllByRole('cell')
         .map((cell) => cell.textContent),
-    ).toEqual(['2026-11-08', '', 'Not required', '', 'Not required']);
+    ).toEqual(['2026-11-08', '', 'Not required', '', 'Not required', 'Request a correction']);
   });
 
   it('should show the empty message with the range when no attendance was recorded', async () => {
@@ -348,5 +356,50 @@ describe('summary table', () => {
     });
     expect(requestAt(summary.requestedQueries, 1).get('page')).toBe('2');
     expect(router.state.location.search).toMatchObject({ page: 2 });
+  });
+});
+
+describe('summary correction link', () => {
+  it('should show an Action column whose link names the day and points at the correction form with that date', async () => {
+    mswServer.use(summaryEndpoint().handler);
+    await openHistoryAt('/history');
+
+    expect(await screen.findByRole('columnheader', { name: 'Action' })).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Request a correction for 2026-11-13' });
+    expect(link).toHaveAttribute('href', '/requests/corrections/new?date=2026-11-13');
+  });
+
+  it('should show no correction link for a day older than the 30-day window in WIB', async () => {
+    // 2026-10-16 is the oldest day a correction can target from 2026-11-15 (30 days back); 2026-10-15 is one day too old.
+    const outsideWindow = { ...ON_TIME_DAY, businessDate: '2026-10-15' };
+    const insideWindow = { ...ON_TIME_DAY, businessDate: '2026-10-16' };
+    mswServer.use(
+      summaryEndpoint(() => HttpResponse.json(summaryPage([insideWindow, outsideWindow]))).handler,
+    );
+    await openHistoryAt('/history');
+
+    await screen.findByRole('cell', { name: '2026-10-15' });
+    expect(
+      screen.getByRole('link', { name: 'Request a correction for 2026-10-16' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Request a correction for 2026-10-15' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('should open the correction form with the day pre-filled when the row link is pressed', async () => {
+    mswServer.use(summaryEndpoint().handler);
+    const { user, router } = await openHistoryAt('/history');
+
+    await user.click(
+      await screen.findByRole('link', { name: 'Request a correction for 2026-11-13' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Request correction' }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/requests/corrections/new');
+    expect(router.state.location.search).toEqual({ date: '2026-11-13' });
+    expect(screen.getByLabelText('Business date')).toHaveValue('2026-11-13');
   });
 });

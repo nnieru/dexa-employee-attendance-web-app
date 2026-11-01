@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  isSameRequestPayload,
   resolveAttemptIdempotencyKey,
   type OvertimeRequestPayload,
   type SubmittedAttempt,
@@ -13,7 +14,10 @@ const PAYLOAD: OvertimeRequestPayload = {
 };
 const FIRST_KEY = '3c1f7e2a-9d4b-4a6e-8f0c-5b2d1e9a7c01';
 const NEW_KEY = '3c1f7e2a-9d4b-4a6e-8f0c-5b2d1e9a7c02';
-const LAST_ATTEMPT: SubmittedAttempt = { idempotencyKey: FIRST_KEY, payload: PAYLOAD };
+const LAST_ATTEMPT: SubmittedAttempt<OvertimeRequestPayload> = {
+  idempotencyKey: FIRST_KEY,
+  payload: PAYLOAD,
+};
 
 describe('resolveAttemptIdempotencyKey', () => {
   it('should make a new key when no attempt was sent yet', () => {
@@ -42,5 +46,19 @@ describe('resolveAttemptIdempotencyKey', () => {
       NEW_KEY,
     );
     expect(createKey).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('isSameRequestPayload', () => {
+  it('should be false when a key is present in one payload and absent in the other', () => {
+    const withClockOut = { businessDate: '2026-11-02', clockOutAt: '2026-11-02T10:00:00.000Z' };
+    const withoutClockOut = { businessDate: '2026-11-02' };
+
+    expect(isSameRequestPayload(withClockOut, withoutClockOut)).toBe(false);
+    expect(isSameRequestPayload(withoutClockOut, withClockOut)).toBe(false);
+  });
+
+  it('should be true when every key and value is equal, whatever the key order', () => {
+    expect(isSameRequestPayload({ a: '1', b: '2' }, { b: '2', a: '1' })).toBe(true);
   });
 });

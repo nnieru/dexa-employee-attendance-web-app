@@ -136,20 +136,13 @@ describe('employee route guards', () => {
     );
   });
 
-  it.each([['/requests/corrections/new', 'Request correction']])(
-    'should show the coming-soon state on %s when the employee is signed in',
-    async (path, title) => {
-      const { router } = await signInFrom('/login');
-      await screen.findByRole('heading', { level: 1, name: 'Attendance' });
+  it('should redirect to login with the correction request form requested when a signed-out employee opens it', async () => {
+    const router = await renderEmployeeApp('/requests/corrections/new');
 
-      await act(async () => {
-        await router.navigate({ href: path });
-      });
-
-      expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument();
-      expect(screen.getByText('Coming soon')).toBeInTheDocument();
-    },
-  );
+    expect(router.state.location.pathname).toBe('/login');
+    expect(router.state.location.search).toEqual({ redirect: '/requests/corrections/new' });
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
+  });
 
   it('should redirect to login with the overtime request form requested when a signed-out employee opens it', async () => {
     const router = await renderEmployeeApp('/requests/overtime/new');

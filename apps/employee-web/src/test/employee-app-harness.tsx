@@ -75,11 +75,14 @@ export function accountCheckRejected(code: 'ACCOUNT_DISABLED' | 'UNAUTHORIZED') 
   );
 }
 
-/** Renders the whole employee app at `initialPath` (which may carry a search string) and waits for the first load. */
-export async function renderEmployeeApp(initialPath = '/login') {
+/**
+ * Renders the whole employee app at `initialPath` (which may carry a search string) and waits for the first load. A test
+ * that must observe cache invalidation passes its own QueryClient; every other test gets a fresh one.
+ */
+export async function renderEmployeeApp(initialPath = '/login', queryClient = new QueryClient()) {
   const router = createAppRouter(createMemoryHistory({ initialEntries: [initialPath] }));
   await act(async () => {
-    render(<EmployeeApp queryClient={new QueryClient()} router={router} />);
+    render(<EmployeeApp queryClient={queryClient} router={router} />);
     await router.load();
   });
   return router;

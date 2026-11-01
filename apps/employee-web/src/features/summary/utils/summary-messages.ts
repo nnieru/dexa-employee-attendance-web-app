@@ -5,6 +5,13 @@ export const SUMMARY_PAGE_DESCRIPTION = 'Your attendance by day. Times are shown
 export const SUMMARY_LOAD_ERROR_MESSAGE = 'Your attendance history could not be loaded. Try again.';
 export const SUMMARY_TABLE_CAPTION = 'Attendance by day';
 export const INVALID_RANGE_TABLE_MESSAGE = 'Choose a valid date range to see attendance.';
+export const CORRECTION_ACTION_HEADER = 'Action';
+export const CORRECTION_LINK_TEXT = 'Request a correction';
+
+/** The link's accessible name names the day, because several identical links sit in one table (WCAG 2.4.4). */
+export function getCorrectionLinkName(businessDate: string): string {
+  return `${CORRECTION_LINK_TEXT} for ${businessDate}`;
+}
 
 /** Names the range, so the employee can tell an empty result from a filter that is too narrow (DESIGN §9). */
 export function getSummaryEmptyMessage(range: { from: string; to: string }): string {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   DEFAULT_PAGE_SIZE,
   type AttendanceSummaryItem,
@@ -18,7 +18,7 @@ import {
   getSummaryEmptyMessage,
   getSummaryTableStatus,
 } from '../utils/summary-messages.js';
-import { SUMMARY_COLUMNS } from './summary-columns.js';
+import { createSummaryColumns } from './summary-columns.js';
 
 type SummaryPageProps = {
   search: SummarySearch;
@@ -46,6 +46,7 @@ export function SummaryPage({ search, today, onSearch, onPageChange }: SummaryPa
   const isRangeValid = urlRangeError === undefined;
   const summaryQuery = useAttendanceSummary(toAttendanceSummaryQuery(search), isRangeValid);
   const page = isRangeValid ? summaryQuery.data : undefined;
+  const summaryColumns = useMemo(() => createSummaryColumns(today), [today]);
 
   function handleSearch(draft: SummaryRange) {
     const draftError = getSummaryRangeError(draft);
@@ -65,7 +66,7 @@ export function SummaryPage({ search, today, onSearch, onPageChange }: SummaryPa
       />
       <DataTable
         caption={SUMMARY_TABLE_CAPTION}
-        columns={SUMMARY_COLUMNS}
+        columns={summaryColumns}
         data={page?.items ?? NO_ROWS}
         emptyMessage={isRangeValid ? getSummaryEmptyMessage(range) : INVALID_RANGE_TABLE_MESSAGE}
         getRowId={getSummaryRowId}

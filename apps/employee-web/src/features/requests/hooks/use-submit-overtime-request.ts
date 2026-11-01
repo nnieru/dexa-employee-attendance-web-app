@@ -39,7 +39,7 @@ export type OvertimeSubmitResult = 'sent' | 'busy' | 'refused';
 export function useSubmitOvertimeRequest() {
   const { apiClient } = useSession();
   const queryClient = useQueryClient();
-  const lastAttemptRef = useRef<SubmittedAttempt | null>(null);
+  const lastAttemptRef = useRef<SubmittedAttempt<OvertimeRequestPayload> | null>(null);
   const isSendingRef = useRef(false);
 
   const mutation = useMutation({

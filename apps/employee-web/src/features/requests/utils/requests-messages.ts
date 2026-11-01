@@ -64,3 +64,41 @@ export const OVERTIME_IDEMPOTENCY_CONFLICT_MESSAGE =
   'This request conflicts with an earlier attempt. Reload the page and submit it again.';
 export const OVERTIME_REQUEST_CONTRACT_MESSAGE =
   'The request could not be prepared. Check the entries and try again.';
+
+/** Shown when a submission cannot be turned into a request that passes the shared contract (nothing was sent). */
+export const REQUEST_CONTRACT_MESSAGE =
+  'The request could not be prepared. Check the entries and try again.';
+
+export const CORRECTION_REQUEST_PAGE_TITLE = 'Request correction';
+export const CORRECTION_REQUEST_PAGE_DESCRIPTION =
+  "Ask HR to correct a day's attendance. HR reviews each request. Your attendance record does not change until HR approves it.";
+export const CORRECTION_REQUEST_SUBMITTED_MESSAGE = 'Correction request submitted.';
+export const CORRECTION_BUSINESS_DATE_HINT = 'Today or up to 30 days back. Times are in WIB.';
+export const CORRECTION_OUTCOME_LEGEND = 'Requested outcome';
+export const CORRECTION_CLOCK_IN_LABEL = 'Clock in (WIB)';
+export const CORRECTION_CLOCK_IN_HINT = 'Required for a present day.';
+export const CORRECTION_CLOCK_OUT_LABEL = 'Clock out (WIB)';
+export const CORRECTION_CLOCK_OUT_HINT = 'Optional. Leave it empty if you do not know it.';
+export const CORRECTION_REASON_LABEL = 'Reason';
+export const CORRECTION_SUBMIT_LABEL = 'Submit request';
+export const CORRECTION_CANCEL_LABEL = 'Cancel';
+/** Shown above the form, because the employee already has a pending correction for the date (COR-4). */
+export const CORRECTION_ALREADY_PENDING_MESSAGE =
+  'You already have a pending correction for this date. Wait for HR to decide it.';
+// Reuses the overtime copy as the correction spec asks. It names overtime, so it should be generalized with a shared copy home.
+export const CORRECTION_SCHEDULE_NOT_CONFIGURED_MESSAGE =
+  'Your work schedule is not set up yet, so a correction cannot be requested. Contact HR.';
+
+export const CURRENT_RECORD_HEADING_PREFIX = 'Current record for';
+export const CURRENT_RECORD_EMPTY_MESSAGE = 'No record for this date.';
+export const CURRENT_RECORD_CHOOSE_DATE_MESSAGE =
+  'Choose a date within the last 30 days to see its current record.';
+export const CURRENT_RECORD_LOADING_MESSAGE = 'Loading the current record…';
+export const CURRENT_RECORD_LOAD_ERROR_MESSAGE =
+  'The current record could not be loaded. You can still submit a request.';
+export const CURRENT_RECORD_TRY_AGAIN_LABEL = 'Try again';
+export const CURRENT_RECORD_NOT_RECORDED_TEXT = 'Not recorded';
+export const CURRENT_RECORD_CLOCK_IN_LABEL = 'Clock in';
+export const CURRENT_RECORD_CLOCK_OUT_LABEL = 'Clock out';
+export const CURRENT_RECORD_DAY_STATUS_LABEL = 'Day status';
+export const CURRENT_RECORD_OVERTIME_LABEL = 'Approved overtime';
