@@ -166,7 +166,7 @@ async function findDayForUpdate(
 
 // The database checks make a working day always carry both instants (attendance_days_working_day_schedule_ck),
 // so a missing instant is a broken row, not a case to classify.
-function toDaySchedule(row: {
+export function toDaySchedule(row: {
   readonly timezone: string;
   readonly isWorkingDay: boolean;
   readonly scheduledStartAt: Date | null;
@@ -255,7 +255,10 @@ async function updateDayCheckOut(runner: PunchRunner, update: DayCheckOutUpdate)
 
 // The status codes are seeded by migration 0003 (DATABASE §5.1). A missing code means the schema is broken, so the
 // error is not a client error.
-async function findStatusId(runner: PunchRunner, code: AttendanceStatusCode): Promise<string> {
+export async function findStatusId(
+  runner: PunchRunner,
+  code: AttendanceStatusCode,
+): Promise<string> {
   const [row] = await runner
     .select({ id: masterAttendanceStatuses.id })
     .from(masterAttendanceStatuses)

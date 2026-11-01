@@ -26,9 +26,14 @@ export type InitialCheckInStatusCode = 'PENDING_CHECKIN' | 'CHECKIN_NOT_REQUIRED
 /** The check-out status a day starts with. A punch never changes it in this task. */
 export type InitialCheckOutStatusCode = 'PENDING_CHECKOUT' | 'CHECKOUT_NOT_REQUIRED';
 
-/** Every status code that a punch or a new day writes. Each one is seeded in master_attendance_statuses (DATABASE §5.1). */
+/**
+ * Every status code that a punch, a new day, or an approved correction writes. Each one is seeded in
+ * master_attendance_statuses (DATABASE §5.1). SICK_LEAVE and LEAVE are written only by an approved correction.
+ */
 export type AttendanceStatusCode =
   | DayStatusCode
+  | 'SICK_LEAVE'
+  | 'LEAVE'
   | InitialCheckInStatusCode
   | InitialCheckOutStatusCode
   | CheckInStatusCode

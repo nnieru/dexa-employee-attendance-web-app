@@ -9,10 +9,12 @@ import {
   correctionRequestPageSchema,
   correctionRequestReviewPageSchema,
   correctionRequestSchema,
+  type ApproveCorrectionRequest,
   type CorrectionRequest,
   type CorrectionRequestPage,
   type CorrectionRequestReviewPage,
   type OwnRequestListQuery,
+  type RejectCorrectionRequest,
   type RequestReviewQueueQuery,
   type SubmitCorrectionRequest,
 } from '@dexa/contracts';
@@ -25,6 +27,10 @@ import {
 
 const CORRECTION_REQUESTS_PATH = `/${API_PREFIX}/attendance-corrections`;
 const OWN_CORRECTION_REQUESTS_PATH = `${CORRECTION_REQUESTS_PATH}/me`;
+
+function decisionPath(requestId: string, decision: 'approve' | 'reject'): string {
+  return `${CORRECTION_REQUESTS_PATH}/${requestId}/${decision}`;
+}
 
 @Injectable()
 export class CorrectionRequestClient implements ICorrectionRequestClient {
@@ -71,6 +77,36 @@ export class CorrectionRequestClient implements ICorrectionRequestClient {
       query: toRequestReviewQueueQueryParameters(query),
       onBehalfOf: user,
       responseSchema: correctionRequestReviewPageSchema,
+    });
+  }
+
+  // HR only. A decision is not retried by the gateway: a lost answer must not be replayed as a second decision. A replay
+  // of the same decision is answered by attendance-service with the recorded request.
+  approveCorrection(
+    user: AuthenticatedUser,
+    requestId: string,
+    body: ApproveCorrectionRequest,
+  ): Promise<CorrectionRequest> {
+    return this.httpClient.post({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: decisionPath(requestId, 'approve'),
+      body,
+      onBehalfOf: user,
+      responseSchema: correctionRequestSchema,
+    });
+  }
+
+  rejectCorrection(
+    user: AuthenticatedUser,
+    requestId: string,
+    body: RejectCorrectionRequest,
+  ): Promise<CorrectionRequest> {
+    return this.httpClient.post({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: decisionPath(requestId, 'reject'),
+      body,
+      onBehalfOf: user,
+      responseSchema: correctionRequestSchema,
     });
   }
 }

@@ -7,10 +7,12 @@ import {
 } from '@dexa/common';
 import {
   Role,
+  type ApproveCorrectionRequest,
   type CorrectionRequest,
   type CorrectionRequestPage,
   type CorrectionRequestReviewPage,
   type OwnRequestListQuery,
+  type RejectCorrectionRequest,
   type RequestReviewQueueQuery,
   type SubmitCorrectionRequest,
 } from '@dexa/contracts';
@@ -229,5 +231,66 @@ describe('CorrectionRequestClient.listReviewQueue', () => {
     await expect(
       client.listReviewQueue(USER, { status: 'PENDING', page: 1, pageSize: 20 }),
     ).rejects.toThrow();
+  });
+});
+
+const REQUEST_ID = '0b9e8d7c-6a5f-4e3d-8c2b-1a0f9e8d7c6b';
+const REVIEWER: AuthenticatedUser = {
+  accountId: '9d2b6a1e-3c4f-4a8b-8e7d-1f2a3b4c5d6e',
+  role: Role.HR,
+};
+const DECIDED_REQUEST: CorrectionRequest = {
+  ...SAVED_REQUEST,
+  status: 'REJECTED',
+  reviewReason: 'Clock records differ',
+  reviewedAt: '2026-11-06T04:00:00.000Z',
+};
+
+describe('CorrectionRequestClient.approveCorrection', () => {
+  it('should post the optional reason to the approve path on behalf of the reviewer', async () => {
+    const recorded: InternalPostRequest<unknown>[] = [];
+    const client = new CorrectionRequestClient(
+      createRecordingHttpClient({ ...SAVED_REQUEST, status: 'APPROVED' }, recorded),
+    );
+    const body: ApproveCorrectionRequest = { reviewReason: 'Confirmed' };
+
+    const response = await client.approveCorrection(REVIEWER, REQUEST_ID, body);
+
+    expect(response).toMatchObject({ status: 'APPROVED' });
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: `/api/v1/attendance-corrections/${REQUEST_ID}/approve`,
+      body: { reviewReason: 'Confirmed' },
+      onBehalfOf: REVIEWER,
+    });
+  });
+
+  it('should reject the answer when attendance-service answers a status the contract does not define', async () => {
+    const client = new CorrectionRequestClient(
+      createRecordingHttpClient({ ...SAVED_REQUEST, status: 'CANCELLED' }, []),
+    );
+
+    await expect(client.approveCorrection(REVIEWER, REQUEST_ID, {})).rejects.toThrow();
+  });
+});
+
+describe('CorrectionRequestClient.rejectCorrection', () => {
+  it('should post the reason to the reject path on behalf of the reviewer and answer the rejected request', async () => {
+    const recorded: InternalPostRequest<unknown>[] = [];
+    const client = new CorrectionRequestClient(
+      createRecordingHttpClient(DECIDED_REQUEST, recorded),
+    );
+    const body: RejectCorrectionRequest = { reviewReason: 'Clock records differ' };
+
+    const response = await client.rejectCorrection(REVIEWER, REQUEST_ID, body);
+
+    expect(response).toEqual(DECIDED_REQUEST);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: `/api/v1/attendance-corrections/${REQUEST_ID}/reject`,
+      body: { reviewReason: 'Clock records differ' },
+      onBehalfOf: REVIEWER,
+    });
   });
 });

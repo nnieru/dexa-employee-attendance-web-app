@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { EmployeesModule } from '../employees/employees.module.js';
 import { CorrectionRequestController } from './correction-request.controller.js';
+import { CorrectionRequestDecisionController } from './correction-request-decision.controller.js';
+import { CorrectionRequestDecisionRepository } from './correction-request-decision.repository.js';
+import { CORRECTION_REQUEST_DECISION_REPOSITORY } from './correction-request-decision.repository.interface.js';
+import { CorrectionRequestDecisionService } from './correction-request-decision.service.js';
+import { CORRECTION_REQUEST_DECISION_SERVICE } from './correction-request-decision.service.interface.js';
 import { CorrectionRequestListRepository } from './correction-request-list.repository.js';
 import { CORRECTION_REQUEST_LIST_READER } from './correction-request-list.repository.interface.js';
 import { CorrectionRequestListService } from './correction-request-list.service.js';
@@ -17,7 +22,11 @@ import { CorrectionRequestService } from './correction-request.service.js';
 
 @Module({
   imports: [EmployeesModule],
-  controllers: [CorrectionRequestController, CorrectionRequestReviewController],
+  controllers: [
+    CorrectionRequestController,
+    CorrectionRequestReviewController,
+    CorrectionRequestDecisionController,
+  ],
   providers: [
     { provide: CORRECTION_REQUEST_SERVICE, useClass: CorrectionRequestService },
     { provide: CORRECTION_REQUEST_REPOSITORY, useClass: CorrectionRequestRepository },
@@ -25,6 +34,11 @@ import { CorrectionRequestService } from './correction-request.service.js';
     { provide: CORRECTION_REQUEST_LIST_READER, useClass: CorrectionRequestListRepository },
     { provide: CORRECTION_REQUEST_REVIEW_SERVICE, useClass: CorrectionRequestReviewService },
     { provide: CORRECTION_REQUEST_REVIEW_READER, useClass: CorrectionRequestReviewRepository },
+    { provide: CORRECTION_REQUEST_DECISION_SERVICE, useClass: CorrectionRequestDecisionService },
+    {
+      provide: CORRECTION_REQUEST_DECISION_REPOSITORY,
+      useClass: CorrectionRequestDecisionRepository,
+    },
   ],
 })
 export class CorrectionsModule {}

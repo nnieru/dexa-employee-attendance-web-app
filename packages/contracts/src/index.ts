@@ -185,6 +185,12 @@ export {
   type RejectOvertimeRequest,
 } from './requests/decide-overtime-request.schema.js';
 export {
+  approveCorrectionRequestSchema,
+  rejectCorrectionRequestSchema,
+  type ApproveCorrectionRequest,
+  type RejectCorrectionRequest,
+} from './requests/decide-correction-request.schema.js';
+export {
   ownRequestListQuerySchema,
   overtimeRequestPageSchema,
   correctionRequestPageSchema,

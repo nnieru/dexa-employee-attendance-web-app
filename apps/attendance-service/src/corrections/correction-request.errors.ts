@@ -60,6 +60,19 @@ export class CorrectionAlreadyPendingError extends ConflictError {
 }
 
 /**
+ * The day changed after the correction was submitted, so applying it would overwrite newer values (DATABASE §5.8).
+ * Nothing is written. HR can reject the stale request, and the employee then submits against the current revision.
+ */
+export class AttendanceDayChangedError extends ConflictError {
+  constructor() {
+    super(
+      ErrorCode.ATTENDANCE_DAY_CHANGED,
+      'This record changed after the request was created. Reload to review the latest data.',
+    );
+  }
+}
+
+/**
  * Another transaction stored a correction with the same idempotency key after this one looked for it. The service reads
  * the stored correction and judges this submission against it. It is not a DomainError, so the repository's transaction
  * wrapper passes it through to the service unchanged.
