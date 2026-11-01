@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import type { EmployeeListItem } from '@dexa/contracts';
 import { Avatar, StatusLabel, createDataTableColumnHelper } from '@dexa/ui';
 import {
@@ -71,6 +72,20 @@ export function createEmployeeListColumns(
         const presentation = getProfileStatusPresentation(row.original.profileStatus);
         return <StatusLabel tone={presentation.tone}>{presentation.label}</StatusLabel>;
       },
+    }),
+    helper.display({
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <Link
+          to="/employees/$employeeId/edit"
+          params={{ employeeId: row.original.accountId }}
+          className="employee-row-action"
+          aria-label={`Edit ${row.original.name}`}
+        >
+          Edit
+        </Link>
+      ),
     }),
   ]);
 }

@@ -66,3 +66,30 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 }
+
+/* Edit link at the end of an employee row: an underlined text link with a 44px target (DESIGN §7). */
+.employee-row-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-brand);
+  text-decoration: underline;
+}
+
+.employee-row-action:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* Edit employee form: the same stacked layout as the add form. */
+.employee-form {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 32rem;
+}
+
+.employee-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

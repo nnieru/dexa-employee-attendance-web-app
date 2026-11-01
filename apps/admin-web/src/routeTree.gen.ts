@@ -18,6 +18,7 @@ import { Route as AuthenticatedEmployeesRouteImport } from './routes/_authentica
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
 import { Route as AuthenticatedEmployeesNewRouteImport } from './routes/_authenticated/employees_.new'
+import { Route as AuthenticatedEmployeesEmployeeIdEditRouteImport } from './routes/_authenticated/employees_.$employeeId.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -65,6 +66,12 @@ const AuthenticatedEmployeesNewRoute =
     path: '/employees/new',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedEmployeesEmployeeIdEditRoute =
+  AuthenticatedEmployeesEmployeeIdEditRouteImport.update({
+    id: '/employees_/$employeeId/edit',
+    path: '/employees/$employeeId/edit',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
+  '/employees/$employeeId/edit': typeof AuthenticatedEmployeesEmployeeIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -85,6 +93,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/employees/new': typeof AuthenticatedEmployeesNewRoute
+  '/employees/$employeeId/edit': typeof AuthenticatedEmployeesEmployeeIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,6 +106,7 @@ export interface FileRoutesById {
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/employees_/new': typeof AuthenticatedEmployeesNewRoute
+  '/_authenticated/employees_/$employeeId/edit': typeof AuthenticatedEmployeesEmployeeIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedule'
     | '/employees/new'
+    | '/employees/$employeeId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedule'
     | '/employees/new'
+    | '/employees/$employeeId/edit'
   id:
     | '__root__'
     | '/'
@@ -130,6 +142,7 @@ export interface FileRouteTypes {
     | '/_authenticated/notifications'
     | '/_authenticated/schedule'
     | '/_authenticated/employees_/new'
+    | '/_authenticated/employees_/$employeeId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -203,6 +216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployeesNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/employees_/$employeeId/edit': {
+      id: '/_authenticated/employees_/$employeeId/edit'
+      path: '/employees/$employeeId/edit'
+      fullPath: '/employees/$employeeId/edit'
+      preLoaderRoute: typeof AuthenticatedEmployeesEmployeeIdEditRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -213,6 +233,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
   AuthenticatedEmployeesNewRoute: typeof AuthenticatedEmployeesNewRoute
+  AuthenticatedEmployeesEmployeeIdEditRoute: typeof AuthenticatedEmployeesEmployeeIdEditRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -222,6 +243,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
   AuthenticatedEmployeesNewRoute: AuthenticatedEmployeesNewRoute,
+  AuthenticatedEmployeesEmployeeIdEditRoute:
+    AuthenticatedEmployeesEmployeeIdEditRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

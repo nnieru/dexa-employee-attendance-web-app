@@ -18,3 +18,14 @@ afterEach(() => {
 afterAll(() => {
   mswServer.close();
 });
+
+// jsdom does not implement the native dialog methods that Dialog and ConfirmDialog call. The browser provides them,
+// so this shim covers only the open attribute, like the shim in packages/ui/src/test-setup.ts.
+if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
+  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+    this.removeAttribute('open');
+  };
+}
