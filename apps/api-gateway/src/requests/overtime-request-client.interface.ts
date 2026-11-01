@@ -1,9 +1,11 @@
 import type { AuthenticatedUser } from '@dexa/common';
 import type {
+  ApproveOvertimeRequest,
   OvertimeRequest,
   OvertimeRequestPage,
   OvertimeRequestReviewPage,
   OwnRequestListQuery,
+  RejectOvertimeRequest,
   RequestReviewQueueQuery,
   SubmitOvertimeRequest,
 } from '@dexa/contracts';
@@ -19,6 +21,16 @@ export interface IOvertimeRequestClient {
     user: AuthenticatedUser,
     query: RequestReviewQueueQuery,
   ): Promise<OvertimeRequestReviewPage>;
+  approveOvertime(
+    user: AuthenticatedUser,
+    requestId: string,
+    body: ApproveOvertimeRequest,
+  ): Promise<OvertimeRequest>;
+  rejectOvertime(
+    user: AuthenticatedUser,
+    requestId: string,
+    body: RejectOvertimeRequest,
+  ): Promise<OvertimeRequest>;
 }
 
 export const OVERTIME_REQUEST_CLIENT = Symbol('IOvertimeRequestClient');

@@ -174,8 +174,16 @@ export { requestStatusSchema, type RequestStatus } from './requests/request-stat
 export {
   REQUEST_REASON_MAX_LENGTH,
   requestIdempotencyKeySchema,
+  requestIdSchema,
   requestReasonSchema,
+  requestReviewReasonSchema,
 } from './requests/request-fields.schema.js';
+export {
+  approveOvertimeRequestSchema,
+  rejectOvertimeRequestSchema,
+  type ApproveOvertimeRequest,
+  type RejectOvertimeRequest,
+} from './requests/decide-overtime-request.schema.js';
 export {
   ownRequestListQuerySchema,
   overtimeRequestPageSchema,

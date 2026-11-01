@@ -1,17 +1,32 @@
 import { CurrentUser, Roles, type AuthenticatedUser } from '@dexa/common';
 import {
+  approveOvertimeRequestSchema,
   ownRequestListQuerySchema,
+  rejectOvertimeRequestSchema,
+  requestIdSchema,
   requestReviewQueueQuerySchema,
   Role,
   submitOvertimeRequestSchema,
+  type ApproveOvertimeRequest,
   type OvertimeRequest,
   type OvertimeRequestPage,
   type OvertimeRequestReviewPage,
   type OwnRequestListQuery,
+  type RejectOvertimeRequest,
   type RequestReviewQueueQuery,
   type SubmitOvertimeRequest,
 } from '@dexa/contracts';
-import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 import {
   OVERTIME_REQUEST_CLIENT,
@@ -54,5 +69,29 @@ export class OvertimeRequestController {
     @Query(new ZodValidationPipe(requestReviewQueueQuerySchema)) query: RequestReviewQueueQuery,
   ): Promise<OvertimeRequestReviewPage> {
     return this.overtimeRequests.listReviewQueue(user, query);
+  }
+
+  // HR only. The gateway checks the role, and attendance-service checks it again and refuses a reviewer who is the
+  // requester (APR-4). The reviewer is the token's account; the body carries only the reason.
+  @Roles(Role.HR)
+  @Post(':id/approve')
+  @HttpCode(HttpStatus.OK)
+  approveOvertime(
+    @Param('id', new ZodValidationPipe(requestIdSchema)) requestId: string,
+    @Body(new ZodValidationPipe(approveOvertimeRequestSchema)) body: ApproveOvertimeRequest,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<OvertimeRequest> {
+    return this.overtimeRequests.approveOvertime(user, requestId, body);
+  }
+
+  @Roles(Role.HR)
+  @Post(':id/reject')
+  @HttpCode(HttpStatus.OK)
+  rejectOvertime(
+    @Param('id', new ZodValidationPipe(requestIdSchema)) requestId: string,
+    @Body(new ZodValidationPipe(rejectOvertimeRequestSchema)) body: RejectOvertimeRequest,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<OvertimeRequest> {
+    return this.overtimeRequests.rejectOvertime(user, requestId, body);
   }
 }

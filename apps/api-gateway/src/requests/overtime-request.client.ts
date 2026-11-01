@@ -9,10 +9,12 @@ import {
   overtimeRequestPageSchema,
   overtimeRequestReviewPageSchema,
   overtimeRequestSchema,
+  type ApproveOvertimeRequest,
   type OvertimeRequest,
   type OvertimeRequestPage,
   type OvertimeRequestReviewPage,
   type OwnRequestListQuery,
+  type RejectOvertimeRequest,
   type RequestReviewQueueQuery,
   type SubmitOvertimeRequest,
 } from '@dexa/contracts';
@@ -25,6 +27,10 @@ import {
 
 const OVERTIME_REQUESTS_PATH = `/${API_PREFIX}/overtime-requests`;
 const OWN_OVERTIME_REQUESTS_PATH = `${OVERTIME_REQUESTS_PATH}/me`;
+
+function decisionPath(requestId: string, decision: 'approve' | 'reject'): string {
+  return `${OVERTIME_REQUESTS_PATH}/${requestId}/${decision}`;
+}
 
 @Injectable()
 export class OvertimeRequestClient implements IOvertimeRequestClient {
@@ -71,6 +77,36 @@ export class OvertimeRequestClient implements IOvertimeRequestClient {
       query: toRequestReviewQueueQueryParameters(query),
       onBehalfOf: user,
       responseSchema: overtimeRequestReviewPageSchema,
+    });
+  }
+
+  // HR only. A decision is not retried by the gateway: a lost answer must not be replayed as a second decision. A replay
+  // of the same decision is answered by attendance-service with the recorded request.
+  approveOvertime(
+    user: AuthenticatedUser,
+    requestId: string,
+    body: ApproveOvertimeRequest,
+  ): Promise<OvertimeRequest> {
+    return this.httpClient.post({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: decisionPath(requestId, 'approve'),
+      body,
+      onBehalfOf: user,
+      responseSchema: overtimeRequestSchema,
+    });
+  }
+
+  rejectOvertime(
+    user: AuthenticatedUser,
+    requestId: string,
+    body: RejectOvertimeRequest,
+  ): Promise<OvertimeRequest> {
+    return this.httpClient.post({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: decisionPath(requestId, 'reject'),
+      body,
+      onBehalfOf: user,
+      responseSchema: overtimeRequestSchema,
     });
   }
 }

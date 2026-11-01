@@ -7,10 +7,12 @@ import {
 } from '@dexa/common';
 import {
   Role,
+  type ApproveOvertimeRequest,
   type OvertimeRequest,
   type OvertimeRequestPage,
   type OvertimeRequestReviewPage,
   type OwnRequestListQuery,
+  type RejectOvertimeRequest,
   type RequestReviewQueueQuery,
   type SubmitOvertimeRequest,
 } from '@dexa/contracts';
@@ -217,5 +219,64 @@ describe('OvertimeRequestClient.listReviewQueue', () => {
     await expect(
       client.listReviewQueue(USER, { status: 'PENDING', page: 1, pageSize: 20 }),
     ).rejects.toThrow();
+  });
+});
+
+const REQUEST_ID = '0b9e8d7c-6a5f-4e3d-8c2b-1a0f9e8d7c6b';
+const REVIEWER: AuthenticatedUser = {
+  accountId: '9d2b6a1e-3c4f-4a8b-8e7d-1f2a3b4c5d6e',
+  role: Role.HR,
+};
+const DECIDED_REQUEST: OvertimeRequest = {
+  ...SAVED_REQUEST,
+  status: 'REJECTED',
+  reviewReason: 'Overlaps the release window',
+  reviewedAt: '2026-11-06T04:00:00.000Z',
+};
+
+describe('OvertimeRequestClient.approveOvertime', () => {
+  it('should post the optional reason to the approve path on behalf of the reviewer', async () => {
+    const recorded: InternalPostRequest<unknown>[] = [];
+    const client = new OvertimeRequestClient(
+      createRecordingHttpClient({ ...SAVED_REQUEST, status: 'APPROVED' }, recorded),
+    );
+    const body: ApproveOvertimeRequest = { reviewReason: 'Confirmed' };
+
+    const response = await client.approveOvertime(REVIEWER, REQUEST_ID, body);
+
+    expect(response).toMatchObject({ status: 'APPROVED' });
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: `/api/v1/overtime-requests/${REQUEST_ID}/approve`,
+      body: { reviewReason: 'Confirmed' },
+      onBehalfOf: REVIEWER,
+    });
+  });
+
+  it('should reject the answer when attendance-service answers a status the contract does not define', async () => {
+    const client = new OvertimeRequestClient(
+      createRecordingHttpClient({ ...SAVED_REQUEST, status: 'CANCELLED' }, []),
+    );
+
+    await expect(client.approveOvertime(REVIEWER, REQUEST_ID, {})).rejects.toThrow();
+  });
+});
+
+describe('OvertimeRequestClient.rejectOvertime', () => {
+  it('should post the reason to the reject path on behalf of the reviewer and answer the rejected request', async () => {
+    const recorded: InternalPostRequest<unknown>[] = [];
+    const client = new OvertimeRequestClient(createRecordingHttpClient(DECIDED_REQUEST, recorded));
+    const body: RejectOvertimeRequest = { reviewReason: 'Overlaps the release window' };
+
+    const response = await client.rejectOvertime(REVIEWER, REQUEST_ID, body);
+
+    expect(response).toEqual(DECIDED_REQUEST);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: `/api/v1/overtime-requests/${REQUEST_ID}/reject`,
+      body: { reviewReason: 'Overlaps the release window' },
+      onBehalfOf: REVIEWER,
+    });
   });
 });
