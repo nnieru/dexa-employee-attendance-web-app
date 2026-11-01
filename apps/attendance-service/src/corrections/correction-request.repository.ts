@@ -87,6 +87,7 @@ export class CorrectionRequestRepository implements ICorrectionRequestRepository
 function createCorrectionTransactionScope(runner: PunchRunner): ICorrectionRequestTransaction {
   const dayScope = createTransactionScope(runner);
   return {
+    insert: (table) => runner.insert(table),
     findScheduleInEffect: dayScope.findScheduleInEffect,
     findCalendarException: dayScope.findCalendarException,
     insertDayIfMissing: dayScope.insertDayIfMissing,

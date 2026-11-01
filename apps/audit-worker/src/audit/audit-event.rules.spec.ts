@@ -56,6 +56,52 @@ describe('decideAuditRecord', () => {
         processedAt: PROCESSED_AT,
       },
     },
+    {
+      condition: 'an attendance.request.submitted event',
+      event: envelopeOf(EventName.ATTENDANCE_REQUEST_SUBMITTED, {
+        accountId: ACCOUNT_ID,
+        actorAccountId: ACTOR_ACCOUNT_ID,
+        resourceType: 'overtime_request',
+        resourceId: '3f7e2d1c-8b4a-4e9f-9c0d-1a2b3c4d5e6f',
+        businessDate: '2026-11-02',
+        changedFields: [],
+      }),
+      record: {
+        eventId: EVENT_ID,
+        eventType: 'attendance.request.submitted',
+        resourceType: 'overtime_request',
+        resourceId: '3f7e2d1c-8b4a-4e9f-9c0d-1a2b3c4d5e6f',
+        sourceService: 'attendance-service',
+        accountId: ACCOUNT_ID,
+        actorAccountId: ACTOR_ACCOUNT_ID,
+        changedFields: [],
+        occurredAt: new Date(OCCURRED_AT),
+        processedAt: PROCESSED_AT,
+      },
+    },
+    {
+      condition: 'an attendance.request.approved event',
+      event: envelopeOf(EventName.ATTENDANCE_REQUEST_APPROVED, {
+        accountId: ACCOUNT_ID,
+        actorAccountId: ACTOR_ACCOUNT_ID,
+        resourceType: 'attendance_adjustment_request',
+        resourceId: '3f7e2d1c-8b4a-4e9f-9c0d-1a2b3c4d5e6f',
+        businessDate: '2026-11-02',
+        changedFields: [],
+      }),
+      record: {
+        eventId: EVENT_ID,
+        eventType: 'attendance.request.approved',
+        resourceType: 'attendance_adjustment_request',
+        resourceId: '3f7e2d1c-8b4a-4e9f-9c0d-1a2b3c4d5e6f',
+        sourceService: 'attendance-service',
+        accountId: ACCOUNT_ID,
+        actorAccountId: ACTOR_ACCOUNT_ID,
+        changedFields: [],
+        occurredAt: new Date(OCCURRED_AT),
+        processedAt: PROCESSED_AT,
+      },
+    },
   ])('should map $condition to one audit record without employee values', ({ event, record }) => {
     const decision = decideAuditRecord(event, PROCESSED_AT);
 
@@ -98,7 +144,7 @@ describe('decideAuditRecord', () => {
     },
     {
       condition: 'the event type is not an audited type',
-      event: envelopeOf('attendance.request.submitted', PASSWORD_PAYLOAD),
+      event: envelopeOf('unknown.event.type', PASSWORD_PAYLOAD),
       reason: 'unsupported-event-type',
     },
   ])('should reject the event when $condition', ({ event, reason }) => {

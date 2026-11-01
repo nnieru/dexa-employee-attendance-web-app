@@ -50,6 +50,7 @@ function createDecisionTransactionScope(
   runner: PunchRunner,
 ): ICorrectionRequestDecisionTransaction {
   return {
+    insert: (table) => runner.insert(table),
     findRequestForUpdate: (requestId) => findRequestForUpdate(runner, requestId),
     findDayForUpdate: (attendanceDayId) => findDayForUpdate(runner, attendanceDayId),
     applyDayValues: (dayId, values) => applyDayValues(runner, dayId, values),

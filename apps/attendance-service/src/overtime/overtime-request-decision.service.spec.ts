@@ -1,5 +1,6 @@
 import type { IClock } from '@dexa/common';
 import { ErrorCode } from '@dexa/contracts';
+import type { IOutboxWriter } from '@dexa/messaging';
 import { RequestNotFoundError } from '../requests/request-decision.errors.js';
 import type {
   IOvertimeRequestDecisionRepository,
@@ -40,6 +41,7 @@ class FakeDecisionRepository implements IOvertimeRequestDecisionRepository {
     work: (transaction: IOvertimeRequestDecisionTransaction) => Promise<TResult>,
   ): Promise<TResult> {
     const transaction: IOvertimeRequestDecisionTransaction = {
+      insert: () => ({ values: () => Promise.resolve() }),
       findRequestForUpdate: (requestId) =>
         Promise.resolve(this.stored?.id === requestId ? this.stored : undefined),
       recordDecision: (decision) => {
@@ -52,13 +54,17 @@ class FakeDecisionRepository implements IOvertimeRequestDecisionRepository {
 }
 
 const FIXED_CLOCK: IClock = { now: () => new Date(REVIEW_MOMENT) };
+const FAKE_OUTBOX: IOutboxWriter = { add: () => Promise.resolve() };
 
 function createService(stored: LockedOvertimeRequest | undefined): {
   service: OvertimeRequestDecisionService;
   repository: FakeDecisionRepository;
 } {
   const repository = new FakeDecisionRepository(stored);
-  return { service: new OvertimeRequestDecisionService(repository, FIXED_CLOCK), repository };
+  return {
+    service: new OvertimeRequestDecisionService(repository, FAKE_OUTBOX, FIXED_CLOCK),
+    repository,
+  };
 }
 
 describe('OvertimeRequestDecisionService', () => {

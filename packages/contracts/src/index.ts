@@ -248,6 +248,13 @@ export {
   type AccountPasswordChangedPayload,
 } from './events/account-password-changed.schema.js';
 export {
+  attendanceRequestEventPayloadSchema,
+  attendanceRequestResourceTypeSchema,
+  ATTENDANCE_REQUEST_RESOURCE_TYPES,
+  type AttendanceRequestEventPayload,
+  type AttendanceRequestResourceType,
+} from './events/attendance-request.schema.js';
+export {
   employeeProfileUpdatedPayloadSchema,
   PROFILE_FIELDS,
   profileFieldSchema,

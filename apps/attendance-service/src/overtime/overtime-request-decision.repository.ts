@@ -40,6 +40,7 @@ export class OvertimeRequestDecisionRepository implements IOvertimeRequestDecisi
 
 function createDecisionTransactionScope(runner: PunchRunner): IOvertimeRequestDecisionTransaction {
   return {
+    insert: (table) => runner.insert(table),
     findRequestForUpdate: (requestId) => findRequestForUpdate(runner, requestId),
     recordDecision: (decision) => recordDecision(runner, decision),
   };

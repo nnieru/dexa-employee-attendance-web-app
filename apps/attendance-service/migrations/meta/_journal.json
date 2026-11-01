@@ -43,6 +43,13 @@
       "when": 1793522505164,
       "tag": "0005_add_request_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793535826509,
+      "tag": "0006_add_outbox_events",
+      "breakpoints": true
     }
   ]
 }

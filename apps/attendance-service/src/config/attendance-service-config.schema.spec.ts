@@ -129,3 +129,11 @@ describe('AttendanceServiceConfigSchema ATTENDANCE_DATABASE_URL', () => {
     );
   });
 });
+
+describe('AttendanceServiceConfigSchema RABBITMQ_URL', () => {
+  it('should reject the configuration when the broker URL is not an amqp URL', () => {
+    expect(rejectionOf({ RABBITMQ_URL: 'http://127.0.0.1:5672' })).toContain(
+      'RABBITMQ_URL: must be an amqp:// or amqps:// connection URL',
+    );
+  });
+});

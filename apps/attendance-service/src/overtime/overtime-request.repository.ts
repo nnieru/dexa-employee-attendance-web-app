@@ -68,6 +68,7 @@ export class OvertimeRequestRepository implements IOvertimeRequestRepository {
 function createOvertimeTransactionScope(runner: PunchRunner): IOvertimeRequestTransaction {
   const dayScope = createTransactionScope(runner);
   return {
+    insert: (table) => runner.insert(table),
     findScheduleInEffect: dayScope.findScheduleInEffect,
     findCalendarException: dayScope.findCalendarException,
     insertDayIfMissing: dayScope.insertDayIfMissing,

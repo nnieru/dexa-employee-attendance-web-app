@@ -19,4 +19,19 @@ export class AuditEventController {
   onAccountPasswordChanged(@Payload() event: EventMessage): Promise<void> {
     return this.audit.recordEvent(event);
   }
+
+  @EventPattern(EventName.ATTENDANCE_REQUEST_SUBMITTED)
+  onAttendanceRequestSubmitted(@Payload() event: EventMessage): Promise<void> {
+    return this.audit.recordEvent(event);
+  }
+
+  @EventPattern(EventName.ATTENDANCE_REQUEST_APPROVED)
+  onAttendanceRequestApproved(@Payload() event: EventMessage): Promise<void> {
+    return this.audit.recordEvent(event);
+  }
+
+  @EventPattern(EventName.ATTENDANCE_REQUEST_REJECTED)
+  onAttendanceRequestRejected(@Payload() event: EventMessage): Promise<void> {
+    return this.audit.recordEvent(event);
+  }
 }

@@ -22,6 +22,10 @@ import {
 // the exclusion constraints, the weekday check function, the updated_at triggers, the immutability triggers,
 // and the status seed (see the migration files), because Drizzle does not model them.
 
+// The outbox table is defined by @dexa/messaging. Re-exporting it here lets db:generate write its migration
+// into this service's own migrations folder (DATABASE §2.2).
+export { outboxEvents } from '@dexa/messaging';
+
 export const masterAttendanceStatuses = pgTable(
   'master_attendance_statuses',
   {

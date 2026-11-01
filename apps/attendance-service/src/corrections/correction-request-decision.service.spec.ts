@@ -1,5 +1,6 @@
 import type { IClock } from '@dexa/common';
 import { ErrorCode } from '@dexa/contracts';
+import type { IOutboxWriter } from '@dexa/messaging';
 import { RequestNotFoundError } from '../requests/request-decision.errors.js';
 import { AttendanceDayChangedError } from './correction-request.errors.js';
 import type { DaySchedule } from '../classification/punch-classification.rules.js';
@@ -64,6 +65,7 @@ class FakeDecisionRepository implements ICorrectionRequestDecisionRepository {
     work: (transaction: ICorrectionRequestDecisionTransaction) => Promise<TResult>,
   ): Promise<TResult> {
     const transaction: ICorrectionRequestDecisionTransaction = {
+      insert: () => ({ values: () => Promise.resolve() }),
       findRequestForUpdate: (requestId) => {
         this.locks.push('request');
         return Promise.resolve(this.request?.id === requestId ? this.request : undefined);
@@ -88,13 +90,17 @@ class FakeDecisionRepository implements ICorrectionRequestDecisionRepository {
 }
 
 const FIXED_CLOCK: IClock = { now: () => new Date(REVIEW_MOMENT) };
+const FAKE_OUTBOX: IOutboxWriter = { add: () => Promise.resolve() };
 
 function createService(
   request: LockedCorrectionRequest | undefined,
   day: LockedCorrectionDay | undefined = { dayId: DAY_ID, revision: 2, daySchedule: WORKING_DAY },
 ): { service: CorrectionRequestDecisionService; repository: FakeDecisionRepository } {
   const repository = new FakeDecisionRepository(request, day);
-  return { service: new CorrectionRequestDecisionService(repository, FIXED_CLOCK), repository };
+  return {
+    service: new CorrectionRequestDecisionService(repository, FAKE_OUTBOX, FIXED_CLOCK),
+    repository,
+  };
 }
 
 describe('CorrectionRequestDecisionService', () => {

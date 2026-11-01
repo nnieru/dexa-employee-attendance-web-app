@@ -1,8 +1,10 @@
 import { AuthModule, HealthModule, InternalHttpModule, ServiceName } from '@dexa/common';
+import { MessagingModule, OutboxModule } from '@dexa/messaging';
 import { Module, type Type } from '@nestjs/common';
 import type { AttendanceServiceConfig } from './config/attendance-service-config.schema.js';
 import { ConfigModule } from './config/config.module.js';
 import { DatabaseModule } from './infrastructure/db/database.module.js';
+import { DATABASE } from './infrastructure/db/database.token.js';
 import { CalendarModule } from './calendar/calendar.module.js';
 import { CorrectionsModule } from './corrections/corrections.module.js';
 import { AttendanceMonitoringModule } from './monitoring/attendance-monitoring.module.js';
@@ -29,6 +31,8 @@ export function createAppModule(config: AttendanceServiceConfig): Type<unknown> 
       }),
       ClockModule,
       DatabaseModule,
+      MessagingModule.forRoot({ url: config.RABBITMQ_URL }),
+      OutboxModule.forRoot({ databaseToken: DATABASE }),
       SchedulesModule,
       CalendarModule,
       PunchesModule,

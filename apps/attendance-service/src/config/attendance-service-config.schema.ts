@@ -19,6 +19,12 @@ const postgresUrlSchema = z
   })
   .pipe(z.string().refine(hasHostAndDatabase, { error: 'must name a host and a database' }));
 
+// The broker URL carries credentials. A failure names the field only, never the URL.
+const rabbitMqUrlSchema = z.url({
+  protocol: /^amqps?$/,
+  error: 'must be an amqp:// or amqps:// connection URL',
+});
+
 function hasHostAndDatabase(value: string): boolean {
   const url = new URL(value);
   const databaseName = url.pathname.slice(1);
@@ -46,6 +52,8 @@ const attendanceEnvironmentSchema = z.intersection(
   BaseConfigSchema.extend({
     SERVICE_NAME: ownServiceNameSchema,
     ATTENDANCE_DATABASE_URL: postgresUrlSchema,
+    // The outbox relay publishes request events to this broker (DATABASE §2.2, D-35).
+    RABBITMQ_URL: rabbitMqUrlSchema,
     // The HR attendance list resolves names through employee-service's batched lookup (PRD ADM-4).
     EMPLOYEE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
   }),

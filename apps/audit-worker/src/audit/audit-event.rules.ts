@@ -1,6 +1,7 @@
 import { ServiceName } from '@dexa/common';
 import {
   accountPasswordChangedPayloadSchema,
+  attendanceRequestEventPayloadSchema,
   employeeProfileUpdatedPayloadSchema,
   EventName,
 } from '@dexa/contracts';
@@ -11,6 +12,8 @@ import type { ZodType } from 'zod';
 export type AuditLogRecord = {
   readonly eventId: string;
   readonly eventType: string;
+  readonly resourceType?: string;
+  readonly resourceId?: string;
   readonly sourceService: string;
   readonly accountId: string;
   readonly actorAccountId: string;
@@ -29,6 +32,8 @@ type AuditedPayload = {
   readonly accountId: string;
   readonly actorAccountId: string;
   readonly changedFields: ReadonlyArray<string>;
+  readonly resourceType?: string;
+  readonly resourceId?: string;
 };
 
 type AuditedEventDefinition = {
@@ -55,6 +60,27 @@ const AUDITED_EVENTS: ReadonlyMap<string, AuditedEventDefinition> = new Map<
       payloadSchema: accountPasswordChangedPayloadSchema,
     },
   ],
+  [
+    EventName.ATTENDANCE_REQUEST_SUBMITTED,
+    {
+      sourceService: ServiceName.ATTENDANCE_SERVICE,
+      payloadSchema: attendanceRequestEventPayloadSchema,
+    },
+  ],
+  [
+    EventName.ATTENDANCE_REQUEST_APPROVED,
+    {
+      sourceService: ServiceName.ATTENDANCE_SERVICE,
+      payloadSchema: attendanceRequestEventPayloadSchema,
+    },
+  ],
+  [
+    EventName.ATTENDANCE_REQUEST_REJECTED,
+    {
+      sourceService: ServiceName.ATTENDANCE_SERVICE,
+      payloadSchema: attendanceRequestEventPayloadSchema,
+    },
+  ],
 ]);
 
 /**
@@ -76,6 +102,8 @@ export function decideAuditRecord(event: EventMessage, processedAt: Date): Audit
     record: {
       eventId: event.eventId,
       eventType: event.type,
+      resourceType: payload.data.resourceType,
+      resourceId: payload.data.resourceId,
       sourceService: definition.sourceService,
       accountId: payload.data.accountId,
       actorAccountId: payload.data.actorAccountId,

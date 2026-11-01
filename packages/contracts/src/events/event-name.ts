@@ -3,6 +3,9 @@
 export const EventName = {
   EMPLOYEE_PROFILE_UPDATED: 'employee.profile.updated',
   ACCOUNT_PASSWORD_CHANGED: 'account.password.changed',
+  ATTENDANCE_REQUEST_SUBMITTED: 'attendance.request.submitted',
+  ATTENDANCE_REQUEST_APPROVED: 'attendance.request.approved',
+  ATTENDANCE_REQUEST_REJECTED: 'attendance.request.rejected',
 } as const;
 
 export type EventName = (typeof EventName)[keyof typeof EventName];
