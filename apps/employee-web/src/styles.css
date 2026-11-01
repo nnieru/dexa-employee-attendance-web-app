@@ -135,3 +135,82 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
 }
+
+/* Today's attendance panel: a genuine task group, so a white surface with no shadow (DESIGN §7). */
+.employee-attendance-panel {
+  display: grid;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+@media (max-width: 767px) {
+  .employee-attendance-panel {
+    padding: var(--space-4);
+  }
+}
+
+.employee-attendance-panel__date {
+  margin: 0;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Scheduled hours and each punch as label and value rows; the value and its status wrap on narrow screens. */
+.employee-attendance-details {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.employee-attendance-details__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.employee-attendance-details__row dt {
+  color: var(--color-text-muted);
+}
+
+.employee-attendance-details__row dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* Loading skeleton with the same shape as the attendance panel (DESIGN §9). */
+.employee-attendance-skeleton__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.employee-attendance-skeleton__block {
+  display: block;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+}
+
+.employee-attendance-skeleton__line {
+  height: 1.25rem;
+  width: 50%;
+}
+
+.employee-attendance-skeleton__row {
+  height: 2.75rem;
+  width: 100%;
+}
+
+.employee-attendance-skeleton__action {
+  height: 2.75rem;
+  width: 100%;
+}
