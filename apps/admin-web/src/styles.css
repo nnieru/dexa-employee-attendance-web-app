@@ -46,3 +46,23 @@
   flex: 1 1 16rem;
   max-width: 26rem;
 }
+
+/* Add action above the search row of the employee list. */
+.employee-list-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-4);
+}
+
+/* Add employee form: fields and actions stacked with the same rhythm as the profile forms, at the 512px form width. */
+.employee-create-form {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 32rem;
+}
+
+.employee-create-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { DataTable, PageShell } from '@dexa/ui';
+import { Button, DataTable, PageShell } from '@dexa/ui';
 import type { EmployeeListItem } from '@dexa/contracts';
 import { useEmployeeList } from '../hooks/use-employee-list.js';
 import { useEmployeePhotoThumbnails } from '../hooks/use-employee-photo-thumbnails.js';
@@ -19,6 +19,7 @@ type EmployeeListPageProps = {
   search: EmployeeListSearch;
   onSearch: (searchTerm: string) => void;
   onPageChange: (page: number) => void;
+  onAddEmployee: () => void;
 };
 
 const NO_ROWS: Array<EmployeeListItem> = [];
@@ -28,7 +29,12 @@ function getEmployeeRowId(employee: EmployeeListItem): string {
 }
 
 /** HR employee list (ADM-3). The URL owns the search and the page; this component only reflects them. */
-export function EmployeeListPage({ search, onSearch, onPageChange }: EmployeeListPageProps) {
+export function EmployeeListPage({
+  search,
+  onSearch,
+  onPageChange,
+  onAddEmployee,
+}: EmployeeListPageProps) {
   const resolvedSearch = resolveEmployeeListSearch(search);
   const employeeList = useEmployeeList(toEmployeeListQuery(resolvedSearch));
   const page = employeeList.data;
@@ -50,6 +56,9 @@ export function EmployeeListPage({ search, onSearch, onPageChange }: EmployeeLis
       title="Employees"
       description="Search employee accounts by name or company email."
     >
+      <div className="employee-list-actions">
+        <Button onClick={onAddEmployee}>Add employee</Button>
+      </div>
       <EmployeeSearchForm searchTerm={resolvedSearch.q} onSearch={onSearch} />
       <DataTable
         caption="Employees"

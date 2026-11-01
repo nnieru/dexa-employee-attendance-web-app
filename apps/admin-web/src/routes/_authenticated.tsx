@@ -34,7 +34,8 @@ function AuthenticatedLayout() {
     label: entry.label,
     icon: entry.icon,
     href: entry.to,
-    isActive: matchRoute({ to: entry.to }) !== false,
+    // Fuzzy, so Employees stays current on the add page under it (/employees/new).
+    isActive: matchRoute({ to: entry.to, fuzzy: true }) !== false,
   }));
 
   return (

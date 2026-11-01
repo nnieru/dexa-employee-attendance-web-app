@@ -8,4 +8,7 @@ export const employeeQueryKeys = {
   // Keyed by the sorted account IDs of one page, so the same page reuses its thumbnails.
   photoThumbnails: (accountIds: ReadonlyArray<string>) =>
     [...employeeQueryKeys.all, 'photo-thumbnails', accountIds] as const,
+  // The HR pickers. They are small catalogs, so one entry per catalog is enough.
+  positions: () => [...employeeQueryKeys.all, 'positions'] as const,
+  employeeStatuses: () => [...employeeQueryKeys.all, 'employee-statuses'] as const,
 };

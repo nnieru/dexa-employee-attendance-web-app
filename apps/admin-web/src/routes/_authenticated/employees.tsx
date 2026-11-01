@@ -26,6 +26,7 @@ function EmployeesRoute() {
         })
       }
       onPageChange={(page) => void navigate({ search: (previous) => ({ ...previous, page }) })}
+      onAddEmployee={() => void navigate({ to: '/employees/new' })}
     />
   );
 }
