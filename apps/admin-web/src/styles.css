@@ -296,3 +296,87 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 }
+
+/* Calendar exceptions: a section on the work schedule screen, with the range filter above a paginated table (PRD SCH-5). */
+.calendar-exceptions {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.calendar-exceptions__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.calendar-exceptions__heading h2 {
+  font-size: var(--font-size-h3);
+}
+
+.calendar-exceptions__description {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.calendar-exceptions__weekday {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.calendar-exceptions__row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.calendar-exception-form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.calendar-exception-form__types {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.calendar-exception-form__types legend {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.calendar-exception-form__option {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* The whole label is the target: at least 44px high, with the native radio kept (DESIGN §7). */
+.calendar-exception-form__choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.calendar-exception-form__choice input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-brand);
+}
+
+.calendar-exception-form__choice input:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.calendar-exception-form__help {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}

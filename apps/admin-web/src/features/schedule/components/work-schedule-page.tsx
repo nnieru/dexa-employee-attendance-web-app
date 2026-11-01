@@ -1,6 +1,8 @@
 import { Alert, Button, PageShell } from '@dexa/ui';
 import type { WorkScheduleOverview } from '@dexa/contracts';
 import { useWorkScheduleOverview } from '../hooks/use-work-schedule-overview.js';
+import type { CalendarExceptionSearch } from '../types/calendar-exception-search.schema.js';
+import type { CalendarExceptionRange } from '../utils/calendar-exception-range.js';
 import type { BusinessDate } from '../utils/schedule-business-date.js';
 import { getEarliestEffectiveFrom } from '../utils/schedule-business-date.js';
 import {
@@ -19,16 +21,26 @@ import {
   WORK_SCHEDULE_PAGE_DESCRIPTION,
   WORK_SCHEDULE_PAGE_TITLE,
 } from '../utils/work-schedule-messages.js';
+import { CalendarExceptionsSection } from './calendar-exceptions-section.js';
 import { WorkScheduleEditor } from './work-schedule-editor.js';
 import { WorkScheduleVersionPanel } from './work-schedule-version-panel.js';
 
 type WorkSchedulePageProps = {
   /** Today in the company timezone. The route reads the clock, so this page stays a function of its props. */
   today: BusinessDate;
+  /** The calendar exception range and page, read from the URL by the route (PRD SCH-5). */
+  calendarSearch: CalendarExceptionSearch;
+  onCalendarRangeSearch: (range: CalendarExceptionRange) => void;
+  onCalendarPageChange: (page: number) => void;
 };
 
-/** The HR work schedule screen (PRD SCH-3, SCH-4). */
-export function WorkSchedulePage({ today }: WorkSchedulePageProps) {
+/** The HR work schedule screen (PRD SCH-3, SCH-4) and its calendar exceptions (PRD SCH-5). */
+export function WorkSchedulePage({
+  today,
+  calendarSearch,
+  onCalendarRangeSearch,
+  onCalendarPageChange,
+}: WorkSchedulePageProps) {
   const overviewQuery = useWorkScheduleOverview();
   const overview = overviewQuery.data;
   const earliestEffectiveFrom = getEarliestEffectiveFrom(today);
@@ -57,6 +69,12 @@ export function WorkSchedulePage({ today }: WorkSchedulePageProps) {
           />
         </div>
       )}
+      <CalendarExceptionsSection
+        search={calendarSearch}
+        today={today}
+        onRangeSearch={onCalendarRangeSearch}
+        onPageChange={onCalendarPageChange}
+      />
     </PageShell>
   );
 }
