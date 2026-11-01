@@ -5,8 +5,10 @@ import { CONFIG } from '../config/config.token.js';
 import type { AttendanceServiceConfig } from '../config/attendance-service-config.schema.js';
 import { classifyCheckOut } from '../classification/punch-classification.rules.js';
 import type { IClockOutService } from './clock-out.service.interface.js';
+import { isLeaveDay } from './leave-day.rules.js';
 import {
   AttendanceAlreadyClockedOutError,
+  AttendanceDayOnLeaveError,
   AttendanceNotClockedInError,
   CheckOutTimeConflictError,
   ScheduleNotConfiguredError,
@@ -75,6 +77,9 @@ async function recordCheckOut(
   // OUT entry that the first one saved.
   const day = await transaction.findDayForUpdate(accountId, businessDate);
   if (day === undefined) throw new AttendanceNotClockedInError();
+  // Before the not-clocked-in and already-clocked-out checks, and before the instant check that reads the day's
+  // check-in. An approved leave clears the effective check-in, so a raw punch from before the leave must stop here.
+  if (isLeaveDay(day.dayStatusCode)) throw new AttendanceDayOnLeaveError();
   await assertCanCheckOut(transaction, day);
 
   const recordedAt = context.clock.now();

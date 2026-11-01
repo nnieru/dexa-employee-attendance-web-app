@@ -6,6 +6,8 @@ import type { AttendanceServiceConfig } from '../config/attendance-service-confi
 import { classifyCheckIn } from '../classification/punch-classification.rules.js';
 import { findOrCreateAttendanceDayForUpdate } from '../attendance-days/find-or-create-attendance-day.js';
 import type { IClockInService } from './clock-in.service.interface.js';
+import { AttendanceDayOnLeaveError } from './punch.errors.js';
+import { isLeaveDay } from './leave-day.rules.js';
 import {
   PUNCH_REPOSITORY,
   type IPunchRepository,
@@ -54,6 +56,8 @@ async function recordCheckIn(
     businessDate,
     opening: 'PUNCH',
   });
+  // Checked before the duplicate-punch check, so an approved leave day never reports a raw punch from before the leave.
+  if (isLeaveDay(day.dayStatusCode)) throw new AttendanceDayOnLeaveError();
 
   // The classification uses the day's stored snapshot, not the schedule in effect now (PRD SCH-6).
   const classification = classifyCheckIn(recordedAt, day.daySchedule);

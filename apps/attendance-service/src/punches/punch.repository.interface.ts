@@ -54,11 +54,14 @@ export type NewAttendanceDay = {
 };
 
 /**
- * The day row after it is locked, with the schedule snapshot that classification reads and the effective check-in
- * that a check-out must not precede (D-41). Null only when the day has no check-in yet.
+ * The day row after it is locked, with the schedule snapshot that classification reads, the effective check-in
+ * that a check-out must not precede (D-41), and the day status that decides whether a punch is refused (COR-7).
+ * The effective check-in is null only when the day has no check-in yet. The status is a master code, so it is a
+ * string here, as in the summary read.
  */
 export type LockedAttendanceDay = {
   readonly dayId: string;
+  readonly dayStatusCode: string;
   readonly daySchedule: DaySchedule;
   readonly effectiveCheckinAt: Date | null;
 };

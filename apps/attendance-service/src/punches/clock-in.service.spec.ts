@@ -1,8 +1,13 @@
 import { ClockInService } from './clock-in.service.js';
-import { AttendanceAlreadyClockedInError, ScheduleNotConfiguredError } from './punch.errors.js';
+import {
+  AttendanceAlreadyClockedInError,
+  AttendanceDayOnLeaveError,
+  ScheduleNotConfiguredError,
+} from './punch.errors.js';
 import {
   FakePunchRepository,
   MONDAY,
+  applyApprovedLeave,
   SCHEDULE_ID,
   TIMEZONE,
   WEEKDAY_SCHEDULE,
@@ -76,6 +81,52 @@ describe('ClockInService.clockIn', () => {
       AttendanceAlreadyClockedInError,
     );
     expect(repository.state).toEqual(stateAfterFirstPunch);
+  });
+
+  it.each([
+    { condition: 'Sick leave', dayStatusCode: 'SICK_LEAVE' as const },
+    { condition: 'Leave', dayStatusCode: 'LEAVE' as const },
+  ])(
+    'should reject the punch with the leave error and write nothing when the day is approved $condition after a raw clock-in',
+    async ({ dayStatusCode }) => {
+      const instant = { current: EARLY_MONDAY_INSTANT };
+      const repository = new FakePunchRepository([WEEKDAY_SCHEDULE]);
+      const service = createService({ repository, instant });
+      await service.clockIn(ACCOUNT_ID);
+      applyApprovedLeave(repository, dayStatusCode);
+      const stateBeforeRetry = structuredClone(repository.state);
+
+      instant.current = LATE_MONDAY_INSTANT;
+
+      await expect(service.clockIn(ACCOUNT_ID)).rejects.toBeInstanceOf(AttendanceDayOnLeaveError);
+      expect(repository.state).toEqual(stateBeforeRetry);
+    },
+  );
+
+  it('should reject the punch with the leave error, not the already-clocked-in error, when a raw clock-in precedes the leave', async () => {
+    const instant = { current: EARLY_MONDAY_INSTANT };
+    const repository = new FakePunchRepository([WEEKDAY_SCHEDULE]);
+    const service = createService({ repository, instant });
+    await service.clockIn(ACCOUNT_ID);
+    applyApprovedLeave(repository, 'LEAVE');
+
+    instant.current = LATE_MONDAY_INSTANT;
+
+    await expect(service.clockIn(ACCOUNT_ID)).rejects.toBeInstanceOf(AttendanceDayOnLeaveError);
+  });
+
+  it('should keep the day and its statuses unchanged when a punch is refused for leave', async () => {
+    const instant = { current: EARLY_MONDAY_INSTANT };
+    const repository = new FakePunchRepository([WEEKDAY_SCHEDULE]);
+    const service = createService({ repository, instant });
+    await service.clockIn(ACCOUNT_ID);
+    applyApprovedLeave(repository, 'SICK_LEAVE');
+    const dayBefore = structuredClone(repository.state.days);
+
+    instant.current = LATE_MONDAY_INSTANT;
+    await expect(service.clockIn(ACCOUNT_ID)).rejects.toBeInstanceOf(AttendanceDayOnLeaveError);
+
+    expect(repository.state.days).toEqual(dayBefore);
   });
 
   it('should reject the punch and write nothing when no schedule covers the business date', async () => {

@@ -31,7 +31,7 @@ type FakeDay = {
   readonly businessDate: string;
   readonly scheduleVersionId: string;
   readonly daySchedule: DaySchedule;
-  readonly dayStatusCode: AttendanceStatusCode;
+  dayStatusCode: AttendanceStatusCode;
   checkinStatusCode: AttendanceStatusCode;
   checkoutStatusCode: AttendanceStatusCode;
   effectiveCheckinAt: Date | null;
@@ -184,6 +184,7 @@ function toFakeDay(state: FakeState, day: NewAttendanceDay): FakeDay {
 function toLockedDay(day: FakeDay): LockedAttendanceDay {
   return {
     dayId: day.id,
+    dayStatusCode: day.dayStatusCode,
     daySchedule: day.daySchedule,
     effectiveCheckinAt: day.effectiveCheckinAt,
   };
@@ -207,6 +208,21 @@ function applyCheckOut(state: FakeState, update: DayCheckOutUpdate): void {
   day.effectiveCheckoutAt = update.effectiveCheckoutAt;
   day.checkoutStatusCode = update.checkoutStatusCode;
   day.revision += 1;
+}
+
+// Stands in for an approved Sick leave or Leave on the first day of the fake (DATABASE §5.4, §5.8): the status changes
+// and the effective times and timing statuses clear, but the raw punches stay.
+export function applyApprovedLeave(
+  repository: FakePunchRepository,
+  dayStatusCode: 'SICK_LEAVE' | 'LEAVE',
+): void {
+  const day = repository.state.days[0];
+  if (day === undefined) throw new Error('The fake has no day to put on leave.');
+  day.dayStatusCode = dayStatusCode;
+  day.effectiveCheckinAt = null;
+  day.effectiveCheckoutAt = null;
+  day.checkinStatusCode = 'CHECKIN_NOT_REQUIRED';
+  day.checkoutStatusCode = 'CHECKOUT_NOT_REQUIRED';
 }
 
 export function fixedClock(instant: { current: Date }): IClock {

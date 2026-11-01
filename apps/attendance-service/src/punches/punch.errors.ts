@@ -40,6 +40,20 @@ export class AttendanceAlreadyClockedOutError extends ConflictError {
 }
 
 /**
+ * The day is an approved Sick leave or Leave (COR-7). A punch would contradict the approved full-day override
+ * (DATABASE §5.5), so nothing is written. Checked after the day is locked and before the other punch checks, so a day
+ * with a raw punch from before the approval gets this answer and not the already-punched one.
+ */
+export class AttendanceDayOnLeaveError extends ConflictError {
+  constructor() {
+    super(
+      ErrorCode.ATTENDANCE_DAY_ON_LEAVE,
+      'This day is an approved leave, so the punch was not recorded.',
+    );
+  }
+}
+
+/**
  * The employee has no IN punch for this business date, so there is nothing to check out of (ATT-5). A validation
  * error, because the request is refused on its current state and the client can correct it by clocking in first.
  */

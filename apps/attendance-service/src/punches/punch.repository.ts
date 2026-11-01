@@ -2,6 +2,7 @@ import { DomainError, readUniqueViolationConstraint, type BusinessDate } from '@
 import type { Database } from '@dexa/db';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import type {
   CalendarExceptionInput,
   DaySchedule,
@@ -131,15 +132,18 @@ async function insertDayIfMissing(runner: PunchRunner, day: NewAttendanceDay): P
 }
 
 // The schedule is joined for its grace minutes. A version that a day references is never edited while it is in
-// effect (DATABASE §5.2), so these graces are the day's snapshot. FOR UPDATE locks only the day row.
+// effect (DATABASE §5.2), so these graces are the day's snapshot. The status is joined so the caller can refuse a
+// punch on an approved leave day. FOR UPDATE locks only the day row.
 async function findDayForUpdate(
   runner: PunchRunner,
   accountId: string,
   businessDate: BusinessDate,
 ): Promise<LockedAttendanceDay | undefined> {
+  const dayStatus = alias(masterAttendanceStatuses, 'day_status');
   const [row] = await runner
     .select({
       dayId: attendanceDays.id,
+      dayStatusCode: dayStatus.code,
       timezone: attendanceDays.businessTimezone,
       isWorkingDay: attendanceDays.isWorkingDay,
       scheduledStartAt: attendanceDays.scheduledStartAt,
@@ -151,6 +155,7 @@ async function findDayForUpdate(
     })
     .from(attendanceDays)
     .innerJoin(workSchedules, eq(workSchedules.id, attendanceDays.workScheduleId))
+    .innerJoin(dayStatus, eq(dayStatus.id, attendanceDays.dayStatusId))
     .where(
       and(eq(attendanceDays.accountId, accountId), eq(attendanceDays.businessDate, businessDate)),
     )
@@ -159,6 +164,7 @@ async function findDayForUpdate(
   if (row === undefined) return undefined;
   return {
     dayId: row.dayId,
+    dayStatusCode: row.dayStatusCode,
     daySchedule: toDaySchedule(row),
     effectiveCheckinAt: row.effectiveCheckinAt,
   };

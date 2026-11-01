@@ -3,6 +3,7 @@ import { ClockInService } from './clock-in.service.js';
 import { ClockOutService } from './clock-out.service.js';
 import {
   AttendanceAlreadyClockedOutError,
+  AttendanceDayOnLeaveError,
   AttendanceNotClockedInError,
   CheckOutTimeConflictError,
   ScheduleNotConfiguredError,
@@ -10,6 +11,7 @@ import {
 import {
   FakePunchRepository,
   MONDAY,
+  applyApprovedLeave,
   SCHEDULE_ID,
   TIMEZONE,
   WEEKDAY_SCHEDULE,
@@ -132,6 +134,44 @@ describe('ClockOutService.clockOut', () => {
       checkoutStatusCode: 'CHECKOUT_NOT_REQUIRED',
       effectiveCheckoutAt: new Date('2026-11-07T11:00:00Z'),
     });
+  });
+
+  it.each([
+    { condition: 'Sick leave', dayStatusCode: 'SICK_LEAVE' as const },
+    { condition: 'Leave', dayStatusCode: 'LEAVE' as const },
+  ])(
+    'should reject the check-out with the leave error and write nothing when the day is approved $condition after a raw clock-in',
+    async ({ dayStatusCode }) => {
+      const instant = { current: EARLY_MONDAY_CHECKIN_INSTANT };
+      const repository = new FakePunchRepository([WEEKDAY_SCHEDULE]);
+      const services = createServices(repository, instant);
+      await services.clockIn.clockIn(ACCOUNT_ID);
+      applyApprovedLeave(repository, dayStatusCode);
+      const stateBeforeRetry = structuredClone(repository.state);
+
+      instant.current = ON_TIME_MONDAY_CHECKOUT_INSTANT;
+
+      await expect(services.clockOut.clockOut(ACCOUNT_ID)).rejects.toBeInstanceOf(
+        AttendanceDayOnLeaveError,
+      );
+      expect(repository.state).toEqual(stateBeforeRetry);
+    },
+  );
+
+  it('should reject the check-out with the leave error, not the not-clocked-in error, when the approved leave day has no punch', async () => {
+    const instant = { current: EARLY_MONDAY_CHECKIN_INSTANT };
+    const repository = new FakePunchRepository([WEEKDAY_SCHEDULE]);
+    const services = createServices(repository, instant);
+    await services.clockIn.clockIn(ACCOUNT_ID);
+    applyApprovedLeave(repository, 'LEAVE');
+    repository.state.entries = [];
+
+    instant.current = ON_TIME_MONDAY_CHECKOUT_INSTANT;
+
+    await expect(services.clockOut.clockOut(ACCOUNT_ID)).rejects.toBeInstanceOf(
+      AttendanceDayOnLeaveError,
+    );
+    expect(repository.state.entries).toEqual([]);
   });
 
   it('should reject the check-out with the schedule error, not the not-clocked-in error, and write nothing when no schedule covers the business date', async () => {
