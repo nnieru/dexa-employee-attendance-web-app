@@ -17,8 +17,16 @@ import {
   signInWith,
 } from '../../../test/employee-app-harness.js';
 import { PHONE_NUMBER_FORMAT_MESSAGE } from '../utils/phone-number-form.schema.js';
+import {
+  CURRENT_PASSWORD_INCORRECT_MESSAGE,
+  PASSWORD_MISMATCH_MESSAGE,
+} from '../utils/change-password-form.schema.js';
 
 const SAVED_PHONE_NUMBER = '+6281999999999';
+const OWN_PASSWORD_URL = '/api/v1/auth/me/password';
+const CURRENT_PASSWORD = 'current-password-1';
+const NEW_PASSWORD = 'brand-new-password-2';
+const LETTERS_ONLY_PASSWORD = 'onlyletters';
 const PHOTO_OBJECT_URL = 'blob:dexa-test-edited-photo';
 const PHOTO_CHOOSER_LABEL = 'Choose photo';
 const OVERSIZE_MESSAGE = 'The photo is larger than 5 MB. Choose a smaller file.';
@@ -192,5 +200,111 @@ describe('profile photo upload', () => {
     expect(photoFieldNames).toEqual([PHOTO_FIELD_NAME]);
     expect(profileReads.count).toBeGreaterThan(readsBeforeUpload);
     expect(screen.queryByText('Phone number saved.')).not.toBeInTheDocument();
+  });
+});
+
+describe('profile password change', () => {
+  function passwordFields() {
+    return {
+      currentPassword: screen.getByLabelText('Current password'),
+      newPassword: screen.getByLabelText('New password'),
+      confirmNewPassword: screen.getByLabelText('Confirm new password'),
+    };
+  }
+
+  it('should show the policy message on the new password and send no request when the new password breaks the policy', async () => {
+    const passwordRequestCount = { value: 0 };
+    mswServer.use(
+      http.patch(OWN_PASSWORD_URL, () => {
+        passwordRequestCount.value += 1;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const { user } = await openProfileAsSignedInEmployee();
+    const fields = passwordFields();
+
+    await user.type(fields.currentPassword, CURRENT_PASSWORD);
+    await user.type(fields.newPassword, LETTERS_ONLY_PASSWORD);
+    await user.type(fields.confirmNewPassword, LETTERS_ONLY_PASSWORD);
+    await user.click(screen.getByRole('button', { name: 'Change password' }));
+
+    expect(await screen.findByText('Password must include a number.')).toBeInTheDocument();
+    expect(fields.newPassword).toHaveAttribute('aria-invalid', 'true');
+    expect(passwordRequestCount.value).toBe(0);
+  });
+
+  it('should show the mismatch message on the confirmation and send no request when the confirmation differs', async () => {
+    const passwordRequestCount = { value: 0 };
+    mswServer.use(
+      http.patch(OWN_PASSWORD_URL, () => {
+        passwordRequestCount.value += 1;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const { user } = await openProfileAsSignedInEmployee();
+    const fields = passwordFields();
+
+    await user.type(fields.currentPassword, CURRENT_PASSWORD);
+    await user.type(fields.newPassword, NEW_PASSWORD);
+    await user.type(fields.confirmNewPassword, 'different-password-3');
+    await user.click(screen.getByRole('button', { name: 'Change password' }));
+
+    expect(await screen.findByText(PASSWORD_MISMATCH_MESSAGE)).toBeInTheDocument();
+    expect(fields.confirmNewPassword).toHaveAttribute('aria-invalid', 'true');
+    expect(passwordRequestCount.value).toBe(0);
+  });
+
+  it('should show the wrong current password message on the current password field and keep the typed values when the server refuses it', async () => {
+    mswServer.use(
+      http.patch(OWN_PASSWORD_URL, () =>
+        HttpResponse.json(
+          {
+            statusCode: 400,
+            code: 'CURRENT_PASSWORD_INCORRECT',
+            message: CURRENT_PASSWORD_INCORRECT_MESSAGE,
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const { user } = await openProfileAsSignedInEmployee();
+    const fields = passwordFields();
+
+    await user.type(fields.currentPassword, 'wrong-password-9');
+    await user.type(fields.newPassword, NEW_PASSWORD);
+    await user.type(fields.confirmNewPassword, NEW_PASSWORD);
+    await user.click(screen.getByRole('button', { name: 'Change password' }));
+
+    expect(await screen.findByText(CURRENT_PASSWORD_INCORRECT_MESSAGE)).toBeInTheDocument();
+    expect(fields.currentPassword).toHaveAttribute('aria-invalid', 'true');
+    expect(fields.newPassword).toHaveValue(NEW_PASSWORD);
+    expect(fields.confirmNewPassword).toHaveValue(NEW_PASSWORD);
+    expect(screen.queryByText('Password changed.')).not.toBeInTheDocument();
+  });
+
+  it('should clear all three password fields, show the change saved, and keep the employee signed in when the change succeeds', async () => {
+    const passwordRequestBodies: unknown[] = [];
+    mswServer.use(
+      http.patch(OWN_PASSWORD_URL, async ({ request }) => {
+        passwordRequestBodies.push(await request.json());
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const { user } = await openProfileAsSignedInEmployee();
+    const fields = passwordFields();
+
+    await user.type(fields.currentPassword, CURRENT_PASSWORD);
+    await user.type(fields.newPassword, NEW_PASSWORD);
+    await user.type(fields.confirmNewPassword, NEW_PASSWORD);
+    await user.click(screen.getByRole('button', { name: 'Change password' }));
+
+    expect(await screen.findByText('Password changed.')).toBeInTheDocument();
+    expect(passwordRequestBodies).toEqual([
+      { currentPassword: CURRENT_PASSWORD, newPassword: NEW_PASSWORD },
+    ]);
+    expect(fields.currentPassword).toHaveValue('');
+    expect(fields.newPassword).toHaveValue('');
+    expect(fields.confirmNewPassword).toHaveValue('');
+    expect(screen.getByRole('heading', { level: 2, name: OWN_PROFILE.name })).toBeInTheDocument();
   });
 });
