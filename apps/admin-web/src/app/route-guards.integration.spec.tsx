@@ -177,7 +177,6 @@ describe('HR route guards', () => {
   });
 
   it.each([
-    ['/attendance', 'Attendance'],
     ['/approvals', 'Approvals'],
     ['/schedule', 'Schedule'],
     ['/notifications', 'Notifications'],

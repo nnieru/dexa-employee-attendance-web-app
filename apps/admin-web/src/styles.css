@@ -93,3 +93,9 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 }
+
+/* Employee filter of the attendance list: one select below the date range, at the width of the employee search. */
+.attendance-employee-filter {
+  max-width: 26rem;
+  margin-block: var(--space-4);
+}
