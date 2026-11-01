@@ -1,13 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ComingSoonPage } from '../../app/coming-soon-page.js';
+import { WorkSchedulePage } from '../../features/schedule/components/work-schedule-page.js';
+import { getCurrentBusinessDate } from '../../features/schedule/utils/current-business-date.js';
 
-// Placeholder until the work schedule screen (T-AWEB-09) is built.
 export const Route = createFileRoute('/_authenticated/schedule')({
-  component: SchedulePlaceholderPage,
+  component: WorkScheduleRoute,
 });
 
-function SchedulePlaceholderPage() {
-  return (
-    <ComingSoonPage title="Schedule" description="The work schedule and its upcoming changes." />
-  );
+function WorkScheduleRoute() {
+  return <WorkSchedulePage today={getCurrentBusinessDate()} />;
 }

@@ -176,10 +176,7 @@ describe('HR route guards', () => {
     expect(navigation.getByRole('link', { name: 'Employees' })).not.toHaveAttribute('aria-current');
   });
 
-  it.each([
-    ['/approvals', 'Approvals'],
-    ['/schedule', 'Schedule'],
-  ])(
+  it.each([['/approvals', 'Approvals']])(
     'should show the coming-soon state on %s when the HR user is signed in',
     async (path, title) => {
       const { router } = await signInFrom('/login');

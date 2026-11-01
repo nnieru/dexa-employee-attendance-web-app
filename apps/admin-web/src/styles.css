@@ -163,3 +163,136 @@
   min-width: 5rem;
   text-align: center;
 }
+
+/* Work schedule: the version in effect and the upcoming version side by side, each a read-only panel (DESIGN §7). */
+.work-schedule-page {
+  display: grid;
+  gap: var(--space-6);
+  margin-block: var(--space-4);
+}
+
+.work-schedule-page__status {
+  color: var(--color-text-muted);
+}
+
+.work-schedule-versions {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  align-items: start;
+}
+
+.work-schedule-panel {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 var(--border-width) var(--color-border);
+}
+
+.work-schedule-panel__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.work-schedule-panel__heading h2 {
+  font-size: var(--font-size-h3);
+}
+
+.work-schedule-panel__note,
+.work-schedule-panel__hint,
+.work-schedule-panel__empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.work-schedule-summary {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.work-schedule-summary dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.work-schedule-summary dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.work-schedule-editor {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 40rem;
+}
+
+.work-schedule-editor__description {
+  color: var(--color-text-muted);
+}
+
+.work-schedule-form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.work-schedule-form__weekdays {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.work-schedule-form__weekdays legend {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.work-schedule-form__weekday-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Each checkbox label is the whole target: at least 44px high and wide, with the native checkbox kept (DESIGN §7). */
+.work-schedule-form__weekday {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: var(--space-2);
+  cursor: pointer;
+}
+
+.work-schedule-form__weekday input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-brand);
+}
+
+.work-schedule-form__weekday input:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.work-schedule-form__row {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.work-schedule-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
