@@ -1,7 +1,10 @@
 import { createFileRoute, Link, Outlet, redirect, useMatchRoute } from '@tanstack/react-router';
 import { AppShell, type AppShellRenderLink } from '@dexa/ui';
 import { ADMIN_NAVIGATION } from '../app/admin-navigation.js';
+import { API_BASE_URL } from '../app/api-base-url.js';
 import { useSession } from '@dexa/session';
+import { useNotificationStream } from '../features/notifications/hooks/use-notification-stream.js';
+import { LiveUpdatesStatus } from '../features/notifications/components/live-updates-status.js';
 
 const HR_BRAND_NAME = 'Dexa HR';
 
@@ -29,6 +32,8 @@ const renderNavigationLink: AppShellRenderLink = ({
 function AuthenticatedLayout() {
   const { signOut } = useSession();
   const matchRoute = useMatchRoute();
+  // Mounted once for the whole signed-in shell, so one stream serves every HR page (ADM-5).
+  const liveUpdatesState = useNotificationStream({ apiBaseUrl: API_BASE_URL });
   const navItems = ADMIN_NAVIGATION.map((entry) => ({
     id: entry.id,
     label: entry.label,
@@ -45,6 +50,7 @@ function AuthenticatedLayout() {
       onLogout={signOut}
       renderLink={renderNavigationLink}
     >
+      <LiveUpdatesStatus state={liveUpdatesState} />
       <Outlet />
     </AppShell>
   );
