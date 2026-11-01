@@ -33,6 +33,8 @@ const VALID_RESPONSE = {
   clockOutAt: '2026-11-02T11:00:00.000Z',
   reason: 'Forgot to clock in',
   status: 'PENDING',
+  reviewReason: null,
+  reviewedAt: null,
   createdAt: '2026-11-02T10:00:00.000Z',
 };
 
@@ -156,5 +158,22 @@ describe('correctionRequestSchema', () => {
     const response = { ...VALID_RESPONSE, clockInAt: '2026-11-02T09:05:00+07:00' };
 
     expect(correctionRequestSchema.safeParse(response).success).toBe(false);
+  });
+
+  it('should reject a response that omits the review fields', () => {
+    const response = { ...VALID_RESPONSE, reviewedAt: undefined };
+
+    expect(correctionRequestSchema.safeParse(response).success).toBe(false);
+  });
+
+  it('should accept a rejected response with its reviewer reason and decision time', () => {
+    const response = {
+      ...VALID_RESPONSE,
+      status: 'REJECTED',
+      reviewReason: 'Punch log shows otherwise',
+      reviewedAt: '2026-11-02T12:00:00.000Z',
+    };
+
+    expect(correctionRequestSchema.parse(response)).toEqual(response);
   });
 });

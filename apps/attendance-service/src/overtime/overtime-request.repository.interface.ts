@@ -12,6 +12,10 @@ export type StoredOvertimeRequest = {
   readonly endAt: Date;
   readonly reason: string;
   readonly status: RequestStatus;
+  /** The reviewer's reason. Set only when REJECTED (DATABASE §5.6). */
+  readonly reviewReason: string | null;
+  /** The decision instant, or null while PENDING. */
+  readonly reviewedAt: Date | null;
   readonly createdAt: Date;
 };
 

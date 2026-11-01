@@ -15,6 +15,7 @@ export const submitOvertimeRequestSchema = z.strictObject({
 export type SubmitOvertimeRequest = z.infer<typeof submitOvertimeRequestSchema>;
 
 // startAt and endAt are UTC instants with a Z suffix. businessDate is the WIB calendar date the request belongs to.
+// reviewReason and reviewedAt are null until HR decides (APR-6). A rejection carries its reason (DATABASE §5.6).
 export const overtimeRequestSchema = z.object({
   id: z.uuid(),
   businessDate: z.iso.date(),
@@ -22,6 +23,8 @@ export const overtimeRequestSchema = z.object({
   endAt: z.iso.datetime(),
   reason: z.string(),
   status: requestStatusSchema,
+  reviewReason: z.string().nullable(),
+  reviewedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
 });
 

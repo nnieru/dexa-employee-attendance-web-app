@@ -6,14 +6,19 @@ import {
 } from '@dexa/common';
 import {
   API_PREFIX,
+  overtimeRequestPageSchema,
   overtimeRequestSchema,
   type OvertimeRequest,
+  type OvertimeRequestPage,
+  type OwnRequestListQuery,
   type SubmitOvertimeRequest,
 } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import type { IOvertimeRequestClient } from './overtime-request-client.interface.js';
+import { toRequestListQueryParameters } from './request-list-query-parameters.js';
 
 const OVERTIME_REQUESTS_PATH = `/${API_PREFIX}/overtime-requests`;
+const OWN_OVERTIME_REQUESTS_PATH = `${OVERTIME_REQUESTS_PATH}/me`;
 
 @Injectable()
 export class OvertimeRequestClient implements IOvertimeRequestClient {
@@ -31,6 +36,21 @@ export class OvertimeRequestClient implements IOvertimeRequestClient {
       body: request,
       onBehalfOf: user,
       responseSchema: overtimeRequestSchema,
+    });
+  }
+
+  // A read, so it is not retried by the gateway, as for the other reads. Each query parameter is forwarded as the caller
+  // sent it, with the defaults filled by the gateway's schema.
+  listOwnRequests(
+    user: AuthenticatedUser,
+    query: OwnRequestListQuery,
+  ): Promise<OvertimeRequestPage> {
+    return this.httpClient.get({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: OWN_OVERTIME_REQUESTS_PATH,
+      query: toRequestListQueryParameters(query),
+      onBehalfOf: user,
+      responseSchema: overtimeRequestPageSchema,
     });
   }
 }

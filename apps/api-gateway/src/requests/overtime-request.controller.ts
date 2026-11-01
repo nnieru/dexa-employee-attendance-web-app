@@ -1,11 +1,14 @@
 import { CurrentUser, Roles, type AuthenticatedUser } from '@dexa/common';
 import {
+  ownRequestListQuerySchema,
   Role,
   submitOvertimeRequestSchema,
   type OvertimeRequest,
+  type OvertimeRequestPage,
+  type OwnRequestListQuery,
   type SubmitOvertimeRequest,
 } from '@dexa/contracts';
-import { Body, Controller, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 import {
   OVERTIME_REQUEST_CLIENT,
@@ -27,5 +30,15 @@ export class OvertimeRequestController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<OvertimeRequest> {
     return this.overtimeRequests.submitOvertime(user, request);
+  }
+
+  // The requester is the verified token's account. The query is validated here and again by attendance-service.
+  @Roles(Role.EMPLOYEE, Role.HR)
+  @Get('me')
+  listOwnRequests(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query(new ZodValidationPipe(ownRequestListQuerySchema)) query: OwnRequestListQuery,
+  ): Promise<OvertimeRequestPage> {
+    return this.overtimeRequests.listOwnRequests(user, query);
   }
 }

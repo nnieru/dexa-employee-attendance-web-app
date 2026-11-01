@@ -19,6 +19,8 @@ const VALID_RESPONSE = {
   endAt: '2026-11-02T13:00:00.000Z',
   reason: 'Release deployment',
   status: 'PENDING',
+  reviewReason: null,
+  reviewedAt: null,
   createdAt: '2026-11-02T10:00:00.000Z',
 };
 
@@ -91,5 +93,22 @@ describe('overtimeRequestSchema', () => {
     const response = { ...VALID_RESPONSE, startAt: '2026-11-02T18:00:00+07:00' };
 
     expect(overtimeRequestSchema.safeParse(response).success).toBe(false);
+  });
+
+  it('should reject a response that omits the review fields', () => {
+    const response = { ...VALID_RESPONSE, reviewReason: undefined };
+
+    expect(overtimeRequestSchema.safeParse(response).success).toBe(false);
+  });
+
+  it('should accept a rejected response with its reviewer reason and decision time', () => {
+    const response = {
+      ...VALID_RESPONSE,
+      status: 'REJECTED',
+      reviewReason: 'Overlaps the release window',
+      reviewedAt: '2026-11-02T12:00:00.000Z',
+    };
+
+    expect(overtimeRequestSchema.parse(response)).toEqual(response);
   });
 });

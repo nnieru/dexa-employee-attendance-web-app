@@ -6,14 +6,31 @@ import {
   type AuthenticatedUser,
 } from '@dexa/common';
 import {
+  ownRequestListQuerySchema,
   Role,
   submitOvertimeRequestSchema,
   type OvertimeRequest,
+  type OvertimeRequestPage,
+  type OwnRequestListQuery,
   type SubmitOvertimeRequest,
 } from '@dexa/contracts';
-import { Body, Controller, HttpStatus, Inject, Post, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpStatus,
+  Inject,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
+import {
+  OVERTIME_REQUEST_LIST_SERVICE,
+  type IOvertimeRequestListService,
+} from './overtime-request-list.service.interface.js';
 import {
   OVERTIME_REQUEST_SERVICE,
   type IOvertimeRequestService,
@@ -26,6 +43,8 @@ import {
 export class OvertimeRequestController {
   constructor(
     @Inject(OVERTIME_REQUEST_SERVICE) private readonly overtimeRequests: IOvertimeRequestService,
+    @Inject(OVERTIME_REQUEST_LIST_SERVICE)
+    private readonly overtimeRequestLists: IOvertimeRequestListService,
   ) {}
 
   // A new request answers 201. An identical retry answers 200 with the request that the first submission saved (APR-5).
@@ -38,5 +57,15 @@ export class OvertimeRequestController {
     const result = await this.overtimeRequests.submit(user.accountId, request);
     response.status(result.created ? HttpStatus.CREATED : HttpStatus.OK);
     return result.request;
+  }
+
+  // The signed-in account's own requests of every status, newest first (APR-6). The query is strict, and the
+  // requester comes only from the token.
+  @Get('me')
+  listOwnRequests(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query(new ZodValidationPipe(ownRequestListQuerySchema)) query: OwnRequestListQuery,
+  ): Promise<OvertimeRequestPage> {
+    return this.overtimeRequestLists.listOwnRequests(user.accountId, query);
   }
 }

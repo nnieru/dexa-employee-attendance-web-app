@@ -1,5 +1,5 @@
 import { CLOCK, type IClock } from '@dexa/common';
-import type { CorrectionRequest, SubmitCorrectionRequest } from '@dexa/contracts';
+import type { SubmitCorrectionRequest } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { CONFIG } from '../config/config.token.js';
 import type { AttendanceServiceConfig } from '../config/attendance-service-config.schema.js';
@@ -21,6 +21,7 @@ import {
   type CorrectionSubmission,
 } from './correction-request-submission.rules.js';
 import { evaluateCorrectionPolicy } from './correction-policy.rules.js';
+import { toCorrectionRequest } from './correction-request.rules.js';
 import type {
   ICorrectionRequestService,
   SubmitCorrectionRequestResult,
@@ -146,18 +147,5 @@ function toSubmission(accountId: string, request: SubmitCorrectionRequest): Corr
     requestedOutcome: request.requestedDayStatus,
     requestedCheckinAt: null,
     requestedCheckoutAt: null,
-  };
-}
-
-function toCorrectionRequest(request: StoredCorrectionRequest): CorrectionRequest {
-  return {
-    id: request.id,
-    businessDate: request.businessDate,
-    requestedDayStatus: request.requestedOutcome,
-    clockInAt: request.requestedCheckinAt?.toISOString() ?? null,
-    clockOutAt: request.requestedCheckoutAt?.toISOString() ?? null,
-    reason: request.reason,
-    status: request.status,
-    createdAt: request.createdAt.toISOString(),
   };
 }

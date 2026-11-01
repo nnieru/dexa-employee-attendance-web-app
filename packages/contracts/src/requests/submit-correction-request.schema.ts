@@ -34,6 +34,7 @@ export const submitCorrectionRequestSchema = z.discriminatedUnion('requestedDayS
 export type SubmitCorrectionRequest = z.infer<typeof submitCorrectionRequestSchema>;
 
 // clockInAt and clockOutAt are UTC instants with a Z suffix. Both are null for a leave outcome.
+// reviewReason and reviewedAt are null until HR decides (APR-6). A rejection carries its reason (DATABASE §5.6).
 export const correctionRequestSchema = z.object({
   id: z.uuid(),
   businessDate: z.iso.date(),
@@ -42,6 +43,8 @@ export const correctionRequestSchema = z.object({
   clockOutAt: z.iso.datetime().nullable(),
   reason: z.string(),
   status: requestStatusSchema,
+  reviewReason: z.string().nullable(),
+  reviewedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
 });
 

@@ -7,7 +7,7 @@ import {
   ServiceName,
   type IAccountStatusReader,
 } from '@dexa/common';
-import { Role, type OvertimeRequest } from '@dexa/contracts';
+import { Role, type OvertimeRequest, type OvertimeRequestPage } from '@dexa/contracts';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -24,6 +24,8 @@ import {
 import { verifyGatewayToken } from './gateway-token.js';
 
 const LOCALHOST = '127.0.0.1';
+const LOCALHOST_URL = 'http://127.0.0.1';
+const LIST_PATH = '/api/v1/overtime-requests/me';
 const SUBMIT_PATH = '/api/v1/overtime-requests';
 const USER_JWT_LIFETIME_SECONDS = 300;
 const TEST_TIMEOUT_MS = 30_000;
@@ -42,6 +44,8 @@ const SAVED_REQUEST: OvertimeRequest = {
   endAt: '2026-11-02T13:00:00.000Z',
   reason: 'Release deployment',
   status: 'PENDING',
+  reviewReason: null,
+  reviewedAt: null,
   createdAt: '2026-11-02T10:00:00.000Z',
 };
 
@@ -341,4 +345,137 @@ describe('api-gateway overtime request submission', () => {
     },
     TEST_TIMEOUT_MS,
   );
+
+  describe('own request list', () => {
+    const OWN_PAGE: OvertimeRequestPage = {
+      items: [SAVED_REQUEST],
+      page: 2,
+      pageSize: 5,
+      totalItems: 6,
+      totalPages: 2,
+    };
+
+    function getOwnList(accessToken: string | undefined, query: string) {
+      const pending = request(app.getHttpServer()).get(`${LIST_PATH}${query}`);
+      if (accessToken !== undefined) pending.set('Authorization', `Bearer ${accessToken}`);
+      return pending;
+    }
+
+    function forwardedQueryOf(path: string | undefined): Record<string, string> {
+      return Object.fromEntries(new URL(path ?? '/', LOCALHOST_URL).searchParams);
+    }
+
+    it(
+      'should forward the status, page, and page size with a token that names the employee and answer 200',
+      async () => {
+        const accountId = randomUUID();
+        attendanceService.answerWith({ status: 200, body: OWN_PAGE });
+        const callsBefore = attendanceService.calls.length;
+
+        const response = await getOwnList(
+          signEndUserJwt(keys, accountId, Role.EMPLOYEE),
+          '?status=APPROVED&page=2&pageSize=5',
+        ).expect(200);
+
+        expect(response.body).toEqual(OWN_PAGE);
+        const forwarded = attendanceService.calls.at(callsBefore);
+        expect(forwarded).toMatchObject({ method: 'GET' });
+        expect(forwarded?.path?.startsWith(`${LIST_PATH}?`)).toBe(true);
+        expect(forwardedQueryOf(forwarded?.path)).toEqual({
+          status: 'APPROVED',
+          page: '2',
+          pageSize: '5',
+        });
+        expect(
+          verifyGatewayToken(keys, forwarded?.authorization, ServiceName.ATTENDANCE_SERVICE),
+        ).toEqual({ accountId, role: Role.EMPLOYEE });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should forward the list for an HR account the same way',
+      async () => {
+        const accountId = randomUUID();
+        attendanceService.answerWith({ status: 200, body: OWN_PAGE });
+        const callsBefore = attendanceService.calls.length;
+
+        await getOwnList(signEndUserJwt(keys, accountId, Role.HR), '?page=2&pageSize=5').expect(
+          200,
+        );
+
+        const forwarded = attendanceService.calls.at(callsBefore);
+        expect(
+          verifyGatewayToken(keys, forwarded?.authorization, ServiceName.ATTENDANCE_SERVICE),
+        ).toEqual({ accountId, role: Role.HR });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should forward the default page and page size with no status when the query is empty',
+      async () => {
+        attendanceService.answerWith({ status: 200, body: OWN_PAGE });
+        const callsBefore = attendanceService.calls.length;
+
+        await getOwnList(signEndUserJwt(keys, randomUUID(), Role.EMPLOYEE), '').expect(200);
+
+        const forwarded = attendanceService.calls.at(callsBefore);
+        expect(forwardedQueryOf(forwarded?.path)).toEqual({ page: '1', pageSize: '20' });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should return 401 and call nothing when the request has no token',
+      async () => {
+        const callsBefore = attendanceService.calls.length;
+
+        const response = await getOwnList(undefined, '').expect(401);
+
+        expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+        expect(attendanceService.calls.length).toBe(callsBefore);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it.each([
+      { condition: 'the status is not a request status', query: '?status=CANCELLED' },
+      { condition: 'the page size is above the maximum', query: '?pageSize=101' },
+      { condition: 'the account is named in the query', query: `?accountId=${randomUUID()}` },
+    ])(
+      'should return 400 and call nothing when $condition',
+      async ({ query }) => {
+        const callsBefore = attendanceService.calls.length;
+
+        const response = await getOwnList(
+          signEndUserJwt(keys, randomUUID(), Role.EMPLOYEE),
+          query,
+        ).expect(400);
+
+        expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+        expect(attendanceService.calls.length).toBe(callsBefore);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should map an answer that does not match the contract to 503 without the upstream body',
+      async () => {
+        attendanceService.answerWith({
+          status: 200,
+          body: { ...OWN_PAGE, items: [{ ...SAVED_REQUEST, status: 'CANCELLED' }] },
+        });
+
+        const response = await getOwnList(
+          signEndUserJwt(keys, randomUUID(), Role.EMPLOYEE),
+          '',
+        ).expect(503);
+
+        expect(response.body).toMatchObject({ statusCode: 503, code: 'DEPENDENCY_UNAVAILABLE' });
+        expect(JSON.stringify(response.body)).not.toContain('CANCELLED');
+      },
+      TEST_TIMEOUT_MS,
+    );
+  });
 });

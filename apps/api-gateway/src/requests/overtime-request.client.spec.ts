@@ -5,7 +5,13 @@ import {
   type InternalGetRequest,
   type InternalPostRequest,
 } from '@dexa/common';
-import { Role, type OvertimeRequest, type SubmitOvertimeRequest } from '@dexa/contracts';
+import {
+  Role,
+  type OvertimeRequest,
+  type OvertimeRequestPage,
+  type OwnRequestListQuery,
+  type SubmitOvertimeRequest,
+} from '@dexa/contracts';
 import { OvertimeRequestClient } from './overtime-request.client.js';
 
 const USER: AuthenticatedUser = {
@@ -26,6 +32,8 @@ const SAVED_REQUEST: OvertimeRequest = {
   endAt: '2026-11-02T13:00:00.000Z',
   reason: 'Release deployment',
   status: 'PENDING',
+  reviewReason: null,
+  reviewedAt: null,
   createdAt: '2026-11-02T10:00:00.000Z',
 };
 
@@ -48,6 +56,73 @@ function createRecordingHttpClient(
     delete: () => Promise.reject(new Error('The client never deletes.')),
   };
 }
+
+// Answers the one get with the given response, parsed by the schema the client passes, and records the request.
+function createRecordingGetClient(
+  response: unknown,
+  recorded: InternalGetRequest<unknown>[],
+): IInternalHttpClient {
+  return {
+    get: <TResponse>(request: InternalGetRequest<TResponse>): Promise<TResponse> => {
+      recorded.push(request);
+      return Promise.resolve().then(() => request.responseSchema.parse(response));
+    },
+    getBinary: () => Promise.reject(new Error('The client never fetches bytes.')),
+    post: <TResponse>(request: InternalPostRequest<TResponse>): Promise<TResponse> =>
+      Promise.reject(new Error(`The client never posts ${request.path}.`)),
+    patch: () => Promise.reject(new Error('The client never patches.')),
+    putJson: () => Promise.reject(new Error('The client never puts JSON.')),
+    put: () => Promise.reject(new Error('The client never puts.')),
+    delete: () => Promise.reject(new Error('The client never deletes.')),
+  };
+}
+
+const OWN_PAGE: OvertimeRequestPage = {
+  items: [SAVED_REQUEST],
+  page: 2,
+  pageSize: 5,
+  totalItems: 6,
+  totalPages: 2,
+};
+
+describe('OvertimeRequestClient.listOwnRequests', () => {
+  it('should get the own requests from attendance-service with the query and the user', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const client = new OvertimeRequestClient(createRecordingGetClient(OWN_PAGE, recorded));
+    const query: OwnRequestListQuery = { status: 'APPROVED', page: 2, pageSize: 5 };
+
+    const response = await client.listOwnRequests(USER, query);
+
+    expect(response).toEqual(OWN_PAGE);
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
+      target: ServiceName.ATTENDANCE_SERVICE,
+      path: '/api/v1/overtime-requests/me',
+      query: { status: 'APPROVED', page: '2', pageSize: '5' },
+      onBehalfOf: USER,
+    });
+  });
+
+  it('should omit the status from the forwarded query when the caller gave none', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const client = new OvertimeRequestClient(createRecordingGetClient(OWN_PAGE, recorded));
+
+    await client.listOwnRequests(USER, { page: 1, pageSize: 20 });
+
+    expect(recorded[0]?.query).toEqual({ page: '1', pageSize: '20' });
+  });
+
+  it('should reject the page when attendance-service answers a page the contract does not define', async () => {
+    const client = new OvertimeRequestClient(
+      createRecordingGetClient(
+        { ...OWN_PAGE, items: [{ ...SAVED_REQUEST, status: 'CANCELLED' }] },
+        [],
+      ),
+    );
+
+    await expect(client.listOwnRequests(USER, { page: 2, pageSize: 5 })).rejects.toThrow();
+  });
+});
 
 describe('OvertimeRequestClient.submitOvertime', () => {
   it('should post the request body to attendance-service on behalf of the user', async () => {

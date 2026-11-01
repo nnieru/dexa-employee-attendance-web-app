@@ -24,6 +24,26 @@ const REQUESTER_IDEMPOTENCY_CONSTRAINT = 'overtime_requests_requester_idempotenc
 // The statuses that hold minutes of the daily cap (PRD OT-4). Rejected requests release their minutes.
 const CAPPED_STATUSES = [REQUEST_STATUS.PENDING, REQUEST_STATUS.APPROVED] as const;
 
+// The columns of a stored request as the reads return it. The business date comes from the joined day row.
+export const storedOvertimeRequestColumns = {
+  id: overtimeRequests.id,
+  businessDate: attendanceDays.businessDate,
+  startAt: overtimeRequests.requestedStartAt,
+  endAt: overtimeRequests.requestedEndAt,
+  reason: overtimeRequests.reason,
+  status: overtimeRequests.status,
+  reviewReason: overtimeRequests.reviewReason,
+  reviewedAt: overtimeRequests.reviewedAt,
+  createdAt: overtimeRequests.createdAt,
+};
+
+type StoredOvertimeRequestRow = Omit<StoredOvertimeRequest, 'status'> & { readonly status: string };
+
+// The status column is a varchar, so it is narrowed to the request statuses here, where the row is read.
+export function toStoredOvertimeRequest(row: StoredOvertimeRequestRow): StoredOvertimeRequest {
+  return { ...row, status: requestStatusSchema.parse(row.status) };
+}
+
 @Injectable()
 export class OvertimeRequestRepository implements IOvertimeRequestRepository {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
@@ -66,15 +86,7 @@ async function findRequestByIdempotencyKey(
   idempotencyKey: string,
 ): Promise<StoredOvertimeRequest | undefined> {
   const [row] = await runner
-    .select({
-      id: overtimeRequests.id,
-      businessDate: attendanceDays.businessDate,
-      startAt: overtimeRequests.requestedStartAt,
-      endAt: overtimeRequests.requestedEndAt,
-      reason: overtimeRequests.reason,
-      status: overtimeRequests.status,
-      createdAt: overtimeRequests.createdAt,
-    })
+    .select(storedOvertimeRequestColumns)
     .from(overtimeRequests)
     .innerJoin(attendanceDays, eq(attendanceDays.id, overtimeRequests.attendanceDayId))
     .where(
@@ -85,7 +97,7 @@ async function findRequestByIdempotencyKey(
     )
     .limit(1);
   if (row === undefined) return undefined;
-  return { ...row, status: requestStatusSchema.parse(row.status) };
+  return toStoredOvertimeRequest(row);
 }
 
 // The sum is in minutes with the seconds kept, so the rule compares the exact interval lengths (no rounding, PRD OT-4).
@@ -129,6 +141,8 @@ async function insertOvertimeRequest(
         id: overtimeRequests.id,
         createdAt: overtimeRequests.createdAt,
         status: overtimeRequests.status,
+        reviewReason: overtimeRequests.reviewReason,
+        reviewedAt: overtimeRequests.reviewedAt,
       });
     if (row === undefined) throw new Error('The overtime request insert returned no row.');
     return {
@@ -138,6 +152,8 @@ async function insertOvertimeRequest(
       endAt: request.endAt,
       reason: request.reason,
       status: requestStatusSchema.parse(row.status),
+      reviewReason: row.reviewReason,
+      reviewedAt: row.reviewedAt,
       createdAt: row.createdAt,
     };
   } catch (error: unknown) {

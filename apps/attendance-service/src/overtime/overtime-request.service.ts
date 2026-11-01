@@ -1,5 +1,5 @@
 import { CLOCK, type IClock } from '@dexa/common';
-import type { OvertimeRequest, SubmitOvertimeRequest } from '@dexa/contracts';
+import type { SubmitOvertimeRequest } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { CONFIG } from '../config/config.token.js';
 import type { AttendanceServiceConfig } from '../config/attendance-service-config.schema.js';
@@ -20,6 +20,7 @@ import {
   type OvertimeSubmission,
 } from './overtime-request-submission.rules.js';
 import { evaluateOvertimePolicy } from './overtime-policy.rules.js';
+import { toOvertimeRequest } from './overtime-request.rules.js';
 import type {
   IOvertimeRequestService,
   SubmitOvertimeRequestResult,
@@ -129,17 +130,5 @@ function toSubmission(accountId: string, request: SubmitOvertimeRequest): Overti
     endAt: new Date(request.endAt),
     reason: request.reason,
     idempotencyKey: request.idempotencyKey,
-  };
-}
-
-function toOvertimeRequest(request: StoredOvertimeRequest): OvertimeRequest {
-  return {
-    id: request.id,
-    businessDate: request.businessDate,
-    startAt: request.startAt.toISOString(),
-    endAt: request.endAt.toISOString(),
-    reason: request.reason,
-    status: request.status,
-    createdAt: request.createdAt.toISOString(),
   };
 }

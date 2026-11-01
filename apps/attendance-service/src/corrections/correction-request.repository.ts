@@ -31,7 +31,37 @@ const PENDING_DAY_CONSTRAINT = 'attendance_adjustment_requests_pending_day_uq';
 const DAY_STATUS_CATEGORY = 'DAY';
 
 // The requested outcome is stored as a DAY status, so its code is read through a second alias of the status master.
-const requestedStatuses = alias(masterAttendanceStatuses, 'requested_status');
+export const requestedStatuses = alias(masterAttendanceStatuses, 'requested_status');
+
+// The columns of a stored request as the reads return it. The business date and the requested outcome come from joins.
+export const storedCorrectionRequestColumns = {
+  id: attendanceAdjustmentRequests.id,
+  businessDate: attendanceDays.businessDate,
+  requestedOutcome: requestedStatuses.code,
+  requestedCheckinAt: attendanceAdjustmentRequests.requestedCheckinAt,
+  requestedCheckoutAt: attendanceAdjustmentRequests.requestedCheckoutAt,
+  reason: attendanceAdjustmentRequests.reason,
+  status: attendanceAdjustmentRequests.status,
+  reviewReason: attendanceAdjustmentRequests.reviewReason,
+  reviewedAt: attendanceAdjustmentRequests.reviewedAt,
+  createdAt: attendanceAdjustmentRequests.createdAt,
+};
+
+type StoredCorrectionRequestRow = Omit<StoredCorrectionRequest, 'requestedOutcome' | 'status'> & {
+  readonly requestedOutcome: string;
+  readonly status: string;
+};
+
+// The outcome and status columns are varchars, so they are narrowed to their contract values where the row is read.
+export function toStoredCorrectionRequest(
+  row: StoredCorrectionRequestRow,
+): StoredCorrectionRequest {
+  return {
+    ...row,
+    requestedOutcome: requestedCorrectionDayStatusSchema.parse(row.requestedOutcome),
+    status: requestStatusSchema.parse(row.status),
+  };
+}
 
 @Injectable()
 export class CorrectionRequestRepository implements ICorrectionRequestRepository {
@@ -75,16 +105,7 @@ async function findRequestByIdempotencyKey(
   idempotencyKey: string,
 ): Promise<StoredCorrectionRequest | undefined> {
   const [row] = await runner
-    .select({
-      id: attendanceAdjustmentRequests.id,
-      businessDate: attendanceDays.businessDate,
-      requestedOutcome: requestedStatuses.code,
-      requestedCheckinAt: attendanceAdjustmentRequests.requestedCheckinAt,
-      requestedCheckoutAt: attendanceAdjustmentRequests.requestedCheckoutAt,
-      reason: attendanceAdjustmentRequests.reason,
-      status: attendanceAdjustmentRequests.status,
-      createdAt: attendanceAdjustmentRequests.createdAt,
-    })
+    .select(storedCorrectionRequestColumns)
     .from(attendanceAdjustmentRequests)
     .innerJoin(attendanceDays, eq(attendanceDays.id, attendanceAdjustmentRequests.attendanceDayId))
     .innerJoin(
@@ -99,11 +120,7 @@ async function findRequestByIdempotencyKey(
     )
     .limit(1);
   if (row === undefined) return undefined;
-  return {
-    ...row,
-    requestedOutcome: requestedCorrectionDayStatusSchema.parse(row.requestedOutcome),
-    status: requestStatusSchema.parse(row.status),
-  };
+  return toStoredCorrectionRequest(row);
 }
 
 async function hasPendingCorrection(
@@ -165,6 +182,8 @@ async function insertCorrectionRequest(
       .returning({
         id: attendanceAdjustmentRequests.id,
         status: attendanceAdjustmentRequests.status,
+        reviewReason: attendanceAdjustmentRequests.reviewReason,
+        reviewedAt: attendanceAdjustmentRequests.reviewedAt,
         createdAt: attendanceAdjustmentRequests.createdAt,
       });
     if (row === undefined) throw new Error('The correction request insert returned no row.');
@@ -176,6 +195,8 @@ async function insertCorrectionRequest(
       requestedCheckoutAt: request.requestedCheckoutAt,
       reason: request.reason,
       status: requestStatusSchema.parse(row.status),
+      reviewReason: row.reviewReason,
+      reviewedAt: row.reviewedAt,
       createdAt: row.createdAt,
     };
   } catch (error: unknown) {
