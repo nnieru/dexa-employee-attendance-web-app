@@ -14,8 +14,11 @@ export type ScheduleVersion = ScheduleVersionInput & {
   readonly id: string;
 };
 
-/** The day status a punch sets (DATABASE §5.4). */
-export type DayStatusCode = 'PRESENT';
+/**
+ * The day status a new day starts with (DATABASE §5.4). A punch sets PRESENT; a request on a working day starts
+ * PENDING and on a day off starts DAY_OFF.
+ */
+export type DayStatusCode = 'PENDING' | 'PRESENT' | 'DAY_OFF';
 
 /** The check-in status a day starts with, before the first punch classifies it (DATABASE §5.1). */
 export type InitialCheckInStatusCode = 'PENDING_CHECKIN' | 'CHECKIN_NOT_REQUIRED';
@@ -23,7 +26,7 @@ export type InitialCheckInStatusCode = 'PENDING_CHECKIN' | 'CHECKIN_NOT_REQUIRED
 /** The check-out status a day starts with. A punch never changes it in this task. */
 export type InitialCheckOutStatusCode = 'PENDING_CHECKOUT' | 'CHECKOUT_NOT_REQUIRED';
 
-/** Every status code that a punch writes. Each one is seeded in master_attendance_statuses (DATABASE §5.1). */
+/** Every status code that a punch or a new day writes. Each one is seeded in master_attendance_statuses (DATABASE §5.1). */
 export type AttendanceStatusCode =
   | DayStatusCode
   | InitialCheckInStatusCode
