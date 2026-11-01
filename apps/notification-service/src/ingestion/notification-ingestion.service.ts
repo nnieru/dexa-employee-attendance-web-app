@@ -35,7 +35,7 @@ export class NotificationIngestionService {
       throw new NonRetryableMessageError(`Notification event rejected: ${decision.reason}`);
     }
     const notifiable = decision.event;
-    const subjectName = await this.resolveSubjectName(notifiable);
+    const subjectName = await this.resolveDisplayName(notifiable);
     const recipientAccountIds = await this.auth.listHrRecipientIds();
     const drafts = buildNotificationRows({
       event: notifiable,
@@ -47,15 +47,22 @@ export class NotificationIngestionService {
       return;
     }
     const insertedNotifications = await this.notifications.insertForRecipients(drafts);
-    this.publisher.publish(insertedNotifications);
+    if (insertedNotifications.length > 0) {
+      this.publisher.publish(insertedNotifications);
+    }
   }
 
-  // The profile event carries the name. The password event does not, so the name comes from Employee.
-  private async resolveSubjectName(event: NotifiableEvent): Promise<string> {
+  // The profile event carries the name. The password and request events do not, so the name comes from Employee in
+  // one batched lookup: the affected account for a password change, the requester for an attendance request.
+  private async resolveDisplayName(event: NotifiableEvent): Promise<string> {
     if (event.eventType === EventName.EMPLOYEE_PROFILE_UPDATED) {
       return event.employeeName;
     }
-    const employees = await this.employees.lookupEmployees([event.subjectAccountId]);
-    return resolveEmployeeName(employees, event.subjectAccountId);
+    const accountId =
+      event.eventType === EventName.ACCOUNT_PASSWORD_CHANGED
+        ? event.subjectAccountId
+        : event.actorAccountId;
+    const employees = await this.employees.lookupEmployees([accountId]);
+    return resolveEmployeeName(employees, accountId);
   }
 }

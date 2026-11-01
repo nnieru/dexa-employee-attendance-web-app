@@ -10,6 +10,10 @@ import {
   type IEmployeeClient,
 } from '../src/ingestion/employee-client.interface.js';
 import {
+  NOTIFICATION_PUBLISHER,
+  type INotificationPublisher,
+} from '../src/ingestion/notification-publisher.interface.js';
+import {
   NOTIFICATION_WRITER,
   type INotificationWriter,
 } from '../src/ingestion/notification-writer.interface.js';
@@ -26,6 +30,8 @@ export type NotificationConsumerAppOptions = {
   readonly authClient: IAuthClient;
   readonly employeeClient: IEmployeeClient;
   readonly notificationWriter?: INotificationWriter;
+  // Replaces the live push, so a test can count pushes without a stream subscriber.
+  readonly notificationPublisher?: INotificationPublisher;
   // The stream specs shorten the heartbeat, so a test can observe heartbeats within a fraction of a second.
   readonly heartbeatMilliseconds?: number;
 };
@@ -58,6 +64,11 @@ export async function startNotificationConsumerApp(
     moduleBuilder = moduleBuilder
       .overrideProvider(NOTIFICATION_WRITER)
       .useValue(options.notificationWriter);
+  }
+  if (options.notificationPublisher !== undefined) {
+    moduleBuilder = moduleBuilder
+      .overrideProvider(NOTIFICATION_PUBLISHER)
+      .useValue(options.notificationPublisher);
   }
   if (options.heartbeatMilliseconds !== undefined) {
     moduleBuilder = moduleBuilder

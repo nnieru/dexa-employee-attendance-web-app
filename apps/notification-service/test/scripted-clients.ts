@@ -3,6 +3,7 @@ import { ErrorCode, type EmployeeLookupItem } from '@dexa/contracts';
 import type { IAuthClient } from '../src/ingestion/auth-client.interface.js';
 import type { IEmployeeClient } from '../src/ingestion/employee-client.interface.js';
 import type { NotificationDraft } from '../src/ingestion/notification-row.rules.js';
+import type { INotificationPublisher } from '../src/ingestion/notification-publisher.interface.js';
 import type {
   INotificationWriter,
   InsertedNotification,
@@ -75,5 +76,19 @@ export class CountingNotificationWriter implements INotificationWriter {
     const inserted = await this.delegate.insertForRecipients(drafts);
     this.commits += 1;
     return inserted;
+  }
+}
+
+/**
+ * Stands in for the live stream. Counts each push and keeps the rows it was given, so a test can show that only the
+ * rows a call inserted were pushed, and that a redelivery pushed nothing.
+ */
+export class RecordingNotificationPublisher implements INotificationPublisher {
+  pushCount = 0;
+  readonly pushedNotifications: InsertedNotification[] = [];
+
+  publish(notifications: ReadonlyArray<InsertedNotification>): void {
+    this.pushCount += 1;
+    this.pushedNotifications.push(...notifications);
   }
 }

@@ -2,6 +2,7 @@ import { EventName } from '@dexa/contracts';
 import type { NotifiableEvent, NotifiableField } from './notifiable-event.rules.js';
 import {
   UNAVAILABLE_EMPLOYEE_NAME,
+  describeAttendanceRequest,
   describeChangedFields,
   describeNotification,
   resolveEmployeeName,
@@ -99,6 +100,70 @@ describe('describeNotification', () => {
 
     expect(text.title).toBe(`${subjectName} updated: phone number`);
     expect(text.title.length).toBe(200);
+  });
+
+  it('should title an attendance request event with the requester name and the request kind', () => {
+    const event: NotifiableEvent = {
+      eventType: EventName.ATTENDANCE_REQUEST_SUBMITTED,
+      eventId: '0f1d6a8e-4c1b-4a55-9d2e-7b3c2a1f0e9d',
+      occurredAt: new Date('2026-10-30T02:05:00.000Z'),
+      subjectAccountId: ACCOUNT_ID,
+      actorAccountId: ACCOUNT_ID,
+      changedFields: [],
+      resourceType: 'attendance_adjustment_request',
+      resourceId: 'e2b1c4a0-7d3e-4b9a-8c1d-0e2f4a6b8c0d',
+      businessDate: '2026-10-28',
+    };
+
+    expect(describeNotification(event, 'Budi Santoso')).toEqual({
+      title: 'Budi Santoso requested an attendance correction for 2026-10-28',
+      body: 'Open the request to review it.',
+    });
+  });
+});
+
+describe('describeAttendanceRequest', () => {
+  it.each([
+    {
+      condition: 'an overtime request is submitted',
+      resourceType: 'overtime_request' as const,
+      title: 'Budi Santoso requested overtime for 2026-10-28',
+    },
+    {
+      condition: 'an attendance correction is submitted',
+      resourceType: 'attendance_adjustment_request' as const,
+      title: 'Budi Santoso requested an attendance correction for 2026-10-28',
+    },
+  ])('should title the request when $condition', ({ resourceType, title }) => {
+    const text = describeAttendanceRequest({
+      resourceType,
+      businessDate: '2026-10-28',
+      requesterName: 'Budi Santoso',
+    });
+
+    expect(text).toEqual({ title, body: 'Open the request to review it.' });
+  });
+
+  it('should keep the longest correction title within the 200-character column', () => {
+    const requesterName = 'A'.repeat(150);
+    const text = describeAttendanceRequest({
+      resourceType: 'attendance_adjustment_request',
+      businessDate: '2026-10-28',
+      requesterName,
+    });
+
+    expect(text.title).toBe(`${requesterName} requested an attendance correction for 2026-10-28`);
+    expect(text.title.length).toBe(200);
+  });
+
+  it('should leave out any reason, since the event carries none', () => {
+    const text = describeAttendanceRequest({
+      resourceType: 'overtime_request',
+      businessDate: '2026-10-28',
+      requesterName: 'Budi Santoso',
+    });
+
+    expect(`${text.title} ${text.body}`.toLowerCase()).not.toContain('reason');
   });
 });
 

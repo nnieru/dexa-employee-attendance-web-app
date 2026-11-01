@@ -1,4 +1,8 @@
-import { EventName, type EmployeeLookupItem } from '@dexa/contracts';
+import {
+  EventName,
+  type AttendanceRequestResourceType,
+  type EmployeeLookupItem,
+} from '@dexa/contracts';
 import type { NotifiableEvent, NotifiableField } from './notifiable-event.rules.js';
 
 /**
@@ -34,12 +38,20 @@ export function describeChangedFields(fields: ReadonlyArray<NotifiableField>): s
 
 /**
  * Builds the title and body from field names only, so no value, password, or token can reach the inbox.
- * `subjectName` is the employee's name as Employee or the event supplies it.
+ * `subjectName` is the employee's name as Employee or the event supplies it. For an attendance request it is the
+ * requester's name.
  */
 export function describeNotification(
   event: NotifiableEvent,
   subjectName: string,
 ): NotificationText {
+  if (event.eventType === EventName.ATTENDANCE_REQUEST_SUBMITTED) {
+    return describeAttendanceRequest({
+      resourceType: event.resourceType,
+      businessDate: event.businessDate,
+      requesterName: subjectName,
+    });
+  }
   const labels = describeChangedFields(event.changedFields);
   const body = `Changed fields: ${labels}.`;
   if (event.eventType === EventName.ACCOUNT_PASSWORD_CHANGED) {
@@ -55,6 +67,31 @@ function profileTitle(subjectName: string, labels: string): string {
     return detailedTitle;
   }
   return `${subjectName} updated their profile`;
+}
+
+// The phrase after the requester's name. The article is part of the phrase, so both titles read as sentences.
+const REQUEST_PHRASES: Readonly<Record<AttendanceRequestResourceType, string>> = {
+  overtime_request: 'overtime',
+  attendance_adjustment_request: 'an attendance correction',
+};
+
+export type AttendanceRequestTextInput = {
+  readonly resourceType: AttendanceRequestResourceType;
+  readonly businessDate: string;
+  readonly requesterName: string;
+};
+
+/**
+ * Builds the title and body for an attendance request submitted by an employee (PRD APR-7). The event carries no
+ * reason, so the text names the request kind and business date only. Employee caps names at 150 characters, so the
+ * longest title still fits the 200-character column.
+ */
+export function describeAttendanceRequest(input: AttendanceRequestTextInput): NotificationText {
+  const phrase = REQUEST_PHRASES[input.resourceType];
+  return {
+    title: `${input.requesterName} requested ${phrase} for ${input.businessDate}`,
+    body: 'Open the request to review it.',
+  };
 }
 
 /** Picks the name for the account from a lookup answer, or the unavailable placeholder when Employee does not know it. */

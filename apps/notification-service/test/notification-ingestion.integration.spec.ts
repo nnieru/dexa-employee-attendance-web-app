@@ -22,12 +22,14 @@ import {
   type GetMessage,
 } from 'amqplib';
 import { eq } from 'drizzle-orm';
+import { UNAVAILABLE_EMPLOYEE_NAME } from '../src/ingestion/notification-text.rules.js';
 import { NotificationRepository } from '../src/ingestion/notification.repository.js';
 import { notifications } from '../src/infrastructure/db/schema.js';
 import { CONTAINER_TIMEOUT_MS, TEST_TIMEOUT_MS, createEmptyDatabaseUri } from './test-database.js';
 import { CREATED_AT, startNotificationConsumerApp } from './notification-consumer-app.js';
 import {
   CountingNotificationWriter,
+  RecordingNotificationPublisher,
   ScriptedAuthClient,
   ScriptedEmployeeClient,
 } from './scripted-clients.js';
@@ -45,6 +47,9 @@ const HR_RECIPIENT_IDS = [
   '3b4c5d6e-7f80-4912-8bcd-2e3f4a5b6c7d',
 ];
 const EMPLOYEE_NAME = 'Budi Santoso';
+const REQUEST_RESOURCE_ID = 'e2b1c4a0-7d3e-4b9a-8c1d-0e2f4a6b8c0d';
+const REQUEST_BUSINESS_DATE = '2026-10-28';
+const REQUEST_INBOX_BODY = 'Open the request to review it.';
 
 function uniqueQueueName(): string {
   return `hr.notifications.${randomUUID()}`;
@@ -77,6 +82,31 @@ function passwordChangedEvent(): EventMessage {
   };
 }
 
+// The requester submits the request, so the requester is both the affected account and the actor.
+type RequestResourceType = 'overtime_request' | 'attendance_adjustment_request';
+
+function attendanceRequestPayload(resourceType: RequestResourceType = 'overtime_request') {
+  return {
+    accountId: SUBJECT_ACCOUNT_ID,
+    actorAccountId: SUBJECT_ACCOUNT_ID,
+    resourceType,
+    resourceId: REQUEST_RESOURCE_ID,
+    businessDate: REQUEST_BUSINESS_DATE,
+    changedFields: [],
+  };
+}
+
+function attendanceRequestEvent(
+  resourceType: RequestResourceType = 'overtime_request',
+): EventMessage {
+  return {
+    eventId: randomUUID(),
+    type: EventName.ATTENDANCE_REQUEST_SUBMITTED,
+    occurredAt: OCCURRED_AT,
+    payload: attendanceRequestPayload(resourceType),
+  };
+}
+
 // The broker body is Nest's { pattern, data } envelope, with the event as data (libs/messaging).
 function nestBody(routingKey: string, data: unknown): Buffer {
   return Buffer.from(JSON.stringify({ pattern: routingKey, data }), 'utf8');
@@ -99,6 +129,18 @@ async function publishRawBody(
 ): Promise<void> {
   await channel.assertExchange(EVENTS_EXCHANGE, 'topic', { durable: true });
   channel.publish(EVENTS_EXCHANGE, routingKey, body, { persistent: true });
+  await channel.waitForConfirms();
+}
+
+// A mandatory publish comes back through the channel's 'return' event when no queue is bound to its routing key.
+// Used to show that a routing key no notification queue binds is dropped by the broker.
+async function publishMandatoryEvent(channel: ConfirmChannel, event: EventMessage): Promise<void> {
+  await channel.assertExchange(EVENTS_EXCHANGE, 'topic', { durable: true });
+  channel.publish(EVENTS_EXCHANGE, event.type, nestBody(event.type, event), {
+    persistent: true,
+    messageId: event.eventId,
+    mandatory: true,
+  });
   await channel.waitForConfirms();
 }
 
@@ -151,6 +193,8 @@ describe('notification consumer on the Nest RMQ transport', () => {
   let publisher: IEventPublisher;
   let observer: ChannelModel;
   let observerChannel: ConfirmChannel;
+  // The message IDs the broker returned as unroutable on the observer channel.
+  const unroutedMessageIds: string[] = [];
   const startedApps: INestApplication[] = [];
   const openDatabases: Database[] = [];
 
@@ -172,6 +216,9 @@ describe('notification consumer on the Nest RMQ transport', () => {
     publisher = publisherModule.get<IEventPublisher>(EVENT_PUBLISHER);
     observer = await connect(rabbitMq.getAmqpUrl());
     observerChannel = await observer.createConfirmChannel();
+    observerChannel.on('return', (message) => {
+      unroutedMessageIds.push(String(message.properties.messageId));
+    });
   }, CONTAINER_TIMEOUT_MS);
 
   afterEach(async () => {
@@ -195,6 +242,7 @@ describe('notification consumer on the Nest RMQ transport', () => {
     const databaseUrl = await createEmptyDatabaseUri(postgres.getConnectionUri());
     const database = openDatabase(databaseUrl);
     const writer = new CountingNotificationWriter(new NotificationRepository(database));
+    const livePublisher = new RecordingNotificationPublisher();
     startedApps.push(
       await startNotificationConsumerApp({
         databaseUrl,
@@ -203,9 +251,10 @@ describe('notification consumer on the Nest RMQ transport', () => {
         authClient: options.authClient,
         employeeClient: options.employeeClient,
         notificationWriter: writer,
+        notificationPublisher: livePublisher,
       }),
     );
-    return { queue, database, writer };
+    return { queue, database, writer, livePublisher };
   }
 
   describe('persisting an event', () => {
@@ -373,6 +422,216 @@ describe('notification consumer on the Nest RMQ transport', () => {
     );
   });
 
+  describe('attendance request submitted', () => {
+    const REQUESTER_NAME = 'Budi Santoso';
+    const requesterEmployee: EmployeeLookupItem = {
+      accountId: SUBJECT_ACCOUNT_ID,
+      name: REQUESTER_NAME,
+      positionName: 'Fullstack Developer',
+    };
+
+    it(
+      'should insert one row per active HR account except the requester, with the request title and resource data',
+      async () => {
+        const { database, writer, livePublisher } = await startConsumer({
+          authClient: new ScriptedAuthClient([SUBJECT_ACCOUNT_ID, ...HR_RECIPIENT_IDS], 0),
+          employeeClient: new ScriptedEmployeeClient([requesterEmployee], 0),
+        });
+        const event = attendanceRequestEvent('overtime_request');
+
+        await publisher.publish(event);
+
+        await waitFor(async () => writer.commits === 1, 'the request rows to commit');
+        const rows = await selectNotifications(database, event.eventId);
+        expect(rows.map(comparableRow).sort(byRecipient)).toEqual(
+          HR_RECIPIENT_IDS.map((recipientAccountId) => ({
+            eventId: event.eventId,
+            eventType: 'attendance.request.submitted',
+            recipientAccountId,
+            subjectAccountId: SUBJECT_ACCOUNT_ID,
+            actorAccountId: SUBJECT_ACCOUNT_ID,
+            title: `${REQUESTER_NAME} requested overtime for ${REQUEST_BUSINESS_DATE}`,
+            body: REQUEST_INBOX_BODY,
+            data: {
+              changedFields: [],
+              resourceType: 'overtime_request',
+              resourceId: REQUEST_RESOURCE_ID,
+              businessDate: REQUEST_BUSINESS_DATE,
+            },
+            occurredAt: new Date(OCCURRED_AT),
+            createdAt: CREATED_AT,
+            readAt: null,
+          })).sort(byRecipient),
+        );
+        expect(livePublisher.pushCount).toBe(1);
+        expect(
+          livePublisher.pushedNotifications.map((row) => row.recipientAccountId).sort(),
+        ).toEqual([...HR_RECIPIENT_IDS].sort());
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it.each([
+      {
+        condition: 'an overtime request is submitted',
+        resourceType: 'overtime_request' as const,
+        title: `${REQUESTER_NAME} requested overtime for ${REQUEST_BUSINESS_DATE}`,
+      },
+      {
+        condition: 'an attendance correction is submitted',
+        resourceType: 'attendance_adjustment_request' as const,
+        title: `${REQUESTER_NAME} requested an attendance correction for ${REQUEST_BUSINESS_DATE}`,
+      },
+    ])(
+      'should title the row by the request kind when $condition',
+      async ({ resourceType, title }) => {
+        const { database, writer } = await startConsumer({
+          authClient: new ScriptedAuthClient(HR_RECIPIENT_IDS, 0),
+          employeeClient: new ScriptedEmployeeClient([requesterEmployee], 0),
+        });
+        const event = attendanceRequestEvent(resourceType);
+
+        await publisher.publish(event);
+
+        await waitFor(async () => writer.commits === 1, 'the request rows to commit');
+        const rows = await selectNotifications(database, event.eventId);
+        expect(rows.map((row) => [row.title, row.data])).toEqual(
+          HR_RECIPIENT_IDS.map(() => [title, expect.objectContaining({ resourceType })]),
+        );
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should title the request with the unavailable placeholder when Employee does not know the requester',
+      async () => {
+        const { database, writer } = await startConsumer({
+          authClient: new ScriptedAuthClient(HR_RECIPIENT_IDS, 0),
+          employeeClient: new ScriptedEmployeeClient([], 0),
+        });
+        const event = attendanceRequestEvent('overtime_request');
+
+        await publisher.publish(event);
+
+        await waitFor(async () => writer.commits === 1, 'the request rows to commit');
+        const rows = await selectNotifications(database, event.eventId);
+        expect(rows.map((row) => row.title)).toEqual(
+          HR_RECIPIENT_IDS.map(
+            () => `${UNAVAILABLE_EMPLOYEE_NAME} requested overtime for ${REQUEST_BUSINESS_DATE}`,
+          ),
+        );
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should store the rows on the second delivery when Employee fails once for the requester name',
+      async () => {
+        const employeeClient = new ScriptedEmployeeClient([requesterEmployee], 1);
+        const { queue, database, writer } = await startConsumer({
+          authClient: new ScriptedAuthClient(HR_RECIPIENT_IDS, 0),
+          employeeClient,
+        });
+        const event = attendanceRequestEvent('overtime_request');
+
+        await publisher.publish(event);
+
+        await waitFor(async () => writer.commits === 1, 'the second delivery to commit');
+        expect(employeeClient.calls).toBe(2);
+        expect(await selectNotifications(database, event.eventId)).toHaveLength(
+          HR_RECIPIENT_IDS.length,
+        );
+        await waitFor(
+          async () => (await readyMessageCount(observerChannel, queue)) === 0,
+          'the queue to drain',
+        );
+        expect(await observerChannel.get(deadLetterQueueName(queue), { noAck: true })).toBe(false);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should keep one row per recipient and push once when the same request arrives twice',
+      async () => {
+        const { queue, database, writer, livePublisher } = await startConsumer({
+          authClient: new ScriptedAuthClient(HR_RECIPIENT_IDS, 0),
+          employeeClient: new ScriptedEmployeeClient([requesterEmployee], 0),
+        });
+        const event = attendanceRequestEvent('overtime_request');
+
+        await publisher.publish(event);
+        await publisher.publish(event);
+
+        await waitFor(async () => writer.commits === 2, 'both deliveries to commit');
+        await waitFor(
+          async () => (await readyMessageCount(observerChannel, queue)) === 0,
+          'the queue to drain',
+        );
+        expect(await selectNotifications(database, event.eventId)).toHaveLength(
+          HR_RECIPIENT_IDS.length,
+        );
+        expect(livePublisher.pushCount).toBe(1);
+        expect(livePublisher.pushedNotifications).toHaveLength(HR_RECIPIENT_IDS.length);
+        expect(await observerChannel.get(deadLetterQueueName(queue), { noAck: true })).toBe(false);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should insert no rows and acknowledge the message when the requester is the only HR account',
+      async () => {
+        const authClient = new ScriptedAuthClient([SUBJECT_ACCOUNT_ID], 0);
+        const { queue, database, livePublisher } = await startConsumer({
+          authClient,
+          employeeClient: new ScriptedEmployeeClient([requesterEmployee], 0),
+        });
+        const event = attendanceRequestEvent('overtime_request');
+
+        await publisher.publish(event);
+
+        await waitFor(async () => authClient.calls === 1, 'the recipient lookup to run');
+        await waitFor(
+          async () => (await readyMessageCount(observerChannel, queue)) === 0,
+          'the queue to drain',
+        );
+        expect(await selectNotifications(database, event.eventId)).toHaveLength(0);
+        expect(livePublisher.pushCount).toBe(0);
+        expect(await observerChannel.get(deadLetterQueueName(queue), { noAck: true })).toBe(false);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should leave approved and rejected events unrouted, since only a submission notifies HR',
+      async () => {
+        const approved = {
+          ...attendanceRequestEvent(),
+          type: EventName.ATTENDANCE_REQUEST_APPROVED,
+        };
+        const rejected = {
+          ...attendanceRequestEvent(),
+          type: EventName.ATTENDANCE_REQUEST_REJECTED,
+        };
+        const { writer } = await startConsumer({
+          authClient: new ScriptedAuthClient(HR_RECIPIENT_IDS, 0),
+          employeeClient: new ScriptedEmployeeClient([requesterEmployee], 0),
+        });
+        const submitted = attendanceRequestEvent('overtime_request');
+
+        await publishMandatoryEvent(observerChannel, approved);
+        await publishMandatoryEvent(observerChannel, rejected);
+        await publisher.publish(submitted);
+
+        await waitFor(async () => writer.commits === 1, 'the submitted request to commit');
+        expect(unroutedMessageIds).toEqual(
+          expect.arrayContaining([approved.eventId, rejected.eventId]),
+        );
+        expect(unroutedMessageIds).not.toContain(submitted.eventId);
+      },
+      TEST_TIMEOUT_MS,
+    );
+  });
+
   describe('invalid messages', () => {
     const profilePayload = {
       accountId: SUBJECT_ACCOUNT_ID,
@@ -404,6 +663,26 @@ describe('notification consumer on the Nest RMQ transport', () => {
           type: EventName.EMPLOYEE_PROFILE_UPDATED,
           occurredAt: OCCURRED_AT,
           payload: { ...profilePayload, changedFields: ['email'] },
+        }),
+      },
+      {
+        condition: 'the attendance request payload carries a reason',
+        routingKey: EventName.ATTENDANCE_REQUEST_SUBMITTED,
+        body: nestBody(EventName.ATTENDANCE_REQUEST_SUBMITTED, {
+          eventId: randomUUID(),
+          type: EventName.ATTENDANCE_REQUEST_SUBMITTED,
+          occurredAt: OCCURRED_AT,
+          payload: { ...attendanceRequestPayload(), reason: 'Client visit' },
+        }),
+      },
+      {
+        condition: 'the attendance request payload names a changed field',
+        routingKey: EventName.ATTENDANCE_REQUEST_SUBMITTED,
+        body: nestBody(EventName.ATTENDANCE_REQUEST_SUBMITTED, {
+          eventId: randomUUID(),
+          type: EventName.ATTENDANCE_REQUEST_SUBMITTED,
+          occurredAt: OCCURRED_AT,
+          payload: { ...attendanceRequestPayload(), changedFields: ['phoneNumber'] },
         }),
       },
       {

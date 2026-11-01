@@ -13,6 +13,7 @@ import { mswServer, NOTIFICATION_UNREAD_COUNT_URL } from '../../../test/msw-serv
 import {
   NOTIFICATION_INBOX_URL,
   READ_NOTIFICATION,
+  REQUEST_NOTIFICATION,
   UNREAD_NOTIFICATION,
   buildNotificationPage,
   inboxRespondsWith,
@@ -91,6 +92,16 @@ describe('notification list', () => {
     expect(screen.getByText(READ_NOTIFICATION.title)).not.toHaveClass(
       'notification-item__title--unread',
     );
+  });
+
+  it('should show an attendance request with its title and body and no changed-field text', async () => {
+    mswServer.use(inboxRespondsWith(buildNotificationPage({ items: [REQUEST_NOTIFICATION] })));
+    await openNotificationsPage('/notifications');
+
+    const requestItem = getItemByTitle(REQUEST_NOTIFICATION.title);
+    expect(within(requestItem).getByText(REQUEST_NOTIFICATION.body)).toBeInTheDocument();
+    expect(requestItem).not.toHaveTextContent('Changed fields');
+    expect(requestItem).not.toHaveTextContent('updated:');
   });
 
   it('should offer Mark as read only on the unread entry', async () => {

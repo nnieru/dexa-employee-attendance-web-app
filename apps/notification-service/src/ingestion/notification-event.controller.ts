@@ -19,4 +19,10 @@ export class NotificationEventController {
   onAccountPasswordChanged(@Payload() event: EventMessage): Promise<void> {
     return this.ingestion.recordEvent(event);
   }
+
+  // Only the submission notifies HR. The approved and rejected events are not bound to this queue.
+  @EventPattern(EventName.ATTENDANCE_REQUEST_SUBMITTED)
+  onAttendanceRequestSubmitted(@Payload() event: EventMessage): Promise<void> {
+    return this.ingestion.recordEvent(event);
+  }
 }

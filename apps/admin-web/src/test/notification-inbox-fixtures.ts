@@ -26,6 +26,23 @@ export const READ_NOTIFICATION: Notification = {
   readAt: '2026-11-12T05:00:00.000Z',
 };
 
+// An attendance request names no changed field. Its body carries no reason, and its resource fields are only data.
+export const REQUEST_NOTIFICATION: Notification = {
+  id: '6a1f0c3d-2b4e-4f5a-9c7d-8e9f0a1b2c3d',
+  eventType: 'attendance.request.submitted',
+  title: 'Rina Kusuma requested overtime for 2026-11-12',
+  body: 'Open the request to review it.',
+  data: {
+    changedFields: [],
+    resourceType: 'overtime_request',
+    resourceId: 'e2b1c4a0-7d3e-4b9a-8c1d-0e2f4a6b8c0d',
+    businessDate: '2026-11-12',
+  },
+  occurredAt: '2026-11-12T06:00:00.000Z',
+  createdAt: '2026-11-12T06:00:01.000Z',
+  readAt: null,
+};
+
 export function buildNotificationPage(options: {
   items: ReadonlyArray<Notification>;
   nextCursor?: string | null;

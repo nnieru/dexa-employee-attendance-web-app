@@ -84,6 +84,32 @@ describe('NotificationInboxClient.listNotifications', () => {
     expect(calls[0]?.request).not.toHaveProperty('query.cursor');
   });
 
+  it('should pass an attendance request notification through with its resource and no changed fields', async () => {
+    const requestNotification: Notification = {
+      id: '3f6a1c2e-8b9d-4e7f-a0b1-c2d3e4f5a6b8',
+      eventType: 'attendance.request.submitted',
+      title: 'Budi Santoso requested overtime for 2026-10-28',
+      body: 'Open the request to review it.',
+      data: {
+        changedFields: [],
+        resourceType: 'overtime_request',
+        resourceId: 'e2b1c4a0-7d3e-4b9a-8c1d-0e2f4a6b8c0d',
+        businessDate: '2026-10-28',
+      },
+      occurredAt: '2026-10-30T02:05:00.000Z',
+      createdAt: '2026-10-30T02:05:01.000Z',
+      readAt: null,
+    };
+    const calls: RecordedCall[] = [];
+    const client = new NotificationInboxClient(
+      createRecordingHttpClient({ items: [requestNotification], nextCursor: null }, calls),
+    );
+
+    const page = await client.listNotifications(USER, { limit: 20 });
+
+    expect(page.items).toEqual([requestNotification]);
+  });
+
   it('should reject the answer when notification-service sends an item the contract does not define', async () => {
     const calls: RecordedCall[] = [];
     const client = new NotificationInboxClient(

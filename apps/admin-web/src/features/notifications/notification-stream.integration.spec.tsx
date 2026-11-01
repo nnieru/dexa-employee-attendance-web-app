@@ -15,6 +15,7 @@ import {
   employeeListSucceeds,
   photoThumbnailsSucceeds,
 } from '../../test/employee-list-fixtures.js';
+import { REQUEST_NOTIFICATION } from '../../test/notification-inbox-fixtures.js';
 
 const NOTIFICATION = {
   id: '3f6c2a10-9b8d-4e7f-8a1b-2c3d4e5f6a7b',
@@ -63,6 +64,25 @@ describe('HR notification stream in the admin app', () => {
 
     expect(
       await screen.findByText(NOTIFICATION.title, undefined, {
+        timeout: LIVE_TIMEOUT_MILLISECONDS,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('should show the toast with the request title for an attendance request while an HR page is open', async () => {
+    const liveEvent = `event: notification\ndata: ${JSON.stringify(REQUEST_NOTIFICATION)}\n\n`;
+    mswServer.use(
+      http.get(NOTIFICATION_STREAM_URL, () =>
+        eventStreamResponse(finiteStream([liveEvent, ': heartbeat\n\n'])),
+      ),
+      accountCheckSucceeds(),
+    );
+    const user = userEvent.setup();
+    await renderAdminApp('/login');
+    await signInWith(user, HR_ACCOUNT.email);
+
+    expect(
+      await screen.findByText(REQUEST_NOTIFICATION.title, undefined, {
         timeout: LIVE_TIMEOUT_MILLISECONDS,
       }),
     ).toBeInTheDocument();
