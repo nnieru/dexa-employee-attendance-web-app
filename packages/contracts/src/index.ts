@@ -169,11 +169,22 @@ export {
 export { requestStatusSchema, type RequestStatus } from './requests/request-status.schema.js';
 export {
   REQUEST_REASON_MAX_LENGTH,
+  requestIdempotencyKeySchema,
+  requestReasonSchema,
+} from './requests/request-fields.schema.js';
+export {
   overtimeRequestSchema,
   submitOvertimeRequestSchema,
   type OvertimeRequest,
   type SubmitOvertimeRequest,
 } from './requests/submit-overtime-request.schema.js';
+export {
+  correctionRequestSchema,
+  requestedCorrectionDayStatusSchema,
+  submitCorrectionRequestSchema,
+  type CorrectionRequest,
+  type SubmitCorrectionRequest,
+} from './requests/submit-correction-request.schema.js';
 export {
   todayAttendanceResponseSchema,
   todayStateSchema,

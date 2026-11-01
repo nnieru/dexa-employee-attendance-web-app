@@ -36,6 +36,13 @@ const WEDNESDAY_HOLIDAY = '2026-11-04';
 const THURSDAY = '2026-11-05';
 const FAR_FUTURE_MONTH_START = '2030-01-01';
 const FAR_FUTURE_MONTH_END = '2030-01-31';
+const OVERTIME_PATH = '/api/v1/overtime-requests';
+// A request creates a day with no punch (DATABASE §5.4). The request dates are a working Friday and the Saturday after.
+const FRIDAY_REQUEST_DATE = '2026-11-06';
+const SATURDAY_REQUEST_DATE = '2026-11-07';
+// Overtime cannot name a date after today, so each request is made on its own business date, at 10:00 WIB.
+const FRIDAY_REQUEST_SUBMITTED_INSTANT = new Date('2026-11-06T03:00:00Z');
+const SATURDAY_REQUEST_SUBMITTED_INSTANT = new Date('2026-11-07T03:00:00Z');
 // Working-day instants in UTC: 09:00 WIB is 02:00Z, and the 15-minute late grace ends at 02:15Z; 18:00 WIB is 11:00Z.
 const MONDAY_LATE_CHECKIN_INSTANT = new Date('2026-11-02T02:30:00Z');
 const MONDAY_ON_TIME_CHECKOUT_INSTANT = new Date('2026-11-02T11:00:00Z');
@@ -110,6 +117,26 @@ async function punchAs(
   await request(app.getHttpServer())
     .post(punchPath)
     .set('Authorization', `Bearer ${tokenFor(accountId, role)}`)
+    .expect(201);
+}
+
+// Makes a day through the overtime endpoint, the request path that creates a day with no punch.
+async function requestOvertimeAs(
+  accountId: string,
+  businessDate: string,
+  submittedInstant: Date,
+): Promise<void> {
+  mutableClock.current = submittedInstant;
+  await request(app.getHttpServer())
+    .post(OVERTIME_PATH)
+    .set('Authorization', `Bearer ${tokenFor(accountId)}`)
+    .send({
+      businessDate,
+      startAt: `${businessDate}T18:00:00+07:00`,
+      endAt: `${businessDate}T20:00:00+07:00`,
+      reason: 'Release deployment',
+      idempotencyKey: randomUUID(),
+    })
     .expect(201);
 }
 
@@ -372,6 +399,53 @@ describe('attendance monitoring list', () => {
         from: MONDAY,
         to: THURSDAY,
       }).expect(403);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should list request-created days with an empty clock-in time and their stored statuses',
+    async () => {
+      const requesterId = registerAccount();
+      employeeProfiles.set(requesterId, {
+        accountId: requesterId,
+        name: 'Rama Putra',
+        positionName: 'QA Analyst',
+      });
+      await requestOvertimeAs(requesterId, FRIDAY_REQUEST_DATE, FRIDAY_REQUEST_SUBMITTED_INSTANT);
+      await requestOvertimeAs(
+        requesterId,
+        SATURDAY_REQUEST_DATE,
+        SATURDAY_REQUEST_SUBMITTED_INSTANT,
+      );
+
+      const response = await listAttendance(tokenFor(hrId, Role.HR), {
+        from: FRIDAY_REQUEST_DATE,
+        to: SATURDAY_REQUEST_DATE,
+        employeeId: requesterId,
+      }).expect(200);
+
+      const page = attendanceMonitoringPageSchema.parse(response.body);
+      expect(page.items).toEqual([
+        {
+          accountId: requesterId,
+          employee: { name: 'Rama Putra', positionName: 'QA Analyst' },
+          businessDate: SATURDAY_REQUEST_DATE,
+          clockInAt: null,
+          clockInStatus: 'CHECKIN_NOT_REQUIRED',
+          clockOutAt: null,
+          clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+        },
+        {
+          accountId: requesterId,
+          employee: { name: 'Rama Putra', positionName: 'QA Analyst' },
+          businessDate: FRIDAY_REQUEST_DATE,
+          clockInAt: null,
+          clockInStatus: 'PENDING_CHECKIN',
+          clockOutAt: null,
+          clockOutStatus: 'PENDING_CHECKOUT',
+        },
+      ]);
     },
     TEST_TIMEOUT_MS,
   );

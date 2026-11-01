@@ -14,8 +14,8 @@ function renderStatus(display: AttendanceStatusDisplay) {
   return <StatusLabel tone={display.tone}>{display.text}</StatusLabel>;
 }
 
-// Read only: no column renders an action, so a row offers no edit or delete control (ADM-6). A day with no clock out
-// leaves the Clock out cell empty; its status cell says the timing is not recorded yet (ADM-4).
+// Read only: no column renders an action, so a row offers no edit or delete control (ADM-6). A day with no clock in or
+// no clock out leaves that time cell empty; its status cell says the timing is not recorded yet, or not required (ADM-4).
 export const ATTENDANCE_MONITORING_COLUMNS = helper.columns([
   helper.display({
     id: 'employee',
@@ -30,7 +30,8 @@ export const ATTENDANCE_MONITORING_COLUMNS = helper.columns([
   helper.display({
     id: 'clockIn',
     header: 'Clock in',
-    cell: ({ row }) => formatBusinessDateTime(row.original.clockInAt),
+    cell: ({ row }) =>
+      row.original.clockInAt === null ? null : formatBusinessDateTime(row.original.clockInAt),
   }),
   helper.display({
     id: 'clockInStatus',

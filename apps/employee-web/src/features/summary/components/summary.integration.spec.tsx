@@ -47,6 +47,21 @@ const EARLY_DAY: AttendanceSummaryItem = {
   clockOutAt: '2026-11-12T10:00:00.000Z',
   clockOutStatus: 'EARLY_CHECKOUT',
 };
+// A request created these days with no punch, so neither has a clock-in time (D-59).
+const REQUEST_WORKING_DAY_NO_CHECK_IN: AttendanceSummaryItem = {
+  businessDate: '2026-11-10',
+  clockInAt: null,
+  clockInStatus: 'PENDING_CHECKIN',
+  clockOutAt: null,
+  clockOutStatus: 'PENDING_CHECKOUT',
+};
+const REQUEST_DAY_OFF_NO_CHECK_IN: AttendanceSummaryItem = {
+  businessDate: '2026-11-08',
+  clockInAt: null,
+  clockInStatus: 'CHECKIN_NOT_REQUIRED',
+  clockOutAt: null,
+  clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+};
 
 function summaryPage(
   items: ReadonlyArray<AttendanceSummaryItem>,
@@ -226,6 +241,32 @@ describe('summary table', () => {
     expect(screen.getByText('Early clock-out')).toBeInTheDocument();
     expect(screen.getByText('Not recorded yet')).toBeInTheDocument();
     expect(screen.getAllByText('Not required')).toHaveLength(2);
+  });
+
+  it('should leave the Clock in cell empty and show the stored statuses for a request-created day with no check-in', async () => {
+    mswServer.use(
+      summaryEndpoint(() =>
+        HttpResponse.json(
+          summaryPage([REQUEST_WORKING_DAY_NO_CHECK_IN, REQUEST_DAY_OFF_NO_CHECK_IN]),
+        ),
+      ).handler,
+    );
+    await openHistoryAt('/history');
+
+    const workingDayRow = (await screen.findByRole('cell', { name: '2026-11-10' })).closest('tr');
+    expect(workingDayRow).not.toBeNull();
+    expect(
+      within(workingDayRow as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['2026-11-10', '', 'Not recorded yet', '', 'Not recorded yet']);
+    const dayOffRow = screen.getByRole('cell', { name: '2026-11-08' }).closest('tr');
+    expect(dayOffRow).not.toBeNull();
+    expect(
+      within(dayOffRow as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['2026-11-08', '', 'Not required', '', 'Not required']);
   });
 
   it('should show the empty message with the range when no attendance was recorded', async () => {

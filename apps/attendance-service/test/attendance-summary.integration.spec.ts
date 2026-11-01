@@ -40,6 +40,13 @@ const THURSDAY_ON_TIME_CHECKOUT_INSTANT = new Date('2026-11-05T11:00:00Z');
 const OTHER_ACCOUNT_TUESDAY_INSTANT = new Date('2026-11-03T03:00:00Z');
 // 10:00 WIB on Tuesday, the 3rd: the default range is 1 Nov through 3 Nov.
 const TUESDAY_MORNING_INSTANT = new Date('2026-11-03T03:00:00Z');
+const OVERTIME_PATH = '/api/v1/overtime-requests';
+// A request creates a day with no punch (DATABASE §5.4). The request dates are a working Friday and the Saturday after.
+const FRIDAY_REQUEST_DATE = '2026-11-06';
+const SATURDAY_REQUEST_DATE = '2026-11-07';
+// Overtime cannot name a date after today, so each request is made on its own business date, at 10:00 WIB.
+const FRIDAY_REQUEST_SUBMITTED_INSTANT = new Date('2026-11-06T03:00:00Z');
+const SATURDAY_REQUEST_SUBMITTED_INSTANT = new Date('2026-11-07T03:00:00Z');
 
 // Stands in for auth-service. The clock is shared across tests, so each test sets the instant it needs.
 const mutableClock: { current: Date } = { current: FIRST_START_INSTANT };
@@ -82,6 +89,26 @@ async function punchAs(accountId: string, punchPath: string, instant: Date): Pro
   await request(app.getHttpServer())
     .post(punchPath)
     .set('Authorization', `Bearer ${tokenFor(accountId)}`)
+    .expect(201);
+}
+
+// Makes a day through the overtime endpoint, the request path that creates a day with no punch.
+async function requestOvertimeAs(
+  accountId: string,
+  businessDate: string,
+  submittedInstant: Date,
+): Promise<void> {
+  mutableClock.current = submittedInstant;
+  await request(app.getHttpServer())
+    .post(OVERTIME_PATH)
+    .set('Authorization', `Bearer ${tokenFor(accountId)}`)
+    .send({
+      businessDate,
+      startAt: `${businessDate}T18:00:00+07:00`,
+      endAt: `${businessDate}T20:00:00+07:00`,
+      reason: 'Release deployment',
+      idempotencyKey: randomUUID(),
+    })
     .expect(201);
 }
 
@@ -337,6 +364,60 @@ describe('attendance own summary', () => {
       const response = await getSummary(tokenFor(employeeId), { pageSize: '101' }).expect(400);
 
       expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should show a request-created working day with no check-in as an empty clock-in time and pending statuses',
+    async () => {
+      const requesterId = registerAccount();
+      await requestOvertimeAs(requesterId, FRIDAY_REQUEST_DATE, FRIDAY_REQUEST_SUBMITTED_INSTANT);
+
+      const response = await getSummary(tokenFor(requesterId), {
+        from: FRIDAY_REQUEST_DATE,
+        to: FRIDAY_REQUEST_DATE,
+      }).expect(200);
+
+      const page = attendanceSummaryPageSchema.parse(response.body);
+      expect(page.items).toEqual([
+        {
+          businessDate: FRIDAY_REQUEST_DATE,
+          clockInAt: null,
+          clockInStatus: 'PENDING_CHECKIN',
+          clockOutAt: null,
+          clockOutStatus: 'PENDING_CHECKOUT',
+        },
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'should show a request-created day off with no check-in with not-required statuses',
+    async () => {
+      const requesterId = registerAccount();
+      await requestOvertimeAs(
+        requesterId,
+        SATURDAY_REQUEST_DATE,
+        SATURDAY_REQUEST_SUBMITTED_INSTANT,
+      );
+
+      const response = await getSummary(tokenFor(requesterId), {
+        from: SATURDAY_REQUEST_DATE,
+        to: SATURDAY_REQUEST_DATE,
+      }).expect(200);
+
+      const page = attendanceSummaryPageSchema.parse(response.body);
+      expect(page.items).toEqual([
+        {
+          businessDate: SATURDAY_REQUEST_DATE,
+          clockInAt: null,
+          clockInStatus: 'CHECKIN_NOT_REQUIRED',
+          clockOutAt: null,
+          clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+        },
+      ]);
     },
     TEST_TIMEOUT_MS,
   );

@@ -26,20 +26,33 @@ export type AttendanceSummaryQuery = z.infer<typeof attendanceSummaryQuerySchema
 
 const attendanceSummaryBaseSchema = z.object({
   businessDate: z.iso.date(),
-  clockInAt: z.iso.datetime(),
-  clockInStatus: checkInClassificationSchema,
 });
 
-// One row per recorded day (PRD SUM-3, SUM-4). With no check-out yet, the status is PENDING_CHECKOUT on a working day
-// or CHECKOUT_NOT_REQUIRED on a day off, which is the stored status either way.
+// A day that a request created has no punch yet (DATABASE §5.4), so it has no check-in time. Its stored check-in
+// status is PENDING_CHECKIN on a working day or CHECKIN_NOT_REQUIRED on a day off (D-59).
+const noCheckInStatusSchema = z.enum(['PENDING_CHECKIN', 'CHECKIN_NOT_REQUIRED']);
+const noCheckOutStatusSchema = z.enum(['PENDING_CHECKOUT', 'CHECKOUT_NOT_REQUIRED']);
+
+// One row per recorded day (PRD SUM-3, SUM-4), including a day with no check-in (D-59). With no check-out yet, the
+// status is PENDING_CHECKOUT on a working day or CHECKOUT_NOT_REQUIRED on a day off, which is the stored status either way.
 export const attendanceSummaryItemSchema = z.union([
   attendanceSummaryBaseSchema.extend({
+    clockInAt: z.iso.datetime(),
+    clockInStatus: checkInClassificationSchema,
     clockOutAt: z.iso.datetime(),
     clockOutStatus: checkOutClassificationSchema,
   }),
   attendanceSummaryBaseSchema.extend({
+    clockInAt: z.iso.datetime(),
+    clockInStatus: checkInClassificationSchema,
     clockOutAt: z.null(),
-    clockOutStatus: z.enum(['PENDING_CHECKOUT', 'CHECKOUT_NOT_REQUIRED']),
+    clockOutStatus: noCheckOutStatusSchema,
+  }),
+  attendanceSummaryBaseSchema.extend({
+    clockInAt: z.null(),
+    clockInStatus: noCheckInStatusSchema,
+    clockOutAt: z.null(),
+    clockOutStatus: noCheckOutStatusSchema,
   }),
 ]);
 

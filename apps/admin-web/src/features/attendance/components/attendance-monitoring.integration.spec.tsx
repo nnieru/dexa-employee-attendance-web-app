@@ -14,6 +14,8 @@ import {
 import {
   ATTENDANCE_MONITORING_URL,
   CLOCK_IN_ONLY_ROW,
+  NO_CHECK_IN_DAY_OFF_ROW,
+  NO_CHECK_IN_ROW,
   ON_TIME_ROW,
   UNKNOWN_EMPLOYEE_ROW,
   buildAttendanceMonitoringPage,
@@ -193,6 +195,27 @@ describe('attendance rows', () => {
     const clockInOnlyRow = await screen.findByRole('row', { name: /2026-11-14/ });
     expect(getCellUnderHeader(clockInOnlyRow, 'Clock out').textContent).toBe('');
     expect(within(clockInOnlyRow).getByText('Not recorded yet')).toBeInTheDocument();
+  });
+
+  it('should leave the Clock in cell empty and show the stored statuses for a request-created day with no check-in', async () => {
+    mswServer.use(
+      http.get(ATTENDANCE_MONITORING_URL, () =>
+        answerWithAttendancePage({
+          items: [NO_CHECK_IN_ROW, NO_CHECK_IN_DAY_OFF_ROW],
+          totalItems: 2,
+        }),
+      ),
+    );
+    await openAttendancePage('/attendance');
+
+    const workingDayRow = await screen.findByRole('row', { name: /2026-11-10/ });
+    expect(getCellUnderHeader(workingDayRow, 'Clock in').textContent).toBe('');
+    expect(getCellUnderHeader(workingDayRow, 'Clock-in status')).toHaveTextContent(
+      'Not recorded yet',
+    );
+    const dayOffRow = getRowForDate('2026-11-08');
+    expect(getCellUnderHeader(dayOffRow, 'Clock in').textContent).toBe('');
+    expect(getCellUnderHeader(dayOffRow, 'Clock-in status')).toHaveTextContent('Not required');
   });
 
   it('should render no buttons, links, or form fields in any attendance row', async () => {

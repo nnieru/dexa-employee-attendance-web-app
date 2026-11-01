@@ -13,7 +13,8 @@ function renderStatus(display: SummaryStatusDisplay) {
   return <StatusLabel tone={display.tone}>{display.text}</StatusLabel>;
 }
 
-// A day with no check-out leaves the Clock out cell empty; the status cell says it is not recorded yet (SUM-4).
+// A day with no check-in or no check-out leaves that time cell empty; the status cell says it is not recorded yet
+// (SUM-4), or not required on a day off.
 export const SUMMARY_COLUMNS = helper.columns([
   helper.display({
     id: 'date',
@@ -23,7 +24,8 @@ export const SUMMARY_COLUMNS = helper.columns([
   helper.display({
     id: 'clockIn',
     header: 'Clock in',
-    cell: ({ row }) => formatBusinessDateTime(row.original.clockInAt),
+    cell: ({ row }) =>
+      row.original.clockInAt === null ? null : formatBusinessDateTime(row.original.clockInAt),
   }),
   helper.display({
     id: 'clockInStatus',

@@ -210,11 +210,51 @@ describe('AttendanceServiceClient.listOwnSummary', () => {
     },
   );
 
+  it('should accept a request-created day with no check-in time and its stored statuses', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const page = {
+      ...SUMMARY_PAGE,
+      items: [
+        {
+          businessDate: '2026-11-07',
+          clockInAt: null,
+          clockInStatus: 'CHECKIN_NOT_REQUIRED',
+          clockOutAt: null,
+          clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+        },
+      ],
+    };
+    const client = new AttendanceServiceClient(createRecordingHttpClient(page, recorded));
+
+    const response = await client.listOwnSummary(USER, { page: 1, pageSize: 20 });
+
+    expect(response).toEqual(page);
+  });
+
   it('should reject the response when attendance-service answers a row the contract does not define', async () => {
     const recorded: InternalGetRequest<unknown>[] = [];
     const malformedPage = {
       ...SUMMARY_PAGE,
       items: [{ ...SUMMARY_PAGE.items[0], clockOutAt: null, clockOutStatus: 'ON_TIME_CHECKOUT' }],
+    };
+    const client = new AttendanceServiceClient(createRecordingHttpClient(malformedPage, recorded));
+
+    await expect(client.listOwnSummary(USER, { page: 1, pageSize: 20 })).rejects.toThrow();
+  });
+
+  it('should reject the response when a row with no check-in time has a classified check-in status', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const malformedPage = {
+      ...SUMMARY_PAGE,
+      items: [
+        {
+          businessDate: '2026-11-07',
+          clockInAt: null,
+          clockInStatus: 'ON_TIME_CHECKIN',
+          clockOutAt: null,
+          clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+        },
+      ],
     };
     const client = new AttendanceServiceClient(createRecordingHttpClient(malformedPage, recorded));
 
@@ -273,6 +313,27 @@ describe('AttendanceServiceClient.listAttendance', () => {
       expect(recorded[0]?.query).toEqual(expectedParameters);
     },
   );
+
+  it('should accept a request-created row with no check-in time and its stored statuses', async () => {
+    const recorded: InternalGetRequest<unknown>[] = [];
+    const page = {
+      ...MONITORING_PAGE,
+      items: [
+        {
+          ...MONITORING_PAGE.items[0],
+          clockInAt: null,
+          clockInStatus: 'PENDING_CHECKIN',
+          clockOutAt: null,
+          clockOutStatus: 'PENDING_CHECKOUT',
+        },
+      ],
+    };
+    const client = new AttendanceServiceClient(createRecordingHttpClient(page, recorded));
+
+    const response = await client.listAttendance(USER, { page: 1, pageSize: 20 });
+
+    expect(response).toEqual(page);
+  });
 
   it('should reject the response when attendance-service answers a row without an account ID', async () => {
     const recorded: InternalGetRequest<unknown>[] = [];

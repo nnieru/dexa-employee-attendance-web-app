@@ -36,6 +36,28 @@ export const UNKNOWN_EMPLOYEE_ROW: AttendanceMonitoringItem = {
   clockOutStatus: 'EARLY_CHECKOUT',
 };
 
+// A request created this working day with no punch: the Clock in cell is empty and the status is not recorded yet (D-59).
+export const NO_CHECK_IN_ROW: AttendanceMonitoringItem = {
+  accountId: '2b8f4d1c-6e3a-4f7b-9c2d-8a1e0f5b3c7d',
+  employee: { name: 'Dewi Anggraini', positionName: 'Engineer' },
+  businessDate: '2026-11-10',
+  clockInAt: null,
+  clockInStatus: 'PENDING_CHECKIN',
+  clockOutAt: null,
+  clockOutStatus: 'PENDING_CHECKOUT',
+};
+
+// A request created this day off with no punch: its check-in and check-out are not required (D-59).
+export const NO_CHECK_IN_DAY_OFF_ROW: AttendanceMonitoringItem = {
+  accountId: '2b8f4d1c-6e3a-4f7b-9c2d-8a1e0f5b3c7d',
+  employee: { name: 'Dewi Anggraini', positionName: 'Engineer' },
+  businessDate: '2026-11-08',
+  clockInAt: null,
+  clockInStatus: 'CHECKIN_NOT_REQUIRED',
+  clockOutAt: null,
+  clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+};
+
 export function buildAttendanceMonitoringPage(options: {
   items?: ReadonlyArray<AttendanceMonitoringItem>;
   page?: number;

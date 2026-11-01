@@ -8,14 +8,10 @@ import type { AttendanceSummaryRecord } from './attendance-summary.repository.in
 
 /**
  * Maps one stored day to its summary row (PRD SUM-3, SUM-4). The times are the effective ones, and the statuses are
- * the stored codes. A day with no check-out keeps the pending or not-required status it was stored with.
+ * the stored codes. A day with no check-in or no check-out keeps the pending or not-required status it was stored with.
  */
 export function toAttendanceSummaryItem(record: AttendanceSummaryRecord): AttendanceSummaryItem {
-  // A day row is created by a punch, and the check-in is written in the same transaction (DATABASE §5.4). So a row
-  // without one is a broken row. Until a request can create a day without a punch, it is refused, not shown blank.
-  if (record.effectiveCheckinAt === null) {
-    throw new Error('The attendance day has no effective check-in.');
-  }
+  if (record.effectiveCheckinAt === null) return toNoCheckInItem(record);
   const base = {
     businessDate: record.businessDate,
     clockInAt: record.effectiveCheckinAt.toISOString(),
@@ -47,6 +43,32 @@ export function toAttendanceSummaryPage(
     totalItems,
     totalPages: Math.ceil(totalItems / pagination.pageSize),
   };
+}
+
+// A day that a request created has no punch, so it has no check-in time (DATABASE §5.4, D-59). A check-out without a
+// check-in is a broken row, which the database also refuses, so it is refused here too.
+function toNoCheckInItem(
+  record: AttendanceSummaryRecord,
+): Extract<AttendanceSummaryItem, { clockInAt: null }> {
+  if (record.effectiveCheckoutAt !== null) {
+    throw new Error('The attendance day has a check-out but no check-in.');
+  }
+  return {
+    businessDate: record.businessDate,
+    clockInAt: null,
+    clockInStatus: pendingCheckinStatusCode(record.checkinStatusCode),
+    clockOutAt: null,
+    clockOutStatus: pendingCheckoutStatusCode(record.checkoutStatusCode),
+  };
+}
+
+// Without a check-in, the stored code is PENDING_CHECKIN on a working day or CHECKIN_NOT_REQUIRED on a day off.
+// Any other code with no check-in is a broken row, so it is refused.
+function pendingCheckinStatusCode(
+  code: string,
+): Extract<AttendanceSummaryItem, { clockInAt: null }>['clockInStatus'] {
+  if (code === 'PENDING_CHECKIN' || code === 'CHECKIN_NOT_REQUIRED') return code;
+  throw new Error('The attendance day has no check-in but a classified check-in status.');
 }
 
 // Without a check-out, the stored code is PENDING_CHECKOUT on a working day or CHECKOUT_NOT_REQUIRED on a day off.

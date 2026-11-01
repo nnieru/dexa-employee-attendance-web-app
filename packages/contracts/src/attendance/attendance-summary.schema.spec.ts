@@ -95,8 +95,61 @@ describe('attendanceSummaryItemSchema', () => {
 
   it.each([
     {
+      condition: 'a request created a working day with no punch',
+      day: {
+        businessDate: '2026-11-06',
+        clockInAt: null,
+        clockInStatus: 'PENDING_CHECKIN',
+        clockOutAt: null,
+        clockOutStatus: 'PENDING_CHECKOUT',
+      },
+    },
+    {
+      condition: 'a request created a day off with no punch',
+      day: {
+        businessDate: '2026-11-07',
+        clockInAt: null,
+        clockInStatus: 'CHECKIN_NOT_REQUIRED',
+        clockOutAt: null,
+        clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+      },
+    },
+  ])('should accept a row with no check-in when $condition', ({ day }) => {
+    expect(attendanceSummaryItemSchema.parse(day)).toEqual(day);
+  });
+
+  it.each([
+    {
       condition: 'the check-out time is set with a pending status',
       day: { ...WORKED_DAY, clockOutStatus: 'PENDING_CHECKOUT' },
+    },
+    {
+      condition: 'the check-in time is null with a classified check-in status',
+      day: {
+        ...WORKED_DAY,
+        clockInAt: null,
+        clockInStatus: 'ON_TIME_CHECKIN',
+        clockOutAt: null,
+        clockOutStatus: 'PENDING_CHECKOUT',
+      },
+    },
+    {
+      condition: 'the check-in time is null but the check-out time is set',
+      day: { ...WORKED_DAY, clockInAt: null, clockInStatus: 'PENDING_CHECKIN' },
+    },
+    {
+      condition: 'the check-in time is set with a pending check-in status',
+      day: { ...WORKED_DAY, clockInStatus: 'PENDING_CHECKIN' },
+    },
+    {
+      condition: 'the check-in time is null with a classified check-out status',
+      day: {
+        businessDate: '2026-11-06',
+        clockInAt: null,
+        clockInStatus: 'PENDING_CHECKIN',
+        clockOutAt: null,
+        clockOutStatus: 'ON_TIME_CHECKOUT',
+      },
     },
     {
       condition: 'the check-out time is null with a classified status',

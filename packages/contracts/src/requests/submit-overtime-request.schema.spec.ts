@@ -1,5 +1,5 @@
+import { REQUEST_REASON_MAX_LENGTH } from './request-fields.schema.js';
 import {
-  REQUEST_REASON_MAX_LENGTH,
   overtimeRequestSchema,
   submitOvertimeRequestSchema,
 } from './submit-overtime-request.schema.js';
