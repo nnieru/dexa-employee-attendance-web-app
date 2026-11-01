@@ -11,7 +11,7 @@ import {
   renderEmployeeApp,
   signInWith,
 } from '../../../test/employee-app-harness.js';
-import { SCHEDULE_NOT_CONFIGURED_MESSAGE } from '../utils/attendance-copy.js';
+import { DAY_ON_LEAVE_MESSAGE, SCHEDULE_NOT_CONFIGURED_MESSAGE } from '../utils/attendance-copy.js';
 
 const TODAY_URL = '/api/v1/attendance/me/today';
 const CLOCK_IN_URL = '/api/v1/attendance/clock-in';
@@ -62,6 +62,8 @@ const DAY_OFF_CLOCKED_IN: TodayAttendanceResponse = {
 };
 
 const ALREADY_CLOCKED_IN_MESSAGE = 'You have already clocked in today.';
+// The server's own wording for COR-7. The employee sees DAY_ON_LEAVE_MESSAGE instead, so this text must not appear.
+const SERVER_DAY_ON_LEAVE_MESSAGE = 'This day is an approved leave, so the punch was not recorded.';
 const NETWORK_ERROR_MESSAGE = 'The server could not be reached. Try again.';
 
 beforeEach(() => {
@@ -292,6 +294,57 @@ describe('attendance punches', () => {
 
     expect(await screen.findByText(SCHEDULE_NOT_CONFIGURED_MESSAGE)).toBeInTheDocument();
     expect(screen.queryByText(/^Clocked in at/)).not.toBeInTheDocument();
+  });
+});
+
+describe('attendance punches on an approved leave day', () => {
+  it('should show the leave message and read today again when clock in is refused with 409', async () => {
+    const today = storedToday(NOT_CLOCKED_IN);
+    const punches = punchEndpoint(CLOCK_IN_URL, () =>
+      HttpResponse.json(
+        {
+          statusCode: 409,
+          code: 'ATTENDANCE_DAY_ON_LEAVE',
+          message: SERVER_DAY_ON_LEAVE_MESSAGE,
+        },
+        { status: 409 },
+      ),
+    );
+    mswServer.use(today.handler, punches.handler);
+    const { user } = await openAttendanceAsSignedInEmployee();
+    const readsBeforePunch = today.reads.count;
+
+    await user.click(await screen.findByRole('button', { name: 'Clock in' }));
+
+    expect(await screen.findByText(DAY_ON_LEAVE_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText(SERVER_DAY_ON_LEAVE_MESSAGE)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Clocked in at/)).not.toBeInTheDocument();
+    expect(today.reads.count).toBeGreaterThan(readsBeforePunch);
+    expect(punches.requestBodies).toHaveLength(1);
+  });
+
+  it('should show the leave message and read today again when clock out is refused with 409', async () => {
+    const today = storedToday(LATE_CLOCKED_IN);
+    const punches = punchEndpoint(CLOCK_OUT_URL, () =>
+      HttpResponse.json(
+        {
+          statusCode: 409,
+          code: 'ATTENDANCE_DAY_ON_LEAVE',
+          message: SERVER_DAY_ON_LEAVE_MESSAGE,
+        },
+        { status: 409 },
+      ),
+    );
+    mswServer.use(today.handler, punches.handler);
+    const { user } = await openAttendanceAsSignedInEmployee();
+    const readsBeforePunch = today.reads.count;
+
+    await user.click(await screen.findByRole('button', { name: 'Clock out' }));
+
+    expect(await screen.findByText(DAY_ON_LEAVE_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText(/^Clocked out at/)).not.toBeInTheDocument();
+    expect(today.reads.count).toBeGreaterThan(readsBeforePunch);
+    expect(punches.requestBodies).toHaveLength(1);
   });
 });
 

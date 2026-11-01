@@ -74,6 +74,44 @@ const REQUEST_DAY_OFF_NO_CHECK_IN: AttendanceSummaryItem = {
   clockOutAt: null,
   clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
 };
+// A punched day whose effective times came from an approved correction; the row shows those times and their labels.
+const CORRECTED_DAY: AttendanceSummaryItem = {
+  businessDate: '2026-11-11',
+  dayStatus: 'PRESENT',
+  approvedOvertimeMinutes: 150,
+  clockInAt: '2026-11-11T01:58:00.000Z',
+  clockInStatus: 'ON_TIME_CHECKIN',
+  clockOutAt: '2026-11-11T13:30:00.000Z',
+  clockOutStatus: 'LATE_CHECKOUT',
+};
+const FRACTIONAL_OVERTIME_DAY: AttendanceSummaryItem = {
+  businessDate: '2026-11-09',
+  dayStatus: 'PRESENT',
+  approvedOvertimeMinutes: 90.5,
+  clockInAt: '2026-11-09T02:00:00.000Z',
+  clockInStatus: 'ON_TIME_CHECKIN',
+  clockOutAt: '2026-11-09T12:00:00.000Z',
+  clockOutStatus: 'LATE_CHECKOUT',
+};
+// SICK_LEAVE and LEAVE days have no effective punches, so both timing statuses are the not-required codes (DATABASE §5.4).
+const SICK_LEAVE_DAY: AttendanceSummaryItem = {
+  businessDate: '2026-11-05',
+  dayStatus: 'SICK_LEAVE',
+  approvedOvertimeMinutes: 0,
+  clockInAt: null,
+  clockInStatus: 'CHECKIN_NOT_REQUIRED',
+  clockOutAt: null,
+  clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+};
+const LEAVE_DAY: AttendanceSummaryItem = {
+  businessDate: '2026-11-04',
+  dayStatus: 'LEAVE',
+  approvedOvertimeMinutes: 0,
+  clockInAt: null,
+  clockInStatus: 'CHECKIN_NOT_REQUIRED',
+  clockOutAt: null,
+  clockOutStatus: 'CHECKOUT_NOT_REQUIRED',
+};
 
 function summaryPage(
   items: ReadonlyArray<AttendanceSummaryItem>,
@@ -228,10 +266,12 @@ describe('summary table', () => {
     const cells = within(clockInOnlyRow as HTMLElement).getAllByRole('cell');
     expect(cells.map((cell) => cell.textContent)).toEqual([
       '2026-11-14',
+      'Present',
       '2026-11-14 09:20',
       'Late clock-in',
       '',
       'Not recorded yet',
+      '—',
       'Request a correction',
     ]);
     const onTimeRow = screen.getByRole('cell', { name: '2026-11-13' }).closest('tr') as HTMLElement;
@@ -274,10 +314,12 @@ describe('summary table', () => {
         .map((cell) => cell.textContent),
     ).toEqual([
       '2026-11-10',
+      'Pending',
       '',
       'Not recorded yet',
       '',
       'Not recorded yet',
+      '—',
       'Request a correction',
     ]);
     const dayOffRow = screen.getByRole('cell', { name: '2026-11-08' }).closest('tr');
@@ -286,7 +328,112 @@ describe('summary table', () => {
       within(dayOffRow as HTMLElement)
         .getAllByRole('cell')
         .map((cell) => cell.textContent),
-    ).toEqual(['2026-11-08', '', 'Not required', '', 'Not required', 'Request a correction']);
+    ).toEqual([
+      '2026-11-08',
+      'Day off',
+      '',
+      'Not required',
+      '',
+      'Not required',
+      '—',
+      'Request a correction',
+    ]);
+  });
+
+  it('should show Day status and Approved overtime after the clock-out status, with Action last', async () => {
+    mswServer.use(summaryEndpoint(() => HttpResponse.json(summaryPage([ON_TIME_DAY]))).handler);
+    await openHistoryAt('/history');
+
+    const headers = await screen.findAllByRole('columnheader');
+    expect(headers.map((header) => header.textContent)).toEqual([
+      'Date',
+      'Day status',
+      'Clock in',
+      'Clock-in status',
+      'Clock out',
+      'Clock-out status',
+      'Approved overtime',
+      'Action',
+    ]);
+  });
+
+  it('should show the effective times and the overtime for a day corrected to present', async () => {
+    mswServer.use(summaryEndpoint(() => HttpResponse.json(summaryPage([CORRECTED_DAY]))).handler);
+    await openHistoryAt('/history');
+
+    const row = (await screen.findByRole('cell', { name: '2026-11-11' })).closest('tr');
+    expect(row).not.toBeNull();
+    expect(
+      within(row as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      '2026-11-11',
+      'Present',
+      '2026-11-11 08:58',
+      'On-time clock-in',
+      '2026-11-11 20:30',
+      'Late clock-out',
+      '2h 30m',
+      'Request a correction',
+    ]);
+  });
+
+  it('should round fractional approved overtime to the nearest whole minute for display', async () => {
+    mswServer.use(
+      summaryEndpoint(() => HttpResponse.json(summaryPage([FRACTIONAL_OVERTIME_DAY]))).handler,
+    );
+    await openHistoryAt('/history');
+
+    const row = (await screen.findByRole('cell', { name: '2026-11-09' })).closest('tr');
+    expect(within(row as HTMLElement).getByRole('cell', { name: '1h 31m' })).toBeInTheDocument();
+  });
+
+  it('should show empty times and Not required in both status columns for a sick leave day', async () => {
+    mswServer.use(summaryEndpoint(() => HttpResponse.json(summaryPage([SICK_LEAVE_DAY]))).handler);
+    await openHistoryAt('/history');
+
+    const row = (await screen.findByRole('cell', { name: '2026-11-05' })).closest('tr');
+    expect(row).not.toBeNull();
+    expect(
+      within(row as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      '2026-11-05',
+      'Sick leave',
+      '',
+      'Not required',
+      '',
+      'Not required',
+      '—',
+      'Request a correction',
+    ]);
+    expect(
+      within(row as HTMLElement).getByRole('link', { name: 'Request a correction for 2026-11-05' }),
+    ).toBeInTheDocument();
+  });
+
+  it('should show empty times and Not required in both status columns for a leave day', async () => {
+    mswServer.use(summaryEndpoint(() => HttpResponse.json(summaryPage([LEAVE_DAY]))).handler);
+    await openHistoryAt('/history');
+
+    const row = (await screen.findByRole('cell', { name: '2026-11-04' })).closest('tr');
+    expect(row).not.toBeNull();
+    expect(
+      within(row as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      '2026-11-04',
+      'Leave',
+      '',
+      'Not required',
+      '',
+      'Not required',
+      '—',
+      'Request a correction',
+    ]);
   });
 
   it('should show the empty message with the range when no attendance was recorded', async () => {

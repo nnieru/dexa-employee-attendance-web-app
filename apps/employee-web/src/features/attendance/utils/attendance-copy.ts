@@ -6,6 +6,9 @@ export const ATTENDANCE_PAGE_DESCRIPTION = 'Record your clock-in and clock-out f
 export const ATTENDANCE_LOAD_FAILED_MESSAGE = 'Your attendance could not be loaded.';
 export const SCHEDULE_NOT_CONFIGURED_MESSAGE =
   'Your work schedule is not set up for today. Contact HR to record attendance.';
+// PRD COR-7: an approved Sick leave or Leave refuses punches on that day. The server's own message is not shown.
+export const DAY_ON_LEAVE_MESSAGE =
+  'Today is an approved leave, so clocking in or out is not available.';
 export const NOT_RECORDED_YET_TEXT = 'Not recorded yet';
 export const DAY_OFF_TEXT = 'Day off';
 export const SCHEDULED_HOURS_LABEL = 'Scheduled hours';

@@ -3,9 +3,11 @@ import type { AttendanceSummaryItem } from '@dexa/contracts';
 import { StatusLabel, createDataTableColumnHelper } from '@dexa/ui';
 import { formatBusinessDateTime, isWithinCorrectionWindow } from '../utils/business-date.js';
 import type { BusinessDate } from '../types/summary-search.schema.js';
+import { formatOvertimeDuration } from '../utils/format-overtime-duration.js';
 import {
   getSummaryCheckInStatusDisplay,
   getSummaryCheckOutStatusDisplay,
+  getSummaryDayStatusDisplay,
   type SummaryStatusDisplay,
 } from '../utils/get-summary-status-display.js';
 import {
@@ -20,8 +22,9 @@ function renderStatus(display: SummaryStatusDisplay) {
   return <StatusLabel tone={display.tone}>{display.text}</StatusLabel>;
 }
 
-// A day with no check-in or no check-out leaves that time cell empty; the status cell says it is not recorded yet
-// (SUM-4), or not required on a day off.
+// Columns follow PRD SUM-3 to SUM-6: the day outcome, then the check-in and check-out with their classifications, then
+// the approved overtime. A day with no check-in or no check-out leaves that time cell empty; the status cell says it is
+// not recorded yet (SUM-4), or not required on a day off or a leave day.
 // The action links to the correction form with the day pre-filled (COR-1). Only days still inside the correction
 // window get the link, so a row the form would refuse does not offer one.
 export function createSummaryColumns(today: BusinessDate) {
@@ -30,6 +33,11 @@ export function createSummaryColumns(today: BusinessDate) {
       id: 'date',
       header: 'Date',
       cell: ({ row }) => row.original.businessDate,
+    }),
+    helper.display({
+      id: 'dayStatus',
+      header: 'Day status',
+      cell: ({ row }) => renderStatus(getSummaryDayStatusDisplay(row.original.dayStatus)),
     }),
     helper.display({
       id: 'clockIn',
@@ -52,6 +60,11 @@ export function createSummaryColumns(today: BusinessDate) {
       id: 'clockOutStatus',
       header: 'Clock-out status',
       cell: ({ row }) => renderStatus(getSummaryCheckOutStatusDisplay(row.original.clockOutStatus)),
+    }),
+    helper.display({
+      id: 'approvedOvertime',
+      header: 'Approved overtime',
+      cell: ({ row }) => formatOvertimeDuration(row.original.approvedOvertimeMinutes),
     }),
     helper.display({
       id: 'action',
