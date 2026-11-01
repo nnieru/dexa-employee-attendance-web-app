@@ -30,7 +30,7 @@ export function RequestsTabs({ activeTab, onTabChange }: RequestsTabsProps) {
   }
 
   return (
-    <div role="tablist" aria-label="Request type" className="requests-tabs">
+    <div role="tablist" aria-label="Request type" className="dexa-request-tabs">
       {REQUEST_TABS.map((tab) => {
         const isSelected = tab === activeTab;
         return (
@@ -39,7 +39,7 @@ export function RequestsTabs({ activeTab, onTabChange }: RequestsTabsProps) {
             id={getRequestTabId(tab)}
             type="button"
             role="tab"
-            className="requests-tab"
+            className="dexa-request-tab"
             aria-selected={isSelected}
             aria-controls={getRequestPanelId(tab)}
             tabIndex={isSelected ? 0 : -1}

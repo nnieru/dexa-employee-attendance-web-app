@@ -26,6 +26,8 @@
     "infra:up": "docker compose up -d --wait postgres rabbitmq",
     "infra:down": "docker compose down",
     "keys:generate": "node scripts/generate-dev-keys.mjs",
+    "setup": "node scripts/setup-dev.mjs",
+    "seed:dev": "node scripts/seed-dev-accounts.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "audit": "npm audit --audit-level=low",

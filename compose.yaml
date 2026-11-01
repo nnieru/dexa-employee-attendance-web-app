@@ -264,6 +264,9 @@ services:
         APP: employee-web
     ports:
       - '127.0.0.1:8080:8080'
+    # nginx resolves api-gateway when it loads its configuration, so the gateway must be started.
+    depends_on:
+      api-gateway: { condition: service_started }
     read_only: true
     cap_drop: [ALL]
     security_opt: ['no-new-privileges:true']
@@ -278,6 +281,8 @@ services:
         APP: admin-web
     ports:
       - '127.0.0.1:8081:8080'
+    depends_on:
+      api-gateway: { condition: service_started }
     read_only: true
     cap_drop: [ALL]
     security_opt: ['no-new-privileges:true']

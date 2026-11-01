@@ -248,38 +248,6 @@
   }
 }
 
-/* Type switch: a tablist. The selected tab has red text, a red underline and soft red, not colour alone (DESIGN §7). */
-.requests-tabs {
-  display: flex;
-  gap: var(--space-2);
-  margin-block-end: var(--space-5);
-  border-block-end: var(--border-width) solid var(--color-border);
-}
-
-.requests-tab {
-  min-height: var(--control-height);
-  padding: 0 var(--space-4);
-  border: 0;
-  border-block-end: 3px solid transparent;
-  color: var(--color-text-muted);
-  background: transparent;
-  font-family: var(--font-body);
-  font-size: var(--font-size-body);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-}
-
-.requests-tab[aria-selected='true'] {
-  color: var(--color-brand);
-  border-block-end-color: var(--color-brand);
-  background: var(--color-brand-soft);
-}
-
-.requests-tab:focus-visible {
-  outline: var(--focus-width) solid var(--color-focus);
-  outline-offset: var(--focus-offset);
-}
-
 .requests-status-filter {
   max-width: 20rem;
   margin-block-end: var(--space-5);

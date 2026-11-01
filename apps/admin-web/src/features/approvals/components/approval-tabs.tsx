@@ -45,7 +45,7 @@ export function ApprovalTabs({ activeTab, onTabChange }: ApprovalTabsProps) {
   }
 
   return (
-    <div role="tablist" aria-label="Request type" className="requests-tabs">
+    <div role="tablist" aria-label="Request type" className="dexa-request-tabs">
       {APPROVAL_TABS.map((tab) => {
         const isSelected = tab === activeTab;
         return (
@@ -54,7 +54,7 @@ export function ApprovalTabs({ activeTab, onTabChange }: ApprovalTabsProps) {
             id={getApprovalTabId(tab)}
             type="button"
             role="tab"
-            className="requests-tab"
+            className="dexa-request-tab"
             aria-selected={isSelected}
             aria-controls={getApprovalPanelId(tab)}
             tabIndex={isSelected ? 0 : -1}

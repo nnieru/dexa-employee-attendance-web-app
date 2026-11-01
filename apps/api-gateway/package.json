@@ -12,11 +12,13 @@
     "test:integration": "npm run build -w @dexa/auth-service && node --experimental-vm-modules --no-warnings ../../node_modules/jest/bin/jest.js --passWithNoTests --testPathPatterns integration"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "9.1.0",
     "@dexa/common": "0.0.0",
     "@dexa/contracts": "0.0.0",
     "@nestjs/common": "12.3.2",
     "@nestjs/core": "12.3.2",
     "@nestjs/platform-express": "12.3.2",
+    "@nestjs/swagger": "12.0.5",
     "multer": "2.5.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
