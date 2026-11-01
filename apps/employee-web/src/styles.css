@@ -60,6 +60,12 @@
   gap: var(--space-5);
 }
 
+/* A profile edit form (phone, photo): fields and its save action stacked with the same rhythm as the fields. */
+.employee-profile-form {
+  display: grid;
+  gap: var(--space-5);
+}
+
 /* Loading skeleton with the same shape as the profile panel (DESIGN §9). */
 .employee-profile-skeleton__status {
   position: absolute;
