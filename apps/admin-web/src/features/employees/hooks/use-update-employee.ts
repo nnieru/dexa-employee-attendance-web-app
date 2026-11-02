@@ -7,7 +7,7 @@ import { updateEmployee } from '../api/update-employee.js';
 
 /**
  * Sends one update for an employee. A success refreshes the list and this employee's detail. A partial failure
- * (EMPLOYEE_UPDATE_INCOMPLETE) reloads the detail, because some steps may have saved (DATABASE §4.3).
+ * (EMPLOYEE_UPDATE_INCOMPLETE) reloads the detail, because some steps may have saved.
  */
 export function useUpdateEmployee(accountId: string) {
   const { apiClient } = useSession();

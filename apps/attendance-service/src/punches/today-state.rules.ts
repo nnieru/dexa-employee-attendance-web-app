@@ -8,7 +8,7 @@ import {
 import type { TodayDayRecord, TodayScheduleFields } from './today-state.repository.interface.js';
 
 /**
- * Derives the employee's state from the day's effective columns (PRD ATT-6, SUM-6). Raw entries are not read: they
+ * Derives the employee's state from the day's effective columns. Raw entries are not read: they
  * are immutable history, while the effective columns are what an approved correction changes. A day with no
  * effective check-in is not clocked in, even when the day row exists (for example, a day created by a request).
  */

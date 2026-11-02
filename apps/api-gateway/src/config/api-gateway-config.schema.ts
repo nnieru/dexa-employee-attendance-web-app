@@ -18,7 +18,7 @@ const ownServiceNameSchema = z.literal(ServiceName.API_GATEWAY, {
 const swaggerEnabledSchema = z.union([z.literal('true'), z.literal('false')]).optional();
 
 // The gateway verifies end-user tokens (UserJwtVerifierConfigSchema) and signs the internal tokens it forwards
-// with its own service key (AuthConfigSchema). It alone reads the user token settings (D-51).
+// with its own service key (AuthConfigSchema). It alone reads the user token settings.
 export const ApiGatewayConfigSchema = z.intersection(
   z.intersection(
     BaseConfigSchema.extend({
@@ -27,7 +27,7 @@ export const ApiGatewayConfigSchema = z.intersection(
       AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
       EMPLOYEE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
       ATTENDANCE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
-      // The HR notification stream is proxied to notification-service (D-08). Only the stream uses this URL.
+      // The HR notification stream is proxied to notification-service. Only the stream uses this URL.
       NOTIFICATION_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
     }),
     AuthConfigSchema,

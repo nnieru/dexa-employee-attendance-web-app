@@ -26,7 +26,7 @@ type InternalRequestTarget = {
   readonly correlationId?: string;
   readonly timeoutMilliseconds?: number;
   // The end user that api-gateway acts for. The call still carries this service's token, which also names the
-  // user, so the target authorizes the same person without ever seeing the user's JWT (D-51). Only api-gateway
+  // user, so the target authorizes the same person without ever seeing the user's JWT. Only api-gateway
   // may set it: the signer refuses any other service.
   readonly onBehalfOf?: AuthenticatedUser;
   // Codes that a 401 answer carries when the target refused the credentials this call presents. Such

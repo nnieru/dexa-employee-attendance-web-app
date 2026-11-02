@@ -6,9 +6,9 @@ import type {
 
 export const CORRECTION_REQUEST_REVIEW_SERVICE = Symbol('ICorrectionRequestReviewService');
 
-/** The HR review queue and detail of correction requests (APR-1). Read only. */
+/** The HR review queue and detail of correction requests. Read only. */
 export interface ICorrectionRequestReviewService {
-  /** The reviewer comes from the verified token, never from the query. It sets isOwnRequest (APR-4). */
+  /** The reviewer comes from the verified token, never from the query. It sets isOwnRequest. */
   listReviewQueue(
     reviewerAccountId: string,
     query: RequestReviewQueueQuery,

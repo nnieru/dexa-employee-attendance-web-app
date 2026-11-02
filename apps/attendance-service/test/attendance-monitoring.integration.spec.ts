@@ -22,7 +22,7 @@ import {
 } from './attendance-service-environment.js';
 import { CONTAINER_TIMEOUT_MS, TEST_TIMEOUT_MS, createEmptyDatabaseUri } from './test-database.js';
 
-// The lifetime of the token api-gateway sends for a call (D-51).
+// The lifetime of the token api-gateway sends for a call.
 const TOKEN_LIFETIME_SECONDS = 60;
 
 const MONITORING_PATH = '/api/v1/attendance';
@@ -37,7 +37,7 @@ const THURSDAY = '2026-11-05';
 const FAR_FUTURE_MONTH_START = '2030-01-01';
 const FAR_FUTURE_MONTH_END = '2030-01-31';
 const OVERTIME_PATH = '/api/v1/overtime-requests';
-// A request creates a day with no punch (DATABASE §5.4). The request dates are a working Friday and the Saturday after.
+// A request creates a day with no punch. The request dates are a working Friday and the Saturday after.
 const FRIDAY_REQUEST_DATE = '2026-11-06';
 const SATURDAY_REQUEST_DATE = '2026-11-07';
 // Overtime cannot name a date after today, so each request is made on its own business date, at 10:00 WIB.
@@ -80,7 +80,7 @@ let app: INestApplication;
 let database: Database;
 let keys: AuthKeySet;
 
-// Signs the token that api-gateway sends to this service for the user (D-51).
+// Signs the token that api-gateway sends to this service for the user.
 function signUserToken(accountId: string, role: Role, expiresAtSeconds: number): string {
   return signGatewayUserToken(
     keys,
@@ -190,7 +190,7 @@ describe('attendance monitoring list', () => {
   let profileLessEmployeeId: string;
   let hrId: string;
 
-  // The rows of MONDAY through THURSDAY, newest date first, then account ID ascending within a date (DATABASE §5.4).
+  // The rows of MONDAY through THURSDAY, newest date first, then account ID ascending within a date.
   function expectedRowOrder(): Array<{ businessDate: string; accountId: string }> {
     const tuesdayRows = [employeeId, profileLessEmployeeId, hrId]
       .sort()

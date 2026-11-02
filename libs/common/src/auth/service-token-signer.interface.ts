@@ -3,7 +3,7 @@ import type { ServiceName } from './service-name.js';
 
 /**
  * Mints the short-lived token a caller presents to one target service's internal routes. With onBehalfOf, the
- * token also names the end user that api-gateway acts for (D-51); only api-gateway may mint such a token.
+ * token also names the end user that api-gateway acts for; only api-gateway may mint such a token.
  */
 export interface IServiceTokenSigner {
   signFor(audience: ServiceName, onBehalfOf?: AuthenticatedUser): Promise<string>;

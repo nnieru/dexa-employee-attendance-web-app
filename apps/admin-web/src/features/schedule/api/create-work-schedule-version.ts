@@ -8,7 +8,7 @@ import type { ApiClient } from '@dexa/session';
 
 const WORK_SCHEDULES_PATH = '/work-schedules';
 
-/** Creates a new upcoming version (PRD SCH-4). The response is the stored version. */
+/** Creates a new upcoming version. The response is the stored version. */
 export async function createWorkScheduleVersion(
   apiClient: ApiClient,
   request: WorkScheduleVersionRequest,

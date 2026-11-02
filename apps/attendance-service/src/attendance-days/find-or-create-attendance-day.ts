@@ -13,7 +13,7 @@ export type FindOrCreateAttendanceDayInput = {
 
 /**
  * Finds the employee's day for the business date, or creates it with the schedule snapshot in effect, and locks it
- * for the rest of the caller's transaction (DATABASE §5.4). Call it in the transaction that writes to the day.
+ * for the rest of the caller's transaction. Call it in the transaction that writes to the day.
  * Rejects with ScheduleNotConfiguredError, and writes nothing, when no schedule version covers the date.
  */
 export async function findOrCreateAttendanceDayForUpdate(

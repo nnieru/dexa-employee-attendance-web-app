@@ -14,7 +14,7 @@ type ReviewerReasonCellProps = {
 };
 
 // A rejection's reason is the explanation the employee needs, so it is shown in bold error text. The status label beside
-// it carries the meaning in words, so the emphasis is not colour alone (DESIGN §8).
+// it carries the meaning in words, so the emphasis is not colour alone.
 export function ReviewerReasonCell({ status, reviewReason }: ReviewerReasonCellProps) {
   if (reviewReason === null || reviewReason.trim() === '') return EMPTY_VALUE_TEXT;
   const className =

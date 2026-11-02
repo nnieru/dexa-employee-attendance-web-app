@@ -3,7 +3,7 @@ import { ErrorCode } from '@dexa/contracts';
 import type { PunchType } from './punch.repository.interface.js';
 
 /**
- * No schedule version covers the business date, so a punch cannot be classified (ATT-8, D-42). Raised before any
+ * No schedule version covers the business date, so a punch cannot be classified. Raised before any
  * other check, so nothing is written.
  */
 export class ScheduleNotConfiguredError extends ConflictError {
@@ -16,7 +16,7 @@ export class ScheduleNotConfiguredError extends ConflictError {
 }
 
 /**
- * No schedule version covers today, so today's state cannot be shown (D-42). The same code as the punch error, with a
+ * No schedule version covers today, so today's state cannot be shown. The same code as the punch error, with a
  * message that does not mention a punch, because this is a read.
  */
 export class TodayScheduleNotConfiguredError extends ConflictError {
@@ -25,14 +25,14 @@ export class TodayScheduleNotConfiguredError extends ConflictError {
   }
 }
 
-/** The employee already has an IN punch for this business date (ATT-4). */
+/** The employee already has an IN punch for this business date. */
 export class AttendanceAlreadyClockedInError extends ConflictError {
   constructor() {
     super(ErrorCode.ATTENDANCE_ALREADY_CLOCKED_IN, 'You have already clocked in today.');
   }
 }
 
-/** The employee already has an OUT punch for this business date (ATT-4). */
+/** The employee already has an OUT punch for this business date. */
 export class AttendanceAlreadyClockedOutError extends ConflictError {
   constructor() {
     super(ErrorCode.ATTENDANCE_ALREADY_CLOCKED_OUT, 'You have already clocked out today.');
@@ -40,8 +40,8 @@ export class AttendanceAlreadyClockedOutError extends ConflictError {
 }
 
 /**
- * The day is an approved Sick leave or Leave (COR-7). A punch would contradict the approved full-day override
- * (DATABASE §5.5), so nothing is written. Checked after the day is locked and before the other punch checks, so a day
+ * The day is an approved Sick leave or Leave. A punch would contradict the approved full-day override
+ * , so nothing is written. Checked after the day is locked and before the other punch checks, so a day
  * with a raw punch from before the approval gets this answer and not the already-punched one.
  */
 export class AttendanceDayOnLeaveError extends ConflictError {
@@ -54,7 +54,7 @@ export class AttendanceDayOnLeaveError extends ConflictError {
 }
 
 /**
- * The employee has no IN punch for this business date, so there is nothing to check out of (ATT-5). A validation
+ * The employee has no IN punch for this business date, so there is nothing to check out of. A validation
  * error, because the request is refused on its current state and the client can correct it by clocking in first.
  */
 export class AttendanceNotClockedInError extends ValidationError {
@@ -68,7 +68,7 @@ export class AttendanceNotClockedInError extends ValidationError {
 
 /**
  * The check-out instant, read after the day was locked, is on another business date or before the day's check-in
- * (D-41). Nothing is stored. The client retries, and the retry is judged against the clock at that time.
+ * Nothing is stored. The client retries, and the retry is judged against the clock at that time.
  */
 export class CheckOutTimeConflictError extends ConflictError {
   constructor() {

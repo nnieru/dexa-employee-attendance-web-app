@@ -27,7 +27,7 @@ import {
   type IWorkCalendarDateClient,
 } from './work-calendar-date-client.interface.js';
 
-// HR only (PRD SCH-5). Employees never reach attendance-service for the company calendar.
+// HR only. Employees never reach attendance-service for the company calendar.
 @Controller('work-calendar-dates')
 export class WorkCalendarDateController {
   constructor(

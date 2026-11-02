@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-// Local wall-clock time in the business timezone, 24-hour HH:mm (DATABASE §5.2).
+// Local wall-clock time in the business timezone, 24-hour HH:mm.
 const clockTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
-// One company schedule version with every SCH-1 field (PRD SCH-1). effectiveUntil is exclusive and null while the
+// One company schedule version with every schedule field. effectiveUntil is exclusive and null while the
 // version has no end yet.
 export const workScheduleVersionSchema = z.object({
   id: z.uuid(),
@@ -24,7 +24,7 @@ export type WorkScheduleVersion = z.infer<typeof workScheduleVersionSchema>;
 const WEEKDAY_MIN = 1;
 const WEEKDAY_MAX = 7;
 
-// Strict, so a client cannot send effectiveUntil (SCH-4: the service sets it), the timezone (the service uses the
+// Strict, so a client cannot send effectiveUntil (the service sets it), the timezone (the service uses the
 // configured business timezone), or a name. The version the client edits is identified by the route, not the body.
 export const workScheduleVersionRequestSchema = z
   .strictObject({
@@ -41,7 +41,7 @@ export const workScheduleVersionRequestSchema = z
     lateCheckoutGraceMinutes: z.number().int().nonnegative(),
     effectiveFrom: z.iso.date(),
   })
-  // Both times are on the same business day (DATABASE §5.2), so a plain string comparison of HH:mm is a time comparison.
+  // Both times are on the same business day, so a plain string comparison of HH:mm is a time comparison.
   .refine((request) => request.startTime < request.endTime, {
     error: 'must be before endTime',
     path: ['startTime'],
@@ -52,7 +52,7 @@ export type WorkScheduleVersionRequest = z.infer<typeof workScheduleVersionReque
 // The version id in a route, such as PUT /work-schedules/:id.
 export const workScheduleIdSchema = z.uuid();
 
-// The version in effect today and the next version that has not taken effect yet (PRD SCH-3). current is null only
+// The version in effect today and the next version that has not taken effect yet. current is null only
 // when no version covers today; upcoming is null when no later version exists.
 export const workScheduleOverviewSchema = z.object({
   current: workScheduleVersionSchema.nullable(),

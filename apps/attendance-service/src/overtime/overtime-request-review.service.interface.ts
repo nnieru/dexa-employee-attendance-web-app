@@ -6,9 +6,9 @@ import type {
 
 export const OVERTIME_REQUEST_REVIEW_SERVICE = Symbol('IOvertimeRequestReviewService');
 
-/** The HR review queue and detail of overtime requests (APR-1). Read only. */
+/** The HR review queue and detail of overtime requests. Read only. */
 export interface IOvertimeRequestReviewService {
-  /** The reviewer comes from the verified token, never from the query. It sets isOwnRequest (APR-4). */
+  /** The reviewer comes from the verified token, never from the query. It sets isOwnRequest. */
   listReviewQueue(
     reviewerAccountId: string,
     query: RequestReviewQueueQuery,

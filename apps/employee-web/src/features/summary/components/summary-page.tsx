@@ -35,7 +35,7 @@ function getSummaryRowId(item: AttendanceSummaryItem): string {
 }
 
 /**
- * The employee's history (PRD SUM-1 to SUM-6). The URL owns the range and the page; this component reflects them.
+ * The employee's own history over the chosen range. The URL owns the range and the page; this component reflects them.
  * A range is checked before it is searched, so an out-of-order range never reaches the API.
  */
 export function SummaryPage({ search, today, onSearch, onPageChange }: SummaryPageProps) {

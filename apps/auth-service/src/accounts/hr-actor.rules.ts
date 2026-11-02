@@ -7,7 +7,7 @@ export type HrActorAccount = {
   readonly isProvisioningPending: boolean;
 };
 
-/** Only an active HR account that is past its own provisioning may create or administer accounts (D-16, DATABASE §3.1). */
+/** Only an active HR account that is past its own provisioning may create or administer accounts. */
 export function isEligibleHrActor(actor: HrActorAccount | undefined): boolean {
   return (
     actor !== undefined &&

@@ -14,7 +14,7 @@ import type {
 
 // A plain read with no FOR UPDATE, so a summary never waits on a punch in progress. The account and the date range
 // are one predicate on attendance_days, served by its unique (account_id, business_date) key, and the newest-first
-// order follows that key too (DATABASE §5.4).
+// order follows that key too.
 @Injectable()
 export class AttendanceSummaryRepository implements IAttendanceSummaryReader {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
@@ -24,7 +24,7 @@ export class AttendanceSummaryRepository implements IAttendanceSummaryReader {
     const checkinStatus = alias(masterAttendanceStatuses, 'checkin_status');
     const checkoutStatus = alias(masterAttendanceStatuses, 'checkout_status');
     const condition = buildRangeCondition(criteria);
-    // No presence predicate: a day that a request or a sick, leave, or day-off correction created is a row too (D-59).
+    // No presence predicate: a day that a request or a sick, leave, or day-off correction created is a row too.
     const rows: AttendanceSummaryRecord[] = await this.database.db
       .select({
         businessDate: attendanceDays.businessDate,

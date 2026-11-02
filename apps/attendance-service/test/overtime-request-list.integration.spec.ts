@@ -67,7 +67,7 @@ async function submitOvertime(accessToken: string, businessDate: string): Promis
 }
 
 // HR decides a request in the database, as the decision endpoint is not built yet (T-REQ-08). The triggers and
-// checks of DATABASE §5.6 still apply: a decided row needs a reviewer other than the requester and a reason when rejected.
+// constraint checks still apply: a decided row needs a reviewer other than the requester and a reason when rejected.
 async function decideOvertime(
   requestId: string,
   status: Exclude<RequestStatus, 'PENDING'>,

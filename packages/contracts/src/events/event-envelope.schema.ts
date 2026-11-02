@@ -8,7 +8,7 @@ export const eventEnvelopeSchema = z.strictObject({
   // Also the AMQP message ID and the key consumers deduplicate on.
   eventId: z.uuid(),
   type: z.string().min(1),
-  // Server UTC instant, written with a trailing Z (ARCHITECTURE §8).
+  // Server UTC instant, written with a trailing Z.
   occurredAt: z.iso.datetime(),
   payload: z.unknown(),
 });

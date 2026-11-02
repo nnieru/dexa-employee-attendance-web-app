@@ -9,10 +9,10 @@ export type AttendanceStatusDisplay = {
 type ClockInStatus = AttendanceMonitoringItem['clockInStatus'];
 type ClockOutStatus = AttendanceMonitoringItem['clockOutStatus'];
 
-// DESIGN §8 labels. The same timing word has a different treatment at check-in and at check-out, so the two maps are
+// The same timing word has a different treatment at check-in and at check-out, so the two maps are
 // separate. This copy repeats the employee summary's map on purpose: features do not import from each other
-// (AGENTS §10). It is a candidate for a shared home once a second app needs it.
-// PENDING_CHECKIN is a day a request created with no punch yet, labelled like the check-out it pairs with (D-59).
+// It is a candidate for a shared home once a second app needs it.
+// PENDING_CHECKIN is a day a request created with no punch yet, labelled like the check-out it pairs with.
 const CHECK_IN_STATUS_DISPLAY: Readonly<Record<ClockInStatus, AttendanceStatusDisplay>> = {
   EARLY_CHECKIN: { text: 'Early clock-in', tone: 'neutral' },
   ON_TIME_CHECKIN: { text: 'On-time clock-in', tone: 'success' },
@@ -37,7 +37,7 @@ export function getCheckOutStatusDisplay(status: ClockOutStatus): AttendanceStat
   return CHECK_OUT_STATUS_DISPLAY[status];
 }
 
-// The DAY status is the stored attendance state (PRD ADM-4, SUM-6), separate from the two timing classifications.
+// The DAY status is the stored attendance state, separate from the two timing classifications.
 const DAY_STATUS_DISPLAY: Readonly<Record<AttendanceDayStatus, AttendanceStatusDisplay>> = {
   PENDING: { text: 'Pending', tone: 'neutral' },
   PRESENT: { text: 'Present', tone: 'success' },

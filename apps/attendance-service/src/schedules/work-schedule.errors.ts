@@ -1,7 +1,7 @@
 import { ConflictError, NotFoundError, ValidationError } from '@dexa/common';
 import { ErrorCode } from '@dexa/contracts';
 
-/** No schedule version has this id, so there is nothing to edit (PRD SCH-4). */
+/** No schedule version has this id, so there is nothing to edit. */
 export class WorkScheduleVersionNotFoundError extends NotFoundError {
   constructor() {
     super(ErrorCode.NOT_FOUND, 'Work schedule version not found.');
@@ -10,7 +10,7 @@ export class WorkScheduleVersionNotFoundError extends NotFoundError {
 
 /**
  * An upcoming version already exists, so a second one would conflict with it. HR edits the upcoming version instead
- * (DATABASE §5.2).
+ *
  */
 export class UpcomingWorkScheduleExistsError extends ConflictError {
   constructor() {
@@ -21,7 +21,7 @@ export class UpcomingWorkScheduleExistsError extends ConflictError {
   }
 }
 
-/** The version is in effect or in the past, so it is never edited (PRD SCH-4). */
+/** The version is in effect or in the past, so it is never edited. */
 export class WorkScheduleVersionNotUpcomingError extends ConflictError {
   constructor() {
     super(
@@ -33,7 +33,7 @@ export class WorkScheduleVersionNotUpcomingError extends ConflictError {
 
 /**
  * The new version would overlap another version. A concurrent change caused it, because the service checks the same
- * rule before writing (DATABASE §5.2, exclusion violation 23P01).
+ * rule before writing (exclusion violation 23P01).
  */
 export class WorkScheduleOverlapError extends ConflictError {
   constructor() {
@@ -44,7 +44,7 @@ export class WorkScheduleOverlapError extends ConflictError {
   }
 }
 
-/** The effective date is not tomorrow or later in the business timezone (PRD SCH-4). */
+/** The effective date is not tomorrow or later in the business timezone. */
 export class WorkScheduleEffectiveFromTooEarlyError extends ValidationError {
   constructor() {
     super(

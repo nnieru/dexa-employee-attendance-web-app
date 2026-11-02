@@ -22,7 +22,7 @@ type ApprovalsPageProps = {
 };
 
 /**
- * The HR approvals queue (PRD APR-1). The URL owns the tab, filters, and page; this component reflects them. Only the
+ * The HR approvals queue. The URL owns the tab, filters, and page; this component reflects them. Only the
  * selected type is mounted, so the other queue is not requested.
  */
 export function ApprovalsPage({

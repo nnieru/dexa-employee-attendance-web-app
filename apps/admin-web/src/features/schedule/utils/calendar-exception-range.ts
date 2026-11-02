@@ -8,7 +8,7 @@ export const RANGE_ORDER_MESSAGE = 'From must not be after To.';
 
 // Length of "YYYY-MM-DD".
 const BUSINESS_DATE_LENGTH = 10;
-// Months after today that the default range reaches. A UI default only; the API accepts any range (D-43).
+// Months after today that the default range reaches. A UI default only; the API accepts any range.
 const DEFAULT_RANGE_MONTHS_AHEAD = 3;
 const BUSINESS_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 

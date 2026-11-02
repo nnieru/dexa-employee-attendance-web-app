@@ -3,7 +3,7 @@ import type { EmployeeLookupItem } from '@dexa/contracts';
 export const EMPLOYEE_CLIENT = Symbol('IEmployeeClient');
 
 /**
- * Reads the Employee-owned names and positions of accounts (DATABASE §8). Employee owns the profiles, so this service
+ * Reads the Employee-owned names and positions of accounts. Employee owns the profiles, so this service
  * never reads that table.
  */
 export interface IEmployeeClient {

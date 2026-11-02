@@ -49,7 +49,7 @@ export const EFFECTIVE_FROM_HINT =
 export const SAVE_DIALOG_TITLE = 'Save work schedule?';
 export const SAVE_DIALOG_CONFIRM_LABEL = 'Save schedule';
 
-/** Names the effective date, and says recorded days keep their classification (SCH-6). */
+/** Names the effective date, and says recorded days keep their classification. */
 export function getSaveDialogDescription(effectiveFrom: string): string {
   return `Punches from ${effectiveFrom} are classified with this schedule. Attendance already recorded is not reclassified.`;
 }
@@ -59,11 +59,11 @@ export const WORK_SCHEDULE_SAVED_MESSAGE = 'Work schedule saved.';
 export const CONFLICT_MESSAGE =
   'The work schedule changed while you were editing. The latest schedule is shown now. Review it before saving again.';
 
-/** Open-ended versions have no effective until date (SCH-3). */
+/** Open-ended versions have no effective until date. */
 export const OPEN_ENDED_TEXT = 'Open-ended';
 export const EFFECTIVE_UNTIL_EXCLUSIVE_HINT = 'The last day is the day before this date.';
 
-/** A save was refused because the schedule changed underneath it (DATABASE §5.2: 409 for a second upcoming version or an overlap). */
+/** A save was refused because the schedule changed underneath it (409 for a second upcoming version or an overlap). */
 export function isWorkScheduleConflictError(error: unknown): boolean {
   return error instanceof ApiError && error.status === 409;
 }

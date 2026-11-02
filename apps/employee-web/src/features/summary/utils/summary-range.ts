@@ -13,7 +13,7 @@ export type SummaryRange = {
 };
 
 /**
- * The message for a range that cannot be searched, or undefined when it can (PRD SUM-5). The order rule is the
+ * The message for a range that cannot be searched, or undefined when it can. The order rule is the
  * shared one from @dexa/contracts, so the browser refuses exactly what the API refuses.
  */
 export function getSummaryRangeError(range: SummaryRange): string | undefined {

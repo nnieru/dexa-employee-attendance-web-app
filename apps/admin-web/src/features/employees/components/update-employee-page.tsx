@@ -21,7 +21,7 @@ type UpdateEmployeePageProps = {
 };
 
 /**
- * Edit employee (ADM-2). The page loads the employee and the two HR pickers, and shows the form only when all of them
+ * Edit employee. The page loads the employee and the two HR pickers, and shows the form only when all of them
  * are available, so every select starts with its stored value. The route decides where a save or a cancel goes.
  */
 export function UpdateEmployeePage({ accountId, onCancel, onSaved }: UpdateEmployeePageProps) {

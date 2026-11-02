@@ -19,7 +19,7 @@ export type TodayScheduleFields =
 
 /**
  * An attendance day as it is stored, read without a lock. The schedule is the day's snapshot, and the effective
- * times and status codes are the ones after any approved correction (DATABASE §5.4). The status codes are the
+ * times and status codes are the ones after any approved correction. The status codes are the
  * master codes as stored; the rules narrow them to the classifications they may hold.
  */
 export type TodayDayRecord = {
@@ -32,7 +32,7 @@ export type TodayDayRecord = {
 
 /**
  * The reads that today's state needs. It takes no row lock and writes nothing, so it is kept apart from the punch
- * transaction port (AGENTS §6, interface segregation).
+ * transaction port (interface segregation).
  */
 export interface ITodayStateReader {
   /** Resolves undefined when no schedule version covers the business date. */

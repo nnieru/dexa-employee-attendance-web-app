@@ -6,7 +6,7 @@ export const DEFAULT_WORK_SCHEDULE_NAME = 'Default company schedule';
 
 /**
  * Builds the open-ended first version from the configured settings. The version starts on the business date of the
- * first startup and uses the business timezone, so the schedule and the day snapshots agree (DATABASE §5.2, §8).
+ * first startup and uses the business timezone, so the schedule and the day snapshots agree.
  */
 export function createDefaultWorkSchedule(input: {
   readonly settings: DefaultScheduleSettings;

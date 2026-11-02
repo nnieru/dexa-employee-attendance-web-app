@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Bounds from PRD PRO-5 and DATABASE §3.2. Shared by the web forms and the server.
+// Shared by the web forms and the server: 8 to 128 characters.
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 

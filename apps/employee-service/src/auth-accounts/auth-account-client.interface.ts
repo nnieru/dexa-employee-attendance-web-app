@@ -3,11 +3,11 @@ import type { AccountLookupItem, AccountReference } from '@dexa/contracts';
 export const AUTH_ACCOUNT_CLIENT = Symbol('IAuthAccountClient');
 
 /**
- * Reads the Auth-owned fields of accounts, such as the company email (DATABASE §4). Auth owns the accounts,
+ * Reads the Auth-owned fields of accounts, such as the company email. Auth owns the accounts
  * so this service never reads that table.
  */
 export interface IAuthAccountClient {
-  /** Resolves the account, or undefined when Auth has no such account (DATABASE §8). */
+  /** Resolves the account, or undefined when Auth has no such account. */
   findAccountById(accountId: string): Promise<AccountLookupItem | undefined>;
   /**
    * Resolves the accounts that Auth knows among `accountIds` in one call. Unknown and pending accounts are
@@ -18,7 +18,7 @@ export interface IAuthAccountClient {
   findAccountReferenceByEmail(email: string): Promise<AccountReference | undefined>;
   /**
    * Resolves the IDs of the accounts whose company email contains `term`, at most ACCOUNT_SEARCH_MAX_IDS of them
-   * (D-15). Rejects when Auth is unavailable, because an empty answer would then read as "no match".
+   * Rejects when Auth is unavailable, because an empty answer would then read as "no match".
    */
   searchAccountIdsByEmail(term: string): Promise<string[]>;
 }

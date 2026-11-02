@@ -37,7 +37,7 @@ export const REMOVE_DIALOG_CONFIRM_LABEL = 'Remove exception';
 export const SAVE_SUCCESS_MESSAGE = 'Calendar exception saved.';
 export const REMOVE_SUCCESS_MESSAGE = 'Calendar exception removed.';
 
-/** Names the range, so HR can tell an empty result from a range that is too narrow (DESIGN §9). */
+/** Names the range, so HR can tell an empty result from a range that is too narrow. */
 export function getCalendarExceptionEmptyMessage(range: { from: string; to: string }): string {
   return `No calendar exceptions from ${range.from} to ${range.to}.`;
 }

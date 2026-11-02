@@ -11,7 +11,7 @@ import { getUnreadNavigationCount } from '../features/notifications/utils/unread
 const HR_BRAND_NAME = 'Dexa HR';
 const NOTIFICATIONS_NAVIGATION_ID = 'notifications';
 
-// Pathless layout: every HR page under it needs a signed-in HR session (AUTH-3). The API enforces
+// Pathless layout: every HR page under it needs a signed-in HR session. The API enforces
 // authorization; this guard only decides which screen the HR user sees.
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
@@ -37,7 +37,7 @@ const renderNavigationLink: AppShellRenderLink = ({
 function AuthenticatedLayout() {
   const { signOut } = useSession();
   const matchRoute = useMatchRoute();
-  // Mounted once for the whole signed-in shell, so one stream serves every HR page (ADM-5).
+  // Mounted once for the whole signed-in shell, so one stream serves every HR page.
   const liveUpdatesState = useNotificationStream({ apiBaseUrl: API_BASE_URL });
   const unreadCount = useUnreadNotificationCount();
   const navItems = ADMIN_NAVIGATION.map((entry) => ({

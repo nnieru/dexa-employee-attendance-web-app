@@ -32,7 +32,7 @@ import {
   employeeServiceEnvironment,
 } from './employee-service-environment.js';
 
-// The lifetime of the token api-gateway sends for a call (D-51).
+// The lifetime of the token api-gateway sends for a call.
 const TOKEN_LIFETIME_SECONDS = 60;
 
 // Starting the container pulls an image on a cold machine, which exceeds Jest's 5 second default.
@@ -70,7 +70,7 @@ const fakeAuthAccountClient: IAuthAccountClient = {
   findAccountReferenceByEmail: () => Promise.resolve(undefined),
 };
 
-// Signs the token that api-gateway sends to this service for the user (D-51).
+// Signs the token that api-gateway sends to this service for the user.
 function signUserToken(
   keys: AuthKeySet,
   accountId: string,

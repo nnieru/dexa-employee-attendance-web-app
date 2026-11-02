@@ -83,7 +83,7 @@ export class OvertimeRequestController {
   }
 
   // HR only. The gateway checks the role, and attendance-service checks it again and refuses a reviewer who is the
-  // requester (APR-4). The reviewer is the token's account; the body carries only the reason.
+  // requester. The reviewer is the token's account; the body carries only the reason.
   @Roles(Role.HR)
   @Post(':id/approve')
   @HttpCode(HttpStatus.OK)

@@ -27,7 +27,7 @@ import {
 } from '../../../test/employee-list-fixtures.js';
 
 // 20:00 UTC on 14 November is 03:00 WIB on 15 November: the WIB date is ahead of the UTC date. The default range
-// (PRD APR-1) is therefore the first of the WIB month through 2026-11-15.
+// is therefore the first of the WIB month through 2026-11-15.
 const NOW_IN_WIB_TODAY_15_NOVEMBER = new Date('2026-11-14T20:00:00.000Z');
 const DEFAULT_QUERY = {
   from: '2026-11-01',

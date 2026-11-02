@@ -3,7 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import type { IPasswordHasher } from './password-hasher.interface.js';
 
-// Only argon2id is accepted (DATABASE §3.2, D-24). argon2.verify would also check argon2i and
+// Only argon2id is accepted. argon2.verify would also check argon2i and
 // argon2d digests, so this prefix check is what keeps them out.
 const ARGON2ID_HASH_PREFIX = '$argon2id$';
 

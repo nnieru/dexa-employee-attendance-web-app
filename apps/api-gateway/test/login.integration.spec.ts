@@ -306,7 +306,7 @@ describe('api-gateway sign-in through a running auth-service', () => {
         const cleared = setCookie.join(';');
         expect(cleared).toMatch(/dexa_refresh_token=;/);
         // The refresh token is stateless: logout only drops it from the browser, and the token
-        // itself expires with its max age (ARCHITECTURE §13).
+        // itself expires with its max age.
       },
       TEST_TIMEOUT_MS,
     );

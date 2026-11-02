@@ -1,7 +1,7 @@
 import { focusManager } from '@tanstack/react-query';
 
 /**
- * Re-checks queries with refetchOnWindowFocus when the window regains focus (D-13). TanStack's default
+ * Re-checks queries with refetchOnWindowFocus when the window regains focus. TanStack's default
  * listens only to visibilitychange, which does not fire when a visible desktop window gains focus, so this
  * replaces the default listener with one that also listens to window focus. Call once at app start.
  * The returned function removes both listeners.

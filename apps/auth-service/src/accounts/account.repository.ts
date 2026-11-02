@@ -19,7 +19,7 @@ import type {
 // A query runs on the connection pool or inside one transaction. Both expose the same methods.
 export type AccountQueryRunner = Pick<Database['db'], 'select' | 'insert' | 'execute'>;
 
-// An account that provisioning has created but HR has not yet activated has this status (DATABASE §3.1).
+// An account that provisioning has created but HR has not yet activated has this status.
 const PENDING_PROVISIONING_STATUS = 'PENDING';
 
 // accounts.id is unique in the operations table, so this join yields at most one row per account.

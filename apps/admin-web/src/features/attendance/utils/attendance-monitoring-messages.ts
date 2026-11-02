@@ -15,7 +15,7 @@ export const EMPLOYEE_OPTIONS_LOADING_HINT = 'Loading employees.';
 export const EMPLOYEE_OPTIONS_ERROR_MESSAGE = 'Employees could not be loaded. Try again.';
 export const NOT_AVAILABLE_TEXT = 'Not available';
 
-/** Names the range, so HR can tell an empty result from a filter that is too narrow (DESIGN §9). */
+/** Names the range, so HR can tell an empty result from a filter that is too narrow. */
 export function getAttendanceEmptyMessage({
   range,
   isFilteredByEmployee,

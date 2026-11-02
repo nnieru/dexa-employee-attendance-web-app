@@ -21,7 +21,7 @@ import {
 } from './correction-request-review.service.interface.js';
 
 // HR only, checked here as well as at the gateway. The reviewer is the token's account, which is compared with each
-// requester so that HR cannot review their own request (APR-4).
+// requester so that HR cannot review their own request.
 @Controller('attendance-corrections')
 @UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)

@@ -32,7 +32,7 @@ import {
   type IWorkCalendarDateWriteService,
 } from './work-calendar-date-write.service.interface.js';
 
-// HR only (PRD SCH-5). Employees never read or change the company calendar through this service.
+// HR only. Employees never read or change the company calendar through this service.
 @Controller('work-calendar-dates')
 @UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)

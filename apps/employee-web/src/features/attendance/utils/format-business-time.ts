@@ -33,7 +33,7 @@ export function formatBusinessDate(businessDate: string): string {
   return dateFormatter.format(new Date(`${businessDate}T00:00:00Z`));
 }
 
-/** Today's scheduled hours, or the day-off text when there is no schedule for today (SCH-7). */
+/** Today's scheduled hours, or the day-off text when there is no schedule for today. */
 export function formatScheduledHours(today: TodayAttendanceResponse): string {
   if (!today.isWorkingDay) return DAY_OFF_TEXT;
   const start = formatBusinessTime(today.scheduledStartAt);

@@ -18,7 +18,7 @@ export type ScheduleVersionInput = {
   readonly lateCheckoutGraceMinutes: number;
 };
 
-/** A company calendar exception for one date (DATABASE §5.3). It overrides the weekday rule in both directions. */
+/** A company calendar exception for one date. It overrides the weekday rule in both directions. */
 export type CalendarExceptionInput = {
   readonly isWorkingDay: boolean;
 };
@@ -52,7 +52,7 @@ const ISO_SUNDAY = 7;
 
 /**
  * Resolves whether the business date is a working day and, for working days, the scheduled start and end instants
- * in the schedule's timezone. A calendar exception wins over the weekday rule (DATABASE §5.3).
+ * in the schedule's timezone. A calendar exception wins over the weekday rule.
  */
 export function resolveDaySchedule(input: {
   readonly businessDate: BusinessDate;
@@ -111,7 +111,7 @@ export function classifyCheckOut(recordedAt: Date, daySchedule: DaySchedule): Ch
   return 'LATE_CHECKOUT';
 }
 
-// PRD §5.5 defines the boundaries in minutes, and employees see punches as HH:MM. A punch at 09:15:59 is therefore
+// The boundaries are defined in minutes, and employees see punches as HH:MM. A punch at 09:15:59 is therefore
 // still the 09:15 minute and on time with a 15-minute grace; 09:16:00 is the first late instant.
 function floorToMinute(instant: Date): number {
   return Math.floor(instant.getTime() / MS_PER_MINUTE) * MS_PER_MINUTE;
@@ -142,7 +142,7 @@ function parseBusinessDate(businessDate: BusinessDate): {
   return { year, month, day };
 }
 
-/** ISO weekday numbers run Monday = 1 to Sunday = 7 (DATABASE §5.2). Pure calendar arithmetic, no timezone. */
+/** ISO weekday numbers run Monday = 1 to Sunday = 7. Pure calendar arithmetic, no timezone. */
 function isoWeekday(businessDate: BusinessDate): number {
   const { year, month, day } = parseBusinessDate(businessDate);
   const candidate = new Date(0);

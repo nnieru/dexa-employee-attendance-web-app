@@ -13,7 +13,7 @@ export type EmployeeProfileRequest = Pick<
   'name' | 'positionId' | 'phoneNumber' | 'employeeStatusId'
 >;
 
-/** The columns that a committed update writes, and the field names that its change event reports (T-EVT-02). */
+/** The columns that a committed update writes, and the field names that its change event reports. */
 export type EmployeeProfilePlan = {
   readonly changes: EmployeeFieldsChanges;
   readonly changedFields: ReadonlyArray<ProfileField>;
@@ -29,8 +29,8 @@ export function requestsProfileChange(request: EmployeeProfileRequest): boolean 
 /**
  * Returns undefined when every named field already holds the requested value, so nothing is written and nothing is
  * reported. Otherwise only the changed columns are planned. The locked row is the base, so a column that the request
- * does not name keeps its stored value, including one that a self-service edit changed meanwhile (DATABASE §4.3).
- * The status is recomputed from the merged row, and profileStatus is written only when it moves (DATABASE §4.1).
+ * does not name keeps its stored value, including one that a self-service edit changed meanwhile.
+ * The status is recomputed from the merged row, and profileStatus is written only when it moves.
  */
 export function planEmployeeUpdate(
   stored: LockedEmployeeProfile,
@@ -71,7 +71,7 @@ export function planEmployeeUpdate(
 
 /**
  * The references that the request assigns anew. A reference that keeps its stored option stays valid even when that
- * option is inactive, as the database rule also allows (DATABASE §4).
+ * option is inactive, as the database rule also allows.
  */
 export function toChangedMasterReferences(
   stored: EmployeeDetailRecord,

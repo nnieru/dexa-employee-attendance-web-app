@@ -1,7 +1,7 @@
 import type { OvertimeRequest, OvertimeRequestPage } from '@dexa/contracts';
 import type { StoredOvertimeRequest } from './overtime-request.repository.interface.js';
 
-// The contract's instants are UTC with a Z suffix. The reviewer's account is not part of the response (APR-6).
+// The contract's instants are UTC with a Z suffix. The reviewer's account is not part of the response.
 export function toOvertimeRequest(request: StoredOvertimeRequest): OvertimeRequest {
   return {
     id: request.id,

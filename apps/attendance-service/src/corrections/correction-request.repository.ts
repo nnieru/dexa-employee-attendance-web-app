@@ -26,7 +26,7 @@ import type {
 
 // Named in migration 0004, so a duplicate key is recognized by this name and not by any other unique violation.
 const REQUESTER_IDEMPOTENCY_CONSTRAINT = 'attendance_adjustment_requests_requester_idempotency_uq';
-// The partial unique index that keeps one PENDING correction per day (COR-4, DATABASE §5.8).
+// The partial unique index that keeps one PENDING correction per day.
 const PENDING_DAY_CONSTRAINT = 'attendance_adjustment_requests_pending_day_uq';
 const DAY_STATUS_CATEGORY = 'DAY';
 
@@ -83,7 +83,7 @@ export class CorrectionRequestRepository implements ICorrectionRequestRepository
   }
 }
 
-// The day reads and writes are the ones that punches use (T-REQ-03), so the schedule snapshot is written in one place.
+// The day reads and writes are the ones that punches use, so the schedule snapshot is written in one place.
 function createCorrectionTransactionScope(runner: PunchRunner): ICorrectionRequestTransaction {
   const dayScope = createTransactionScope(runner);
   return {
@@ -210,7 +210,7 @@ async function insertCorrectionRequest(
   }
 }
 
-// The DAY status codes are seeded by migration 0003 (DATABASE §5.1). A missing code means the schema is broken.
+// The DAY status codes are seeded by migration 0003. A missing code means the schema is broken.
 async function findDayStatusId(runner: PunchRunner, code: string): Promise<string> {
   const [row] = await runner
     .select({ id: masterAttendanceStatuses.id })

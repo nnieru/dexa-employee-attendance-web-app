@@ -15,11 +15,11 @@ export const OVERTIME_REQUESTS_URL = '/api/v1/overtime-requests';
 export const CORRECTION_REQUESTS_URL = '/api/v1/attendance-corrections';
 
 // The requester the HR user reviews most. The own request carries the signed-in HR account, so the screen must forbid
-// reviewing it (APR-4).
+// reviewing it.
 export const RINA_REQUESTER = { accountId: RINA.accountId, name: RINA.name };
 export const SARI_REQUESTER = { accountId: HR_ACCOUNT.id, name: 'Sari Wulandari' };
 
-/** One row of the overtime review queue (PRD APR-1), shaped like the contract. */
+/** One row of the overtime review queue, shaped like the contract. */
 export function buildOvertimeReviewItem({
   id,
   ...overrides
@@ -28,7 +28,7 @@ export function buildOvertimeReviewItem({
   return {
     id,
     businessDate: '2026-11-12',
-    // 17:00–19:00 WIB. The server stores the instant; the screen renders the WIB time (OT-1, APR-1).
+    // 17:00–19:00 WIB. The server stores the instant; the screen renders the WIB time.
     startAt: '2026-11-12T10:00:00.000Z',
     endAt: '2026-11-12T12:00:00.000Z',
     reason: 'The client visit ran past office hours.',
@@ -68,7 +68,7 @@ export const REJECTED_OVERTIME = buildOvertimeReviewItem({
   reviewedAt: '2026-11-14T01:30:00.000Z',
 });
 
-/** One row of the correction review queue (PRD APR-1), shaped like the contract. */
+/** One row of the correction review queue, shaped like the contract. */
 export function buildCorrectionReviewItem({
   id,
   ...overrides
@@ -98,7 +98,7 @@ export const PENDING_CORRECTION = buildCorrectionReviewItem({
 });
 
 /**
- * The bare request the decision endpoint answers with (APR-2): the requester, current values, and the self-review flag
+ * The bare request the decision endpoint answers with: the requester, current values, and the self-review flag
  * are review-queue data, not the stored request record.
  */
 export function toOvertimeRequest(item: OvertimeRequestReviewItem): OvertimeRequest {

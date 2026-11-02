@@ -4,7 +4,7 @@ import type { ApiClient } from '@dexa/session';
 
 const EMPLOYEES_PATH = '/employees';
 
-/** Loads one employee's HR view for the edit page (ADM-2). */
+/** Loads one employee's HR view for the edit page. */
 export async function fetchEmployee(
   apiClient: ApiClient,
   accountId: string,

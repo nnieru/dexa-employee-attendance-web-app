@@ -18,7 +18,7 @@ function getCorrectionRequestId(request: CorrectionRequest): string {
   return request.id;
 }
 
-/** The employee's correction requests, one server page at a time (PRD APR-6). */
+/** The employee's correction requests, one server page at a time. */
 export function CorrectionRequestsTable({ search, onPageChange }: CorrectionRequestsTableProps) {
   const requestsQuery = useOwnCorrectionRequests(toOwnRequestListQuery(search));
   const page = requestsQuery.data;

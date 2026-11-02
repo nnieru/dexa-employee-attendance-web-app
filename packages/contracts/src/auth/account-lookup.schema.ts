@@ -2,12 +2,12 @@ import { z } from 'zod';
 import { createPageSchema } from '../pagination/pagination.schema.js';
 import { roleSchema } from './role.js';
 
-// Matches accounts.company_email, varchar(254) in DATABASE §3.
+// Matches accounts.company_email, varchar(254).
 const EMAIL_MAX_LENGTH = 254;
 
 // Bounds one batched lookup, so a caller that holds more IDs splits the request instead of asking for one large query.
 export const ACCOUNT_LOOKUP_MAX_IDS = 100;
-// The email search returns at most this many IDs (D-15), so the employee list resolves a bounded set.
+// The email search returns at most this many IDs, so the employee list resolves a bounded set.
 export const ACCOUNT_SEARCH_MAX_IDS = 100;
 
 export const accountIdSchema = z.uuid();

@@ -1,7 +1,7 @@
 import { API_PREFIX, type OwnProfile } from '@dexa/contracts';
 import type { EmployeeProfileRecord } from './employee-profile.reader.interface.js';
 
-// The photo is served by the authenticated resource, so the metadata carries only this relative URL (DATABASE §4.2).
+// The photo is served by the authenticated resource, so the metadata carries only this relative URL.
 export const OWN_PHOTO_URL = `/${API_PREFIX}/employees/me/photo`;
 
 /**

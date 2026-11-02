@@ -2,7 +2,7 @@ import type { Readable } from 'node:stream';
 
 export const PHOTO_STORAGE = Symbol('IPhotoStorage');
 
-/** Durable storage for stored photos, addressed only by their server-generated keys (DATABASE §4.2). */
+/** Durable storage for stored photos, addressed only by their server-generated keys. */
 export interface IPhotoStorage {
   /** Writes the photo under a new key and resolves once the file is durable on disk. */
   save(photo: Buffer): Promise<string>;

@@ -1,5 +1,5 @@
 // How often an open stream sends a heartbeat comment. The comment keeps proxies from closing an idle connection.
-// The gateway re-checks the account on the same interval and closes the stream when it is deactivated (D-51).
+// The gateway re-checks the account on the same interval and closes the stream when it is deactivated.
 // 15 seconds stays under the 60-second idle timeout of common proxies.
 export const NOTIFICATION_STREAM_HEARTBEAT_MILLISECONDS = 15_000;
 

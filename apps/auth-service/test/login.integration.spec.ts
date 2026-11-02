@@ -61,7 +61,7 @@ const jwtService = new JwtService();
 // Generated once for the file. The keys are only as valid as the config needs.
 const TEST_KEYS: AuthKeySet = generateAuthKeySet();
 
-// The token api-gateway sends to /auth/me for this user, after it checked the sign-in token (D-51).
+// The token api-gateway sends to /auth/me for this user, after it checked the sign-in token.
 function gatewayTokenFor(account: { readonly id: string; readonly role: Role }): string {
   return signGatewayUserToken(TEST_KEYS, ServiceName.AUTH_SERVICE, account.id, account.role);
 }

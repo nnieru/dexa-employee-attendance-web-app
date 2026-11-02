@@ -63,7 +63,7 @@ function getCalendarExceptionRowId(exception: WorkCalendarDate): string {
 }
 
 /**
- * Calendar exceptions for a range (PRD SCH-5), on the work schedule screen. The URL owns the range and the page. Add and
+ * Calendar exceptions for a range, on the work schedule screen. The URL owns the range and the page. Add and
  * edit open a dialog holding a snapshot of the exception at open time, so a refetch does not reset the form.
  */
 export function CalendarExceptionsSection({

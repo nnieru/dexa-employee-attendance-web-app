@@ -8,7 +8,7 @@ import type { ApiClient } from '@dexa/session';
 
 const WORK_SCHEDULES_PATH = '/work-schedules';
 
-/** Replaces the upcoming version's values (PRD SCH-4). A version in effect is refused by the service (409). */
+/** Replaces the upcoming version's values. A version in effect is refused by the service (409). */
 export async function updateWorkScheduleVersion(
   apiClient: ApiClient,
   versionId: string,

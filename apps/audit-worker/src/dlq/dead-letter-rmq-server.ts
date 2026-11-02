@@ -34,7 +34,7 @@ const logger = new Logger('DeadLetterArchiver');
  * the DLQ has no dead-letter exchange to receive it. This server sends every delivery to one handler instead.
  *
  * It also owns the consumer's lifecycle. After a transient failure it cancels the consumer for pauseMs, then
- * consumes again (D-46), and it reports the pause through DeadLetterConsumerStatus. It declares the parking queue on
+ * consumes again, and it reports the pause through DeadLetterConsumerStatus. It declares the parking queue on
  * every (re)connect, next to the DLQ consumer.
  */
 export class DeadLetterRmqServer extends ServerRMQ {

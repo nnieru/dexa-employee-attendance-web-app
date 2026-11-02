@@ -4,7 +4,7 @@ import { toWorkingWeekdayValues } from './work-schedule-weekdays.js';
 
 /**
  * The starting values of a new version. A new version copies the working rules of the version in effect, so HR changes
- * only what differs. Its effective date stays empty: HR picks the date on purpose (SCH-4).
+ * only what differs. Its effective date stays empty: HR picks the date on purpose.
  */
 export function toCreateWorkScheduleFormValues(
   current: WorkScheduleVersion | null,

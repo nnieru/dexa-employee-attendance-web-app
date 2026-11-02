@@ -210,7 +210,7 @@ function applyCheckOut(state: FakeState, update: DayCheckOutUpdate): void {
   day.revision += 1;
 }
 
-// Stands in for an approved Sick leave or Leave on the first day of the fake (DATABASE §5.4, §5.8): the status changes
+// Stands in for an approved Sick leave or Leave on the first day of the fake: the status changes
 // and the effective times and timing statuses clear, but the raw punches stay.
 export function applyApprovedLeave(
   repository: FakePunchRepository,

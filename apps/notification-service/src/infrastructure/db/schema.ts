@@ -12,7 +12,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-// One HR inbox row per source event per HR recipient (DATABASE §7.1). Recipient, subject, actor, and event IDs
+// One HR inbox row per source event per HR recipient. Recipient, subject, actor, and event IDs
 // are logical references to other services, so none of them is a foreign key.
 export const notifications = pgTable(
   'notifications',

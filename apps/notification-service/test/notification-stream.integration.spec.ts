@@ -37,7 +37,7 @@ const RABBITMQ_IMAGE = 'rabbitmq:4-management';
 const STREAM_PATH = '/api/v1/notifications/stream';
 // A short heartbeat lets the specs observe heartbeats and a deactivation within a fraction of a second.
 const HEARTBEAT_MILLISECONDS = 100;
-// The popup must appear within about 2 seconds of the change (PRD §8).
+// The popup must appear within about 2 seconds of the change.
 const POPUP_BUDGET_MILLISECONDS = 2_000;
 const WAIT_TIMEOUT_MS = 10_000;
 const WAIT_INTERVAL_MS = 25;

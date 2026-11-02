@@ -21,7 +21,7 @@ import type {
 
 // Named in migration 0004, so a duplicate key is recognized by this name and not by any other unique violation.
 const REQUESTER_IDEMPOTENCY_CONSTRAINT = 'overtime_requests_requester_idempotency_uq';
-// The statuses that hold minutes of the daily cap (PRD OT-4). Rejected requests release their minutes.
+// The statuses that hold minutes of the daily cap. Rejected requests release their minutes.
 const CAPPED_STATUSES = [REQUEST_STATUS.PENDING, REQUEST_STATUS.APPROVED] as const;
 
 // The columns of a stored request as the reads return it. The business date comes from the joined day row.
@@ -64,7 +64,7 @@ export class OvertimeRequestRepository implements IOvertimeRequestRepository {
   }
 }
 
-// The day reads and writes are the ones that punches use (T-REQ-03), so the schedule snapshot is written in one place.
+// The day reads and writes are the ones that punches use, so the schedule snapshot is written in one place.
 function createOvertimeTransactionScope(runner: PunchRunner): IOvertimeRequestTransaction {
   const dayScope = createTransactionScope(runner);
   return {
@@ -101,7 +101,7 @@ async function findRequestByIdempotencyKey(
   return toStoredOvertimeRequest(row);
 }
 
-// The sum is in minutes with the seconds kept, so the rule compares the exact interval lengths (no rounding, PRD OT-4).
+// The sum is in minutes with the seconds kept, so the rule compares the exact interval lengths (no rounding).
 async function findActiveOvertimeMinutes(
   runner: PunchRunner,
   attendanceDayId: string,

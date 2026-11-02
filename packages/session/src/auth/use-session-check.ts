@@ -4,7 +4,7 @@ import { getCurrentAccount } from './get-current-account.js';
 import { authQueryKeys } from './auth-query-keys.js';
 import type { ApiClient } from '../session-http-client.js';
 
-// AUTH-5 and D-13: an open app re-checks the session at least every 30 seconds and on window focus.
+// An open app re-checks the session at least every 30 seconds and on window focus.
 const SESSION_CHECK_INTERVAL_MS = 30_000;
 
 type UseSessionCheckOptions = {

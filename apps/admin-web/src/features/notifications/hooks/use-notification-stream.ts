@@ -17,14 +17,14 @@ const NOTIFICATION_STREAM_PATH = '/notifications/stream';
 const CURRENT_ACCOUNT_PATH = '/auth/me';
 
 // Events missed while the stream was down are found in the durable inbox, so every new event and every reconnect
-// refreshes the inbox and the unread count (DESIGN §8, DATABASE §7.3).
+// refreshes the inbox and the unread count.
 function refreshNotificationQueries(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ queryKey: notificationQueryKeys.inbox() });
   void queryClient.invalidateQueries({ queryKey: notificationQueryKeys.unreadCount() });
 }
 
 /**
- * Keeps the HR notification stream open while a session is signed in (ADM-5, EVT-2). Each valid notification shows a
+ * Keeps the HR notification stream open while a session is signed in. Each valid notification shows a
  * toast and refreshes the inbox queries. The stream closes when the session ends or the component unmounts. Mount it
  * once, in the authenticated shell.
  */

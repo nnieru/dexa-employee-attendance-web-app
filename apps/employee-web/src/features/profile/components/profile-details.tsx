@@ -9,8 +9,8 @@ type ProfileDetailsProps = {
   profile: OwnProfile;
 };
 
-// Name, email and position are read-only for the employee (PRO-3). Phone, photo and password are what the
-// employee changes (PRO-2), each with its own save and its own success message.
+// Name, email and position are read-only for the employee. Phone, photo and password are what the
+// employee changes, each with its own save and its own success message.
 export function ProfileDetails({ profile }: ProfileDetailsProps) {
   return (
     <section className="employee-profile-panel" aria-label="Your details">

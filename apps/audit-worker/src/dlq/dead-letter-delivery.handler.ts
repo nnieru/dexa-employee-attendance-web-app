@@ -67,7 +67,7 @@ export function createDeadLetterHandler(
 }
 
 /**
- * Settles one dead-lettered delivery (DATABASE §6.2, D-46):
+ * Settles one dead-lettered delivery:
  * - archived: ack after the commit.
  * - transient failure after the retries: requeue, so the message stays in the DLQ.
  * - permanent failure after the retries: park the unchanged message, then ack. If the parking publish fails, the

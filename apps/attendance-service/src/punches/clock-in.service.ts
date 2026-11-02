@@ -29,7 +29,7 @@ export class ClockInService implements IClockInService {
   ) {}
 
   // The instant is read once, so the stored punch, the business date, and the classification all come from the same
-  // moment (DATABASE §5.5).
+  // moment.
   async clockIn(accountId: string): Promise<ClockInResponse> {
     const recordedAt = this.clock.now();
     const businessDate = toBusinessDate(recordedAt, this.config.BUSINESS_TIMEZONE);
@@ -59,7 +59,7 @@ async function recordCheckIn(
   // Checked before the duplicate-punch check, so an approved leave day never reports a raw punch from before the leave.
   if (isLeaveDay(day.dayStatusCode)) throw new AttendanceDayOnLeaveError();
 
-  // The classification uses the day's stored snapshot, not the schedule in effect now (PRD SCH-6).
+  // The classification uses the day's stored snapshot, not the schedule in effect now.
   const classification = classifyCheckIn(recordedAt, day.daySchedule);
   await transaction.insertEntry({ attendanceDayId: day.dayId, type: 'IN', recordedAt });
   await transaction.updateDayCheckIn({

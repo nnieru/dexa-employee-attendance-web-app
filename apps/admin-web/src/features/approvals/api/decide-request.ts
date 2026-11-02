@@ -24,7 +24,7 @@ export type DecideRequestInput = {
 };
 
 /**
- * Approves or rejects one request (PRD APR-2). The reviewer and the decision are sent from the browser; the server
+ * Approves or rejects one request. The reviewer and the decision are sent from the browser; the server
  * derives the reviewer from the token and checks self-review and the terminal state again.
  */
 export async function decideRequest(

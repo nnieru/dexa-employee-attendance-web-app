@@ -5,8 +5,8 @@ import type { StoredCorrectionRequest } from './correction-request.repository.in
 export const CORRECTION_REQUEST_REVIEW_READER = Symbol('ICorrectionRequestReviewReader');
 
 /**
- * A stored correction request with the requester and the day as it stands now (APR-1). The current times are the
- * effective times, which an approved correction or a punch changes (DATABASE §5.4).
+ * A stored correction request with the requester and the day as it stands now. The current times are the
+ * effective times, which an approved correction or a punch changes.
  */
 export type StoredCorrectionReviewRequest = StoredCorrectionRequest & {
   readonly requesterAccountId: string;

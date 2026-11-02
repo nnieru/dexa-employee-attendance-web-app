@@ -10,8 +10,8 @@ import type { IDeadLetterArchiveWriter } from './dead-letter-archive.interface.j
 export class DeadLetterArchiveRepository implements IDeadLetterArchiveWriter {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
 
-  // A redelivery of the same message updates the existing row instead of adding one (DATABASE §6.1). The first
-  // failure time is kept, and a replay that fails again returns the row to PENDING (DATABASE §6.2 step 7).
+  // A redelivery of the same message updates the existing row instead of adding one. The first
+  // failure time is kept, and a replay that fails again returns the row to PENDING (step 7).
   // A RESOLVED row is left alone, so a late duplicate of an old failure cannot reopen a replayed message.
   async upsertFailure(record: DeadLetterArchiveRecord): Promise<void> {
     await this.database.db

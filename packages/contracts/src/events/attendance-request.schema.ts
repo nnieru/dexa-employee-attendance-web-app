@@ -12,7 +12,6 @@ export const attendanceRequestResourceTypeSchema = z.enum(ATTENDANCE_REQUEST_RES
 
 /**
  * Event payload for attendance.request.submitted, attendance.request.approved, and attendance.request.rejected
- * (ARCHITECTURE §8, PRD APR-7).
  *
  * Strict, so no reasons, timestamps, passwords, or extra fields can ride along. changedFields is always empty.
  */

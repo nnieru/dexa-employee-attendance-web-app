@@ -44,8 +44,8 @@ export class ClockOutService implements IClockOutService {
   ) {}
 
   // The first read only selects the day row to lock, by its business date. The stored instant is a second read taken
-  // after the lock is held (D-41), so a clock-in that committed during the lock wait is ordered before this check-out.
-  // This replaces the single-read rule of DATABASE §5.5 for check-out only.
+  // after the lock is held, so a clock-in that committed during the lock wait is ordered before this check-out.
+  // This replaces the single-read rule for check-out only.
   async clockOut(accountId: string): Promise<ClockOutResponse> {
     const lookupInstant = this.clock.now();
     const businessDate = toBusinessDate(lookupInstant, this.config.BUSINESS_TIMEZONE);
@@ -71,7 +71,7 @@ async function recordCheckOut(
   context: CheckOutContext,
 ): Promise<CheckOutRecording> {
   const { accountId, businessDate } = target;
-  // Checked first, before the lock and the not-clocked-in and already-clocked-out checks (D-42).
+  // Checked first, before the lock and the not-clocked-in and already-clocked-out checks.
   await assertScheduleInEffect(transaction, businessDate);
   // The row lock serializes competing check-outs. A second one waits, and then, in a new statement snapshot, sees the
   // OUT entry that the first one saved.
@@ -90,7 +90,7 @@ async function recordCheckOut(
     timeZone: context.timeZone,
   });
 
-  // The classification uses the day's stored snapshot, not the schedule in effect now (PRD SCH-6).
+  // The classification uses the day's stored snapshot, not the schedule in effect now.
   const classification = classifyCheckOut(recordedAt, day.daySchedule);
   await transaction.insertEntry({ attendanceDayId: day.dayId, type: 'OUT', recordedAt });
   await transaction.updateDayCheckOut({
@@ -117,7 +117,7 @@ async function assertCanCheckOut(
   if (await transaction.hasEntry(day.dayId, 'OUT')) throw new AttendanceAlreadyClockedOutError();
 }
 
-// D-41: the locked day's business date and its check-in bound the instant. Midnight can pass while the request waits
+// The locked day's business date and its check-in bound the instant. Midnight can pass while the request waits
 // for the lock, and replicas can disagree about the clock, so an instant outside those bounds would be stored against
 // the wrong day or violate attendance_days_effective_checkout_ck. The check-out is refused as a retryable conflict.
 function assertRecordableInstant(input: {

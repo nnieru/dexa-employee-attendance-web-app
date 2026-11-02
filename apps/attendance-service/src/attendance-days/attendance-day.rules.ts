@@ -9,14 +9,14 @@ import type {
 } from '../punches/punch.repository.interface.js';
 
 /**
- * What creates the day. A punch makes the employee present. A request (overtime or correction) only names the day,
- * so the day waits for HR to decide its outcome (DATABASE §5.4).
+ * What creates the day. A punch makes the employee present. A request (overtime or correction) only names the day
+ * so the day waits for HR to decide its outcome.
  */
 export type AttendanceDayOpening = 'PUNCH' | 'REQUEST';
 
 /**
  * The day row that a first punch or a first request creates, with its schedule snapshot and its starting statuses
- * (DATABASE §5.4). Pure: the caller resolves the schedule and the calendar exception.
+ * Pure: the caller resolves the schedule and the calendar exception.
  */
 export function buildAttendanceDay(input: {
   readonly accountId: string;

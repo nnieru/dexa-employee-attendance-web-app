@@ -10,7 +10,7 @@ import { Controller, Get, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { NotificationStreamService } from './notification-stream.service.js';
 
-// HR only, checked here as well as at the gateway (D-08). The guards run before this handler, so an employee token is
+// HR only, checked here as well as at the gateway. The guards run before this handler, so an employee token is
 // refused before any header is written.
 @Controller('notifications')
 @UseGuards(GatewayUserAuthGuard, RolesGuard)

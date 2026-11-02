@@ -7,7 +7,7 @@ const FIRST_PAGE = 1;
 const businessDateSchema = z.iso.date();
 
 /**
- * The exception list state in the URL (PRD SCH-5). Each key is optional and an unusable value is dropped (`.catch`), so
+ * The exception list state in the URL. Each key is optional and an unusable value is dropped (`.catch`), so
  * a stale or hand-edited link still opens the screen. Defaults are applied by resolveCalendarExceptionSearch, not written
  * into the URL. An out-of-order range is kept, so the screen can explain why nothing loaded.
  */

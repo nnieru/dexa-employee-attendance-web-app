@@ -14,7 +14,7 @@ type ConfirmWorkScheduleDialogProps = {
   onConfirm: () => void;
 };
 
-/** Asks before a version is saved. Cancel sends nothing (SCH-6: recorded days are never reclassified). */
+/** Asks before a version is saved. Cancel sends nothing (recorded days are never reclassified). */
 export function ConfirmWorkScheduleDialog({
   effectiveFrom,
   isBusy,

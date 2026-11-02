@@ -1,6 +1,6 @@
 /**
  * Request statuses as stored in `overtime_requests.status` and `attendance_adjustment_requests.status`
- * (DATABASE §5.6). The values match the table check constraints.
+ * The values match the table check constraints.
  */
 export const REQUEST_STATUS = {
   PENDING: 'PENDING',
@@ -26,20 +26,20 @@ export type RequestDecisionInput = {
   readonly targetStatus: TerminalRequestStatus;
   readonly requestedByAccountId: string;
   readonly reviewerAccountId: string;
-  /** The HR reason. Required when rejecting; optional when approving (APR-2). */
+  /** The HR reason. Required when rejecting; optional when approving. */
   readonly reviewReason: string | null;
 };
 
 export type RequestDecisionResult =
   | { readonly kind: 'apply'; readonly nextStatus: TerminalRequestStatus }
-  /** The request already holds this decision. The caller returns the recorded result and writes nothing (APR-3). */
+  /** The request already holds this decision. The caller returns the recorded result and writes nothing. */
   | { readonly kind: 'replay'; readonly recordedStatus: TerminalRequestStatus }
   | { readonly kind: 'violation'; readonly violation: RequestDecisionViolation };
 
 /**
- * Decides one HR decision on a request (PRD APR-2..APR-4). The checks run in this order: self-review, then the
+ * Decides one HR decision on a request. The checks run in this order: self-review, then the
  * rejection reason, then the state transition. A reviewer who is the requester is refused even when the request is
- * already decided, because a requester never holds the decision (DATABASE §5.6).
+ * already decided, because a requester never holds the decision.
  */
 export function evaluateRequestDecision(input: RequestDecisionInput): RequestDecisionResult {
   if (input.reviewerAccountId === input.requestedByAccountId) {

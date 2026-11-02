@@ -4,7 +4,7 @@ import type {
   SetAccountActiveStatusRequest,
 } from '@dexa/contracts';
 
-/** HR actions on another account, invoked by employee-service after it has checked the HR role (T-EMP-08). */
+/** HR actions on another account, invoked by employee-service after it has checked the HR role. */
 export interface IAccountAdministrationService {
   /**
    * Resolves once the new hash and its account.password.changed outbox row have committed together.

@@ -64,9 +64,9 @@ type ProfileUpdateOutcome =
   | { readonly kind: 'SAVED'; readonly changedFields: ReadonlyArray<ProfileField> };
 
 /**
- * Applies HR's update in the order that keeps an account consistent without a distributed transaction (DATABASE §4.3).
+ * Applies HR's update in the order that keeps an account consistent without a distributed transaction.
  *
- * Every requested status brings the Auth account in line with it, even when the stored status already matches (D-13).
+ * Every requested status brings the Auth account in line with it, even when the stored status already matches.
  * INACTIVE deactivates: Auth is set inactive before the profile is written, so an employee HR has deactivated is never
  * usable in Auth. Any other status reactivates: the profile is written first, so Auth is never reactivated for a change
  * that did not save. Because Auth's route is idempotent, a retry that repeats the status repairs an earlier failed Auth

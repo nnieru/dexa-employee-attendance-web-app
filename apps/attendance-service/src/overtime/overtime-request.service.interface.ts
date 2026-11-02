@@ -8,7 +8,7 @@ export type SubmitOvertimeRequestResult = {
   readonly request: OvertimeRequest;
 };
 
-/** Records the signed-in employee's overtime request for one business date (OT-1..OT-5, APR-5). */
+/** Records the signed-in employee's overtime request for one business date. */
 export interface IOvertimeRequestService {
   /** The account comes from the verified token. Rejects with a domain error when the request is refused. */
   submit(accountId: string, request: SubmitOvertimeRequest): Promise<SubmitOvertimeRequestResult>;

@@ -30,7 +30,7 @@ import type {
   ScheduleVersion,
 } from './punch.repository.interface.js';
 
-// The unique key that makes one IN and one OUT per day (DATABASE §5.5). Named in the migration, so a duplicate
+// The unique key that makes one IN and one OUT per day. Named in the migration, so a duplicate
 // punch is recognized by this name and not by any other unique violation.
 const ENTRY_DAY_TYPE_CONSTRAINT = 'attendance_entries_attendance_day_id_type_uq';
 
@@ -69,7 +69,7 @@ export function createTransactionScope(runner: PunchRunner): IPunchTransaction {
   };
 }
 
-// A version covers the date when it starts on or before the date and has no end or ends after it (DATABASE §5.2).
+// A version covers the date when it starts on or before the date and has no end or ends after it.
 // The exclusion constraint keeps at most one version covering any date.
 export async function findScheduleInEffect(
   runner: PunchRunner,
@@ -132,7 +132,7 @@ async function insertDayIfMissing(runner: PunchRunner, day: NewAttendanceDay): P
 }
 
 // The schedule is joined for its grace minutes. A version that a day references is never edited while it is in
-// effect (DATABASE §5.2), so these graces are the day's snapshot. The status is joined so the caller can refuse a
+// effect, so these graces are the day's snapshot. The status is joined so the caller can refuse a
 // punch on an approved leave day. FOR UPDATE locks only the day row.
 async function findDayForUpdate(
   runner: PunchRunner,
@@ -246,7 +246,7 @@ async function updateDayCheckIn(runner: PunchRunner, update: DayCheckInUpdate): 
     .where(eq(attendanceDays.id, update.dayId));
 }
 
-// The day status stays PRESENT: a check-out does not change presence (DATABASE §5.4), so only the check-out columns move.
+// The day status stays PRESENT: a check-out does not change presence, so only the check-out columns move.
 async function updateDayCheckOut(runner: PunchRunner, update: DayCheckOutUpdate): Promise<void> {
   const checkoutStatusId = await findStatusId(runner, update.checkoutStatusCode);
   await runner
@@ -259,7 +259,7 @@ async function updateDayCheckOut(runner: PunchRunner, update: DayCheckOutUpdate)
     .where(eq(attendanceDays.id, update.dayId));
 }
 
-// The status codes are seeded by migration 0003 (DATABASE §5.1). A missing code means the schema is broken, so the
+// The status codes are seeded by migration 0003. A missing code means the schema is broken, so the
 // error is not a client error.
 export async function findStatusId(
   runner: PunchRunner,

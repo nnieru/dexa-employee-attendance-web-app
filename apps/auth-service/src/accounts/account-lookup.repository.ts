@@ -19,7 +19,7 @@ import type {
 // A left join on the PENDING provisioning operation leaves its ID NULL when no such operation exists.
 const withoutPendingProvisioning = isNull(accountProvisioningOperations.operationId);
 
-// Only active HR accounts that are past provisioning are recipients of HR notifications (DATABASE §3.1).
+// Only active HR accounts that are past provisioning are recipients of HR notifications.
 const hrRecipientCondition = and(
   eq(masterRoles.code, Role.HR),
   eq(accounts.isActive, true),

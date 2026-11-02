@@ -13,7 +13,7 @@ const DEFAULT_STATUS: RequestStatus = 'PENDING';
 const YEAR_MONTH_LENGTH = 7;
 
 /**
- * The approvals state in the URL (PRD APR-1). Each key is optional and an unusable value is dropped (`.catch`), so a
+ * The approvals state in the URL. Each key is optional and an unusable value is dropped (`.catch`), so a
  * stale or hand-edited link still opens the queue. The defaults are applied by resolveApprovalsSearch, not written
  * into the URL.
  */

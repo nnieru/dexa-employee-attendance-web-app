@@ -2,7 +2,7 @@ import { ErrorCode } from '@dexa/contracts';
 
 /**
  * Code of a failed API call. A code the client does not know (for example one added by a newer server)
- * is replaced by FALLBACK_ERROR_CODE before it reaches an ApiError (D-54), so the type is exactly the
+ * is replaced by FALLBACK_ERROR_CODE before it reaches an ApiError, so the type is exactly the
  * shared ErrorCode list and apps can switch over it exhaustively.
  */
 export type ApiErrorCode = ErrorCode;

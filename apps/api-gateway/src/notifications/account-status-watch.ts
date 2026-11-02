@@ -11,7 +11,7 @@ export type AccountStatusWatchOptions = {
 
 /**
  * Re-checks an open stream's account on a timer, because a stream outlives the request that opened it. The check
- * fails closed: an account that cannot be verified ends the stream, as an inactive one does (D-13). Each check
+ * fails closed: an account that cannot be verified ends the stream, as an inactive one does. Each check
  * reads auth-service with no cache, the same as JwtAuthGuard does for a request.
  */
 export class AccountStatusWatch {

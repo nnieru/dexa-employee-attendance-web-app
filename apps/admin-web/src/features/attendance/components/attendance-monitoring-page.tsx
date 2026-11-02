@@ -41,7 +41,7 @@ function getAttendanceRowId(item: AttendanceMonitoringItem): string {
 }
 
 /**
- * Attendance of all employees (PRD ADM-4), read only (ADM-6). The URL owns the range, the employee, and the page; this
+ * Attendance of all employees, read only. The URL owns the range, the employee, and the page; this
  * component reflects them. No request is sent for a range that cannot be searched.
  */
 export function AttendanceMonitoringPage({

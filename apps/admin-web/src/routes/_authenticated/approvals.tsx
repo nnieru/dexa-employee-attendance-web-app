@@ -6,7 +6,7 @@ import {
 } from '../../features/approvals/types/approvals-search.schema.js';
 import { getCurrentBusinessDate } from '../../features/attendance/utils/current-business-date.js';
 
-// The tab, filters, and page live in the URL, so a reload or a shared link shows the same queue (PRD APR-1).
+// The tab, filters, and page live in the URL, so a reload or a shared link shows the same queue.
 export const Route = createFileRoute('/_authenticated/approvals')({
   validateSearch: approvalsSearchSchema,
   component: ApprovalsRoute,

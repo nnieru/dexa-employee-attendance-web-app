@@ -25,7 +25,7 @@ import { WORKING_WEEKDAY_OPTIONS } from '../utils/work-schedule-weekdays.js';
 type WorkScheduleFormProps = {
   /** The values the form starts from. The editor changes the key when they change, so the form restarts with them. */
   defaultValues: WorkScheduleFormValues;
-  /** Tomorrow in WIB. Earlier dates are refused on the client (SCH-4). */
+  /** Tomorrow in WIB. Earlier dates are refused on the client. */
   earliestEffectiveFrom: BusinessDate;
   isBusy: boolean;
   submitLabel: string;

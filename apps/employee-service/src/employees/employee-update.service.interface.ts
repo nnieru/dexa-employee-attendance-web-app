@@ -11,14 +11,14 @@ export type EmployeeUpdateCommand = {
 
 /**
  * The employee as stored after the update, and the profile fields whose change was committed. The change set is empty
- * when the request changed no stored column. The change event (T-EVT-02) reads changedFields.
+ * when the request changed no stored column. The change event reads changedFields.
  */
 export type EmployeeUpdateResult = {
   readonly employee: EmployeeDetail;
   readonly changedFields: ReadonlyArray<ProfileField>;
 };
 
-/** HR's update of an employee (ADM-2). */
+/** HR's update of an employee. */
 export interface IEmployeeUpdateService {
   /**
    * Resolves once every requested step has saved. Rejects with 404 when the profile is missing, with 400 when a changed

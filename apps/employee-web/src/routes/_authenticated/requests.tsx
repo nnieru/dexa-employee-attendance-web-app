@@ -5,7 +5,7 @@ import {
   resolveRequestsSearch,
 } from '../../features/requests/types/requests-search.schema.js';
 
-// The tab, the status and the page live in the URL, so a reload or a shared link shows the same list (PRD APR-6).
+// The tab, the status and the page live in the URL, so a reload or a shared link shows the same list.
 export const Route = createFileRoute('/_authenticated/requests')({
   validateSearch: requestsSearchSchema,
   component: RequestsRoute,

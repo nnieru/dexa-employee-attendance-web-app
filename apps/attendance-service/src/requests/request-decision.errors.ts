@@ -18,21 +18,21 @@ export class RequestNotFoundError extends NotFoundError {
   }
 }
 
-/** The reviewer is the requester (APR-4). */
+/** The reviewer is the requester. */
 export class SelfReviewForbiddenError extends ForbiddenError {
   constructor() {
     super(ErrorCode.SELF_REVIEW_FORBIDDEN, 'You cannot review your own request.');
   }
 }
 
-/** A rejection without a non-blank reason (APR-2, DATABASE §5.6). */
+/** A rejection without a non-blank reason. */
 export class ReviewReasonRequiredError extends ValidationError {
   constructor() {
     super(ErrorCode.REVIEW_REASON_REQUIRED, 'A reason is required to reject a request.');
   }
 }
 
-/** The request already holds a different decision (APR-3). */
+/** The request already holds a different decision. */
 export class RequestAlreadyDecidedError extends ConflictError {
   constructor() {
     super(

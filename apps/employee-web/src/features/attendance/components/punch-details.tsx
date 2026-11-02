@@ -8,7 +8,7 @@ type PunchDetailsProps = {
   today: TodayAttendanceResponse;
 };
 
-// Each confirmed punch shows its server time and its own classification label (DESIGN §8). The check-in and the
+// Each confirmed punch shows its server time and its own classification label. The check-in and the
 // check-out are separate rows, so the same word is never read as the other punch's timing.
 export function PunchDetails({ today }: PunchDetailsProps) {
   const punchRows = getPunchRows(today.state);

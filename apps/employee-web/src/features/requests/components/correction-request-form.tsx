@@ -34,7 +34,7 @@ type CorrectionRequestFormProps = {
 };
 
 /**
- * One correction request, entered in WIB (PRD COR-1..COR-4). Times are asked for only for a present day; a leave outcome
+ * One correction request, entered in WIB. Times are asked for only for a present day; a leave outcome
  * hides them and sends none. Field errors come from the rules here or from the server, and every entered value is kept
  * when a submission is refused.
  */

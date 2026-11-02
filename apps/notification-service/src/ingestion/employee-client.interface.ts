@@ -1,7 +1,7 @@
 import type { EmployeeLookupItem } from '@dexa/contracts';
 
 /**
- * Reads the Employee-owned names of accounts (DATABASE §4). Employee owns the profiles, so this service never reads
+ * Reads the Employee-owned names of accounts. Employee owns the profiles, so this service never reads
  * that table.
  */
 export interface IEmployeeClient {

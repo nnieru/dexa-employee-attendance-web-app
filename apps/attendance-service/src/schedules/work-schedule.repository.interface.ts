@@ -6,7 +6,7 @@ export const WORK_SCHEDULE_VERSION_READER = Symbol('IWorkScheduleVersionReader')
 
 export type ScheduleInsertOutcome = 'INSERTED' | 'ALREADY_PRESENT';
 
-// A new company schedule version. Times are local HH:MM in the business timezone (DATABASE §5.2).
+// A new company schedule version. Times are local HH:MM in the business timezone.
 export type NewWorkSchedule = {
   readonly name: string;
   readonly timezone: string;
@@ -27,11 +27,11 @@ export interface IWorkScheduleRepository {
   insertIfNoSchedule(schedule: NewWorkSchedule): Promise<ScheduleInsertOutcome>;
 }
 
-/** Read-only access to the schedule versions that the HR schedule view shows (PRD SCH-3). */
+/** Read-only access to the schedule versions that the HR schedule view shows. */
 export interface IWorkScheduleVersionReader {
   /**
    * The versions that have not ended by the business date, earliest effective date first, at most two. That is the
-   * version in effect (if any) followed by the next upcoming version. The exclusion constraint (DATABASE §5.2) keeps
+   * version in effect (if any) followed by the next upcoming version. The exclusion constraint keeps
    * at most one version in effect, so the second row is the nearest upcoming one.
    */
   findInEffectOrUpcoming(businessDate: BusinessDate): Promise<ReadonlyArray<WorkScheduleVersion>>;

@@ -10,7 +10,7 @@ type LiveUpdatesStatusProps = {
   state: NotificationStreamState;
 };
 
-/** Shows only while live delivery is delayed. The durable inbox stays available (DESIGN §9). */
+/** Shows only while live delivery is delayed. The durable inbox stays available. */
 export function LiveUpdatesStatus({ state }: LiveUpdatesStatusProps) {
   if (state === 'interrupted') return <Alert variant="warning">{INTERRUPTED_MESSAGE}</Alert>;
   if (state === 'stopped') return <Alert variant="warning">{STOPPED_MESSAGE}</Alert>;

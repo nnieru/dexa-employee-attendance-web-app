@@ -12,7 +12,7 @@ import {
   userJwtVerifierEnvironmentFor,
 } from './auth-key-set.js';
 
-// The document paths key, set by the zod contracts table (D-01): one entry per method and path.
+// The document paths key, set by the zod contracts table: one entry per method and path.
 type EndpointKey = string;
 
 function endpointKey(method: string, path: string): EndpointKey {

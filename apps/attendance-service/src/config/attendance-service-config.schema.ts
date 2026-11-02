@@ -47,21 +47,21 @@ const ownServiceNameSchema = z.literal(ServiceName.ATTENDANCE_SERVICE, {
 });
 
 // Parsed once at startup (see main.ts). BUSINESS_TIMEZONE comes from BaseConfigSchema and is the zone the default
-// schedule is written in (DATABASE §8).
+// schedule is written in.
 const attendanceEnvironmentSchema = z.intersection(
   BaseConfigSchema.extend({
     SERVICE_NAME: ownServiceNameSchema,
     ATTENDANCE_DATABASE_URL: postgresUrlSchema,
-    // The outbox relay publishes request events to this broker (DATABASE §2.2, D-35).
+    // The outbox relay publishes request events to this broker.
     RABBITMQ_URL: rabbitMqUrlSchema,
-    // The HR attendance list resolves names through employee-service's batched lookup (PRD ADM-4).
+    // The HR attendance list resolves names through employee-service's batched lookup.
     EMPLOYEE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
   }),
   defaultScheduleSettingsSchema,
 );
 
 // Service key settings are shared with every service (libs/common/src/config/auth-config.schema.ts). The service
-// verifies the gateway's internal tokens, so it holds no user token setting (D-51).
+// verifies the gateway's internal tokens, so it holds no user token setting.
 export const AttendanceServiceConfigSchema = z.intersection(
   attendanceEnvironmentSchema,
   AuthConfigSchema,

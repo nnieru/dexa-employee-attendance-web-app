@@ -7,7 +7,7 @@ type CreateEmployeePageProps = {
   onCreated: (employee: EmployeeDetail) => void;
 };
 
-/** Add employee (ADM-1). The page only frames the form; the route decides where a save or a cancel goes. */
+/** Add employee. The page only frames the form; the route decides where a save or a cancel goes. */
 export function CreateEmployeePage({ onCancel, onCreated }: CreateEmployeePageProps) {
   return (
     <PageShell

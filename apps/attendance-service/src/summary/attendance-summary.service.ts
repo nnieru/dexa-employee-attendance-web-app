@@ -19,7 +19,7 @@ export class AttendanceSummaryService implements IAttendanceSummaryService {
     @Inject(CONFIG) private readonly config: Pick<AttendanceServiceConfig, 'BUSINESS_TIMEZONE'>,
   ) {}
 
-  // The defaults are filled here, not in the schema, because they depend on the clock (PRD SUM-1). The range is
+  // The defaults are filled here, not in the schema, because they depend on the clock. The range is
   // checked again after filling, because a single bound given by the client can fall out of order with its default.
   async listOwnSummary(
     accountId: string,

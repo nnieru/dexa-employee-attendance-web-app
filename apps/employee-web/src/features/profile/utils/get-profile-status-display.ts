@@ -6,8 +6,8 @@ export type ProfileStatusDisplay = {
   tone: NonNullable<StatusLabelProps['tone']>;
 };
 
-// Profile completion is separate from employment status and never disables attendance (DESIGN §8). The text
-// carries the meaning; the tone only adds colour (DESIGN §6 functional states).
+// Profile completion is separate from employment status and never disables attendance. The text
+// carries the meaning; the tone only adds colour (functional states).
 const PROFILE_STATUS_DISPLAY: Record<ProfileStatus, ProfileStatusDisplay> = {
   COMPLETE: { text: 'Profile complete', tone: 'success' },
   INCOMPLETE: { text: 'Profile incomplete', tone: 'warning' },

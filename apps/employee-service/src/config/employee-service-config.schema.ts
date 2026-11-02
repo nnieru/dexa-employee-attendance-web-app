@@ -44,9 +44,9 @@ function treatWhitespaceAsUnset(value: unknown): unknown {
   return typeof value === 'string' && value.trim() === '' ? undefined : value;
 }
 
-// Matches accounts.company_email, varchar(254) in DATABASE §3.
+// Matches accounts.company_email, varchar(254).
 const BOOTSTRAP_HR_EMAIL_MAX_LENGTH = 254;
-// Matches employees.name, varchar(150) in DATABASE §4.
+// Matches employees.name, varchar(150).
 const BOOTSTRAP_HR_NAME_MAX_LENGTH = 150;
 
 const bootstrapHrEmailSchema = z.preprocess(
@@ -86,7 +86,7 @@ const ownServiceNameSchema = z.literal(ServiceName.EMPLOYEE_SERVICE, {
 const employeeServiceEnvironmentSchema = BaseConfigSchema.extend({
   SERVICE_NAME: ownServiceNameSchema,
   EMPLOYEE_DATABASE_URL: postgresUrlSchema,
-  // The outbox relay publishes profile events to this broker (DATABASE §2.2, D-35).
+  // The outbox relay publishes profile events to this broker.
   RABBITMQ_URL: rabbitMqUrlSchema,
   EMPLOYEE_MASTER_DATA: z.preprocess(treatBlankAsUnset, z.string().optional()),
   EMPLOYEE_PHOTO_DIRECTORY: z.preprocess(treatBlankAsUnset, z.string().optional()),
@@ -122,7 +122,7 @@ const resolvedSettingsSchema = employeeServiceEnvironmentSchema
   });
 
 // Service key settings are shared with every service (libs/common/src/config/auth-config.schema.ts). The service
-// verifies the gateway's internal tokens, so it holds no user token setting (D-51).
+// verifies the gateway's internal tokens, so it holds no user token setting.
 export const EmployeeServiceConfigSchema = z.intersection(resolvedSettingsSchema, AuthConfigSchema);
 
 export type EmployeeServiceConfig = z.infer<typeof EmployeeServiceConfigSchema>;

@@ -4,7 +4,7 @@ export type PunchType = 'IN' | 'OUT';
 
 type PunchAction = {
   punchType: PunchType;
-  /** False when the day is done: the action is shown but cannot be sent (PRD ATT-6). */
+  /** False when the day is done: the action is shown but cannot be sent. */
   isAvailable: boolean;
 };
 

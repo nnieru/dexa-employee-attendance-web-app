@@ -12,7 +12,7 @@ const EMPLOYEE_STATUS_REQUIRED_MESSAGE = 'Select an employment status.';
 const PHONE_NUMBER_FORMAT_MESSAGE =
   'Use an optional leading + followed by 8 to 15 digits, or leave this empty.';
 
-// The contract's employee name bound (DATABASE §4, employees.name varchar(150)). The server checks it again.
+// The contract's employee name bound (employees.name varchar(150)). The server checks it again.
 const NAME_MAX_LENGTH = 150;
 const NAME_TOO_LONG_MESSAGE = `Use ${NAME_MAX_LENGTH} characters or fewer.`;
 

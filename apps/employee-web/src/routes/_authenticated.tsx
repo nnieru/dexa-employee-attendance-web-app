@@ -5,7 +5,7 @@ import { useSession } from '@dexa/session';
 
 const EMPLOYEE_BRAND_NAME = 'Dexa Employee';
 
-// Pathless layout: every employee page under it needs a signed-in session (AUTH-3). The API enforces
+// Pathless layout: every employee page under it needs a signed-in session. The API enforces
 // authorization; this guard only decides which screen the employee sees.
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {

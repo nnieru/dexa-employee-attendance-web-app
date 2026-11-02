@@ -35,7 +35,7 @@ type WorkScheduleEditorProps = {
 
 /**
  * Creates the upcoming version, or edits it when one exists. A second upcoming version would conflict, so the upcoming
- * version is always the one that is edited (DATABASE §5.2). The version in effect is never edited here.
+ * version is always the one that is edited. The version in effect is never edited here.
  */
 export function WorkScheduleEditor({
   current,

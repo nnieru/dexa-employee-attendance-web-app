@@ -4,7 +4,7 @@ import type { ApiClient } from '@dexa/session';
 
 const WORK_SCHEDULES_PATH = '/work-schedules';
 
-/** The version in effect and the upcoming version (PRD SCH-3). HR only. */
+/** The version in effect and the upcoming version. HR only. */
 export async function fetchWorkScheduleOverview(
   apiClient: ApiClient,
 ): Promise<WorkScheduleOverview> {

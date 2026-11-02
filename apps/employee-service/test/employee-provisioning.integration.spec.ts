@@ -237,7 +237,7 @@ function isSameFakeRequest(
   );
 }
 
-// Signs the token that api-gateway sends to this service for the user (D-51).
+// Signs the token that api-gateway sends to this service for the user.
 function signUserToken(keys: AuthKeySet, accountId: string, role: Role): string {
   return signGatewayUserToken(keys, ServiceName.EMPLOYEE_SERVICE, accountId, role);
 }

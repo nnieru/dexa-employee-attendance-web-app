@@ -11,7 +11,7 @@ import type {
 } from './work-calendar-date.repository.interface.js';
 
 /**
- * Only a date after the business date can change (PRD SCH-5). Business dates are YYYY-MM-DD, so string order is
+ * Only a date after the business date can change. Business dates are YYYY-MM-DD, so string order is
  * calendar order, and the first editable date is the day after today.
  */
 export function isCalendarDateEditable(date: BusinessDate, businessDate: BusinessDate): boolean {

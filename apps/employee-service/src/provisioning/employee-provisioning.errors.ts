@@ -15,7 +15,7 @@ export function profileExistsError(): ConflictError {
   return new ConflictError(ErrorCode.CONFLICT, PROFILE_EXISTS_MESSAGE);
 }
 
-/** A stopped operation answers 503 with its ID and the phase that was saved, so HR can resume it (DATABASE §4.3). */
+/** A stopped operation answers 503 with its ID and the phase that was saved, so HR can resume it. */
 export function provisioningIncompleteError(
   details: EmployeeProvisioningIncompleteDetails,
 ): DependencyUnavailableError {

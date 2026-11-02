@@ -28,7 +28,7 @@ export function readDeliveryCount(headers: unknown): number | undefined {
 }
 
 /**
- * dlq_messages.attempt_count (DATABASE §6.1, D-45): the deliveries on the source queue before dead-lettering. When
+ * dlq_messages.attempt_count: the deliveries on the source queue before dead-lettering. When
  * the counters are absent, a delivery_limit failure means the limit was reached, so MAX_DELIVERIES deliveries were
  * made. Any other failure without counters was decided on the first delivery.
  */

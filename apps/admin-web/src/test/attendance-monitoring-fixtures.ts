@@ -20,7 +20,7 @@ export const ON_TIME_ROW: AttendanceMonitoringItem = {
 };
 
 // An approved correction on this day: the effective punches are 08:02 and 19:00 WIB, while the raw punches stay
-// 08:10 and 18:30 WIB. The row must show both, because HR needs the raw punch as well as the value in effect (ADM-4).
+// 08:10 and 18:30 WIB. The row must show both, because HR needs the raw punch as well as the value in effect.
 export const CORRECTED_ROW: AttendanceMonitoringItem = {
   accountId: '9e4c2b7a-5d3f-4a1b-8c6e-0f2d4b6a8c1e',
   employee: { name: 'Siti Rahma', positionName: 'Product Analyst' },
@@ -36,7 +36,7 @@ export const CORRECTED_ROW: AttendanceMonitoringItem = {
   clockOutStatus: 'LATE_CHECKOUT',
 };
 
-// A day with a late clock in and no clock out yet: the Clock out cell is empty (PRD ADM-4).
+// A day with a late clock in and no clock out yet: the Clock out cell is empty.
 export const CLOCK_IN_ONLY_ROW: AttendanceMonitoringItem = {
   accountId: '3a7d9c4e-1b2f-4c8a-8d5e-6f7a8b9c0d1e',
   employee: { name: 'Budi Santoso', positionName: 'Product Analyst' },
@@ -52,7 +52,7 @@ export const CLOCK_IN_ONLY_ROW: AttendanceMonitoringItem = {
   clockOutStatus: 'PENDING_CHECKOUT',
 };
 
-// An early day for an account that employee-service does not know: its name is shown as unavailable (ADM-4).
+// An early day for an account that employee-service does not know: its name is shown as unavailable.
 export const UNKNOWN_EMPLOYEE_ROW: AttendanceMonitoringItem = {
   accountId: '7c2e5f8a-9d1b-4e6c-a3f4-0b5c6d7e8f9a',
   employee: null,
@@ -68,7 +68,7 @@ export const UNKNOWN_EMPLOYEE_ROW: AttendanceMonitoringItem = {
   clockOutStatus: 'EARLY_CHECKOUT',
 };
 
-// A request created this working day with no punch: the Clock in cell is empty and the status is not recorded yet (D-59).
+// A request created this working day with no punch: the Clock in cell is empty and the status is not recorded yet.
 export const NO_CHECK_IN_ROW: AttendanceMonitoringItem = {
   accountId: '2b8f4d1c-6e3a-4f7b-9c2d-8a1e0f5b3c7d',
   employee: { name: 'Dewi Anggraini', positionName: 'Engineer' },
@@ -84,7 +84,7 @@ export const NO_CHECK_IN_ROW: AttendanceMonitoringItem = {
   clockOutStatus: 'PENDING_CHECKOUT',
 };
 
-// A request created this day off with no punch: its check-in and check-out are not required (D-59).
+// A request created this day off with no punch: its check-in and check-out are not required.
 export const NO_CHECK_IN_DAY_OFF_ROW: AttendanceMonitoringItem = {
   accountId: '2b8f4d1c-6e3a-4f7b-9c2d-8a1e0f5b3c7d',
   employee: { name: 'Dewi Anggraini', positionName: 'Engineer' },

@@ -13,7 +13,7 @@ type CalendarExceptionRemoveDialogProps = {
   onConfirm: () => void;
 };
 
-/** Asks before an exception is removed. Cancel sends nothing (PRD SCH-5). Mounted only while a removal is pending. */
+/** Asks before an exception is removed. Cancel sends nothing. Mounted only while a removal is pending. */
 export function CalendarExceptionRemoveDialog({
   exception,
   isBusy,

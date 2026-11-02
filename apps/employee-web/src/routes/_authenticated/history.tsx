@@ -3,7 +3,7 @@ import { SummaryPage } from '../../features/summary/components/summary-page.js';
 import { getCurrentBusinessDate } from '../../features/summary/utils/current-business-date.js';
 import { createSummarySearchSchema } from '../../features/summary/types/summary-search.schema.js';
 
-// The range and page live in the URL, so a reload or a shared link shows the same summary (PRD SUM-1, SUM-2).
+// The range and page live in the URL, so a reload or a shared link shows the same summary.
 export const Route = createFileRoute('/_authenticated/history')({
   validateSearch: (search: Record<string, unknown>) =>
     createSummarySearchSchema(getCurrentBusinessDate()).parse(search),

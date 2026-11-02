@@ -19,7 +19,7 @@ const photoUpload: RequestHandler = multer({
 }).single(PHOTO_FIELD_NAME);
 
 /**
- * Refuses an oversized upload before multer reads its body, using the declared Content-Length (DATABASE §4.2).
+ * Refuses an oversized upload before multer reads its body, using the declared Content-Length.
  * A body with no declared length is still bounded by the multer file size limit.
  */
 @Injectable()

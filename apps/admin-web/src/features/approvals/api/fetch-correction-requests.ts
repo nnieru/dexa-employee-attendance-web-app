@@ -8,7 +8,7 @@ import type { ApiClient } from '@dexa/session';
 
 const CORRECTION_REQUESTS_PATH = '/attendance-corrections';
 
-/** One page of the HR correction review queue (PRD APR-1). The gateway accepts this only for HR. */
+/** One page of the HR correction review queue. The gateway accepts this only for HR. */
 export async function fetchCorrectionRequests(
   apiClient: ApiClient,
   query: RequestReviewQueueQuery,

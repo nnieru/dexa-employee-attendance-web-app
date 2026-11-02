@@ -8,7 +8,7 @@ import type { ApiClient } from '@dexa/session';
 
 const ATTENDANCE_MONITORING_PATH = '/attendance';
 
-/** One page of every employee's attendance (PRD ADM-4). The gateway accepts this only for HR. */
+/** One page of every employee's attendance. The gateway accepts this only for HR. */
 export async function fetchAttendanceMonitoring(
   apiClient: ApiClient,
   query: AttendanceMonitoringQuery,

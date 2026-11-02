@@ -86,7 +86,7 @@ type OvertimeApprovalTableProps = {
   onPageChange: (page: number) => void;
 };
 
-/** The overtime review queue (PRD APR-1). The URL owns the filters and the page; this table reflects them. */
+/** The overtime review queue. The URL owns the filters and the page; this table reflects them. */
 export function OvertimeApprovalTable({ search, onPageChange }: OvertimeApprovalTableProps) {
   const queue = useOvertimeApprovalQueue(toReviewQueueQuery(search));
   const page = queue.data;

@@ -8,7 +8,7 @@ import type { ApiClient } from '@dexa/session';
 
 const NOTIFICATION_INBOX_PATH = '/notifications';
 
-/** One page of the HR inbox, newest first (ADM-7). The cursor is opaque; the page number is kept by the caller. */
+/** One page of the HR inbox, newest first. The cursor is opaque; the page number is kept by the caller. */
 export async function fetchNotificationInbox(
   apiClient: ApiClient,
   query: NotificationListQuery,

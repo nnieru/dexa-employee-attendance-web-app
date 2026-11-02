@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Matches accounts.company_email, varchar(254) in DATABASE §3.
+// Matches accounts.company_email, varchar(254).
 const COMPANY_EMAIL_MAX_LENGTH = 254;
 
 // Sign-in and provisioning share these rules, so both accept and reject the same addresses.

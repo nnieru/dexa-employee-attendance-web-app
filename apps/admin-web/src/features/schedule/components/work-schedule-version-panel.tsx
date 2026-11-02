@@ -18,7 +18,7 @@ type WorkScheduleVersionPanelProps = {
 };
 
 /**
- * One version as read-only facts (SCH-3). The version in effect and the upcoming version use the same layout, and this
+ * One version as read-only facts. The version in effect and the upcoming version use the same layout, and this
  * panel has no controls: editing lives in the form below.
  */
 export function WorkScheduleVersionPanel({

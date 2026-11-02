@@ -29,7 +29,7 @@ const rabbitMqUrlSchema = z.url({
   error: 'must be an amqp:// or amqps:// connection URL',
 });
 
-// Matches accounts.company_email, varchar(254) in DATABASE §3.
+// Matches accounts.company_email, varchar(254).
 const COMPANY_EMAIL_MAX_LENGTH = 254;
 
 // A blank variable counts as unset, so an empty line in .env or compose means "not configured".
@@ -55,13 +55,13 @@ const ownServiceNameSchema = z.literal(ServiceName.AUTH_SERVICE, {
 const serviceEnvironmentSchema = BaseConfigSchema.extend({
   SERVICE_NAME: ownServiceNameSchema,
   AUTH_DATABASE_URL: postgresUrlSchema,
-  // The outbox relay publishes account events to this broker (DATABASE §2.2, D-35).
+  // The outbox relay publishes account events to this broker.
   RABBITMQ_URL: rabbitMqUrlSchema,
   AUTH_BOOTSTRAP_HR_EMAIL: z.preprocess(treatBlankAsUnset, bootstrapHrEmailSchema.optional()),
   AUTH_BOOTSTRAP_HR_PASSWORD: z.preprocess(treatBlankAsUnset, passwordSchema.optional()),
 }).superRefine(requireBootstrapHrPair);
 
-// auth-service is the only service that issues user tokens, so it alone must hold the private key (D-51).
+// auth-service is the only service that issues user tokens, so it alone must hold the private key.
 // The shared schema checks the key pair; this step requires the private key that the shared schema leaves optional.
 const tokenSettingsSchema = z
   .intersection(AuthConfigSchema, UserJwtSigningConfigSchema)

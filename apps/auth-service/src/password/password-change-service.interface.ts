@@ -1,6 +1,6 @@
 import type { ChangePasswordRequest } from '@dexa/contracts';
 
-/** Lets an authenticated account replace its own password (DATABASE §3.2). */
+/** Lets an authenticated account replace its own password. */
 export interface IPasswordChangeService {
   /**
    * Resolves once the new hash and its account.password.changed outbox row have committed together.

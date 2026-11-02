@@ -6,7 +6,7 @@ import type {
 
 export const OVERTIME_REQUEST_DECISION_SERVICE = Symbol('IOvertimeRequestDecisionService');
 
-/** HR approves or rejects a pending overtime request (APR-2..APR-4, OT-6). */
+/** HR approves or rejects a pending overtime request. */
 export interface IOvertimeRequestDecisionService {
   /** The reviewer comes from the verified token. Rejects with a domain error when the decision is refused. */
   approve(

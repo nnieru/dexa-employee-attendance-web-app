@@ -17,7 +17,7 @@ const DAY_OFF_SNAPSHOT: DaySchedule = {
   scheduledStartAt: null,
   scheduledEndAt: null,
 };
-// 09:00-18:00 WIB on 2026-11-02 (DATABASE §5.2 default schedule).
+// 09:00-18:00 WIB on 2026-11-02 (default schedule).
 const WORKING_DAY_SNAPSHOT: DaySchedule = {
   isWorkingDay: true,
   timezone: BUSINESS_TIMEZONE,

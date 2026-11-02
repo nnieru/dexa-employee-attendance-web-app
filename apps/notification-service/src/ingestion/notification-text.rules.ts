@@ -6,12 +6,12 @@ import {
 import type { NotifiableEvent, NotifiableField } from './notifiable-event.rules.js';
 
 /**
- * The name shown when Employee has no profile for the affected account (DATABASE §8: an unknown account is shown
+ * The name shown when Employee has no profile for the affected account (an unknown account is shown
  * as unavailable, not as an error that fails the whole notification).
  */
 export const UNAVAILABLE_EMPLOYEE_NAME = 'Unavailable employee';
 
-// Title limit of notifications.title (DATABASE §7.1).
+// Title limit of notifications.title.
 const TITLE_MAX_LENGTH = 200;
 
 // Readable label for each field name a contract may report. A field without a label fails type-checking, so a new
@@ -82,7 +82,7 @@ export type AttendanceRequestTextInput = {
 };
 
 /**
- * Builds the title and body for an attendance request submitted by an employee (PRD APR-7). The event carries no
+ * Builds the title and body for an attendance request submitted by an employee. The event carries no
  * reason, so the text names the request kind and business date only. Employee caps names at 150 characters, so the
  * longest title still fits the 200-character column.
  */

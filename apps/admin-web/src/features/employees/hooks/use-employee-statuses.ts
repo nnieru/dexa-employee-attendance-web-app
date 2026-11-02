@@ -4,7 +4,7 @@ import { useSession } from '@dexa/session';
 import { employeeQueryKeys } from '../api/employee-query-keys.js';
 import { fetchEmployeeStatuses } from '../api/fetch-employee-statuses.js';
 
-/** The employment status catalog for the create and update forms (ADM-1, ADM-2). */
+/** The employment status catalog for the create and update forms. */
 export function useEmployeeStatuses(): UseQueryResult<ReadonlyArray<MasterOption>, Error> {
   const { apiClient } = useSession();
   return useQuery({

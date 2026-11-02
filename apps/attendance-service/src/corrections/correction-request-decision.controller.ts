@@ -31,7 +31,7 @@ import {
 } from './correction-request-decision.service.interface.js';
 
 // HR only, checked here as well as at the gateway. The reviewer is the token's account, and the service refuses a
-// reviewer who is the requester (APR-4). A decision answers 200 whether it applied or replayed a recorded decision.
+// reviewer who is the requester. A decision answers 200 whether it applied or replayed a recorded decision.
 @Controller('attendance-corrections')
 @UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)

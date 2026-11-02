@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Mirrors the employees_profile_status_ck values (DATABASE §4.1). The server derives the value; clients only read it.
+// Mirrors the employees_profile_status_ck values. The server derives the value; clients only read it.
 export const ProfileStatus = {
   INCOMPLETE: 'INCOMPLETE',
   COMPLETE: 'COMPLETE',

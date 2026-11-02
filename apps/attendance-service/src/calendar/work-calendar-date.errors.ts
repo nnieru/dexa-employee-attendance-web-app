@@ -1,7 +1,7 @@
 import { ConflictError, NotFoundError } from '@dexa/common';
 import { ErrorCode } from '@dexa/contracts';
 
-/** No calendar exception has this date, so there is nothing to delete (PRD SCH-5). */
+/** No calendar exception has this date, so there is nothing to delete. */
 export class WorkCalendarDateNotFoundError extends NotFoundError {
   constructor() {
     super(ErrorCode.NOT_FOUND, 'Calendar date not found.');
@@ -10,7 +10,7 @@ export class WorkCalendarDateNotFoundError extends NotFoundError {
 
 /**
  * The date is today or earlier in the business timezone. Such a date is read-only, so attendance already recorded
- * on it cannot change (PRD SCH-5, SCH-6).
+ * on it cannot change.
  */
 export class WorkCalendarDateNotFutureError extends ConflictError {
   constructor() {

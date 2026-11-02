@@ -57,7 +57,7 @@ const READY_STATUS: DataTableStatus = { kind: 'ready' };
 const REFRESHING_MESSAGE = 'Updating records…';
 
 /**
- * Renders a semantic table with server-side pagination. The caller owns fetching, the page number,
+ * Renders a semantic table with server-side pagination. The caller owns fetching, the page number
  * and the status. The body shows exactly one of loading, error, empty, or the rows; refreshing shows
  * the rows with an updating indicator.
  */

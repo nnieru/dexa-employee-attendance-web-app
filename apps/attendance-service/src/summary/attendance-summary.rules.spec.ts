@@ -17,7 +17,7 @@ const WORKED_RECORD: AttendanceSummaryRecord = {
   approvedOvertimeMinutes: 0,
 };
 
-// A request created the day with no punch, so the day has no check-in time and keeps its stored statuses (D-59).
+// A request created the day with no punch, so the day has no check-in time and keeps its stored statuses.
 describe('toAttendanceSummaryItem', () => {
   it.each<{
     condition: string;

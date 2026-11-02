@@ -27,7 +27,7 @@ export type CorrectionSubmitHandlers = {
 export type CorrectionSubmitResult = 'sent' | 'busy' | 'refused';
 
 /**
- * Sends a correction request for this form session (APR-5). The idempotency key rule is the one the overtime form uses
+ * Sends a correction request for this form session. The idempotency key rule is the one the overtime form uses
  * (resolveAttemptIdempotencyKey): the first send makes a key, an identical retry reuses it, and a changed payload gets a
  * new key. A refusal by the contract is not an attempt, so it keeps the earlier key. Success invalidates the own
  * correction lists and the single-date record, so the list and the panel show the new state.

@@ -13,10 +13,10 @@ export type PasswordChangedEventInput = {
 };
 
 /**
- * Builds the account.password.changed envelope (ARCHITECTURE §8, D-09). The payload names only the
+ * Builds the account.password.changed envelope. The payload names only the
  * field that changed. It is built from these named inputs, so no password, hash, or token can reach
  * it, and the strict payload schema rejects any extra key that a caller might still add.
- * T-AUTH-09 reuses this builder with the HR account as the actor.
+ * The profile-change event rebuilder reuses this builder with the HR account as the actor.
  */
 export function buildPasswordChangedEvent(input: PasswordChangedEventInput): EventMessage {
   return {

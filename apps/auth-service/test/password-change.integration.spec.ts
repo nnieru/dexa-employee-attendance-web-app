@@ -207,7 +207,7 @@ describe('self-service password change', () => {
       .send(body);
   }
 
-  // Signs in, then returns the token that api-gateway sends to this service for the same user (D-51). The gateway
+  // Signs in, then returns the token that api-gateway sends to this service for the same user. The gateway
   // checks the end-user JWT, so this service only ever receives its own token.
   async function signIn(email: string, password: string, portal: string): Promise<string> {
     const response = await postSession({ email, password, portal });

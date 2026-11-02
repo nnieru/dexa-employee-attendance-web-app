@@ -21,7 +21,7 @@ const REQUEST_STATUS_DISPLAY: Readonly<Record<RequestStatus, ApprovalStatusDispl
   REJECTED: { text: 'Rejected', tone: 'error' },
 };
 
-/** DESIGN §8 request labels. The text carries the meaning; the tone only adds colour. */
+/** The text carries the meaning; the tone only adds colour. */
 export function getApprovalStatusDisplay(status: RequestStatus): ApprovalStatusDisplay {
   return REQUEST_STATUS_DISPLAY[status];
 }

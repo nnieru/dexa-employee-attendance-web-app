@@ -1,4 +1,4 @@
-// Shows the shape of the profile panel while it loads (DESIGN §9). No placeholder names, numbers or times.
+// Shows the shape of the profile panel while it loads. No placeholder names, numbers or times.
 export function ProfileSkeleton() {
   return (
     <div aria-busy="true">

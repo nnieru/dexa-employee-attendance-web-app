@@ -38,14 +38,14 @@ export class EmployeeListService implements IEmployeeListService {
   }
 
   // The email part of a search can only come from Auth. If Auth is unavailable, the search fails with 503 rather
-  // than returning name matches alone, because those would look like the complete answer (D-15).
+  // than returning name matches alone, because those would look like the complete answer.
   private async resolveSearch(nameTerm: string): Promise<EmployeeListSearch> {
     const emailMatchAccountIds = await this.accounts.searchAccountIdsByEmail(nameTerm);
     return { nameTerm, emailMatchAccountIds };
   }
 
   // One batched lookup covers the page, and none runs for an empty page. Unlike the search, the email and role
-  // are display data, so an unavailable Auth shows those cells as null and keeps the rest of the page (DATABASE §8).
+  // are display data, so an unavailable Auth shows those cells as null and keeps the rest of the page.
   private async lookupPageAccounts(
     records: ReadonlyArray<EmployeeListRecord>,
   ): Promise<ReadonlyMap<string, AccountLookupItem>> {

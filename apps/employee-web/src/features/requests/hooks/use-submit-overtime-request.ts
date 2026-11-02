@@ -27,7 +27,7 @@ export type OvertimeSubmitHandlers = {
 export type OvertimeSubmitResult = 'sent' | 'busy' | 'refused';
 
 /**
- * Sends an overtime request for this form session (APR-5). The idempotency key rule lives here:
+ * Sends an overtime request for this form session. The idempotency key rule lives here:
  * - the first submission makes a key; a form that is never submitted makes none, and a reopened form starts over;
  * - a retry whose content equals the last submitted attempt reuses that attempt's key, so the server answers the
  *   same request;

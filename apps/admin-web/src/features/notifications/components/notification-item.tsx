@@ -20,7 +20,7 @@ type NotificationItemProps = {
 };
 
 /**
- * One inbox entry (DESIGN §7). Read state is shown as text and as the title's weight, never by color alone. Only an
+ * One inbox entry. Read state is shown as text and as the title's weight, never by color alone. Only an
  * unread entry offers the mark-read action; its busy state keeps the label and disables a second press.
  */
 export function NotificationItem({

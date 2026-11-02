@@ -21,7 +21,7 @@ export type EmployeePhoneUpdate = {
   readonly profileStatus: ProfileStatus;
 };
 
-/** The photo reference and the status it implies, written together in one UPDATE (DATABASE §4.2). */
+/** The photo reference and the status it implies, written together in one UPDATE. */
 export type EmployeePhotoUpdate = {
   readonly accountId: string;
   readonly photoKey: string;
@@ -56,7 +56,7 @@ export interface IEmployeeProfileTransaction extends OutboxTransaction {
   updateFields(update: EmployeeFieldsUpdate): Promise<void>;
 }
 
-/** Runs profile writes inside one transaction (DATABASE §4.1). Reads belong to IEmployeeProfileReader. */
+/** Runs profile writes inside one transaction. Reads belong to IEmployeeProfileReader. */
 export interface IEmployeeProfileWriter {
   runInTransaction<TResult>(
     work: (transaction: IEmployeeProfileTransaction) => Promise<TResult>,

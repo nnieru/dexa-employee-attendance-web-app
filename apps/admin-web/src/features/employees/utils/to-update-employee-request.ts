@@ -17,7 +17,7 @@ type StoredEmployee = {
 
 /**
  * Names only the fields that differ from the stored employee. An unchanged value would overwrite a self-service change
- * saved after the page loaded (DATABASE §4.3). The status is also named when a previous save reported a partial
+ * saved after the page loaded. The status is also named when a previous save reported a partial
  * failure: the server repeats the Auth call for it, which repairs the account (EmployeeUpdateService).
  * A value that is not present (a field not yet registered, or one that is disabled) counts as unchanged.
  */
@@ -52,7 +52,7 @@ export function toUpdateEmployeeRequest(changes: UpdateEmployeeChanges): UpdateE
   return updateEmployeeRequestSchema.parse(changes);
 }
 
-// The master code that deactivates an account (D-13). Every other status keeps the account active.
+// The master code that deactivates an account. Every other status keeps the account active.
 const INACTIVE_EMPLOYEE_STATUS_CODE = 'INACTIVE';
 
 /** True when the changes name a status that deactivates the account. Such a save asks for confirmation first. */

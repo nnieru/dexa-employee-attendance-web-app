@@ -13,7 +13,7 @@ import {
 } from './attendance-monitoring.service.interface.js';
 
 // HR only, checked here as well as at the gateway. The controller has only this GET: attendance records have no
-// PUT, PATCH, or DELETE route (PRD ADM-6).
+// PUT, PATCH, or DELETE route.
 @Controller('attendance')
 @UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)

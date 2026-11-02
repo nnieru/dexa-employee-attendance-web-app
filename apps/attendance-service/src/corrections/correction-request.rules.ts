@@ -2,7 +2,7 @@ import type { CorrectionRequest, CorrectionRequestPage } from '@dexa/contracts';
 import type { StoredCorrectionRequest } from './correction-request.repository.interface.js';
 
 // clockInAt and clockOutAt are the requested instants, null for a leave outcome. The reviewer's account is not part of
-// the response (APR-6).
+// the response.
 export function toCorrectionRequest(request: StoredCorrectionRequest): CorrectionRequest {
   return {
     id: request.id,

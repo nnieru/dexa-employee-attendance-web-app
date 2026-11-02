@@ -23,7 +23,7 @@ export function deadLetterQueueName(queue: string): string {
 }
 
 /**
- * Holds dead-letter messages that a consumer cannot store or redeliver (DATABASE §6.2). Nothing consumes it; an
+ * Holds dead-letter messages that a consumer cannot store or redeliver. Nothing consumes it; an
  * operator reviews the messages by hand.
  */
 export function parkedQueueName(queue: string): string {

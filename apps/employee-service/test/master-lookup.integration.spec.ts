@@ -22,7 +22,7 @@ import {
   employeeServiceEnvironment,
 } from './employee-service-environment.js';
 
-// The lifetime of the token api-gateway sends for a call (D-51).
+// The lifetime of the token api-gateway sends for a call.
 const TOKEN_LIFETIME_SECONDS = 60;
 
 // Starting the container pulls an image on a cold machine, which exceeds Jest's 5 second default.
@@ -59,7 +59,7 @@ const EXPECTED_EMPLOYEE_STATUSES = [
   { code: 'ON_LEAVE', name: 'On Leave', isActive: false },
 ];
 
-// Signs the token that api-gateway sends to this service for the user (D-51). The claims are the ones the
+// Signs the token that api-gateway sends to this service for the user. The claims are the ones the
 // service's guard checks.
 function signUserToken(
   keys: AuthKeySet,
@@ -183,7 +183,7 @@ describe('employee-service master lookups', () => {
     TEST_TIMEOUT_MS,
   );
 
-  // Only api-gateway verifies end-user tokens and the account status (D-51), so these routes refuse anything else.
+  // Only api-gateway verifies end-user tokens and the account status, so these routes refuse anything else.
   it.each([POSITIONS_PATH, EMPLOYEE_STATUSES_PATH])(
     'should return 401 UNAUTHORIZED on %s when an end-user JWT is sent instead of a gateway token',
     async (path) => {

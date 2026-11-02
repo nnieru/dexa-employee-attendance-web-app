@@ -1,6 +1,6 @@
 import { isBusinessDate, shiftBusinessDate, type BusinessDate } from './business-time.js';
 
-// PRD COR-1: the business date is today or up to this many days back.
+// The business date is today or up to this many days back.
 export const CORRECTION_BUSINESS_DATE_WINDOW_DAYS = 30;
 
 export type CorrectionDateBounds = {

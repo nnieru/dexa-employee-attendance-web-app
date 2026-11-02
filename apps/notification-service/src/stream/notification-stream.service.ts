@@ -18,7 +18,7 @@ const EVENT_STREAM_HEADERS = {
 /**
  * Opens the HR notification stream for one recipient. The stream carries the rows committed for that recipient and
  * heartbeat comments. It ends when the client leaves. The account is not checked here: api-gateway checks it while it
- * proxies the stream, and closes the connection when the account is deactivated (D-51). The token is checked once, at
+ * proxies the stream, and closes the connection when the account is deactivated. The token is checked once, at
  * connect, by the guard on the route.
  */
 @Injectable()

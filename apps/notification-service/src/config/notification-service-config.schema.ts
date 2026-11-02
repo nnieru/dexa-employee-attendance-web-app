@@ -35,17 +35,17 @@ const ownServiceNameSchema = z.literal(ServiceName.NOTIFICATION_SERVICE, {
 
 // The notification service consumes the event queue, writes the inbox, and resolves recipients and names through
 // the internal routes of auth-service and employee-service. Its service token is signed with its own key. It holds
-// no user token setting: the gateway checks users and forwards only its own signed token (D-51).
+// no user token setting: the gateway checks users and forwards only its own signed token.
 export const NotificationServiceConfigSchema = z.intersection(
   AuthConfigSchema,
   BaseConfigSchema.extend({
     SERVICE_NAME: ownServiceNameSchema,
     NOTIFICATION_DATABASE_URL: postgresUrlSchema,
-    // The consumer declares its queue and dead-letter queue on this broker at startup (DATABASE §7.3).
+    // The consumer declares its queue and dead-letter queue on this broker at startup.
     RABBITMQ_URL: rabbitMqUrlSchema,
-    // Recipients are the active HR accounts that auth-service lists (DATABASE §7.3 step 1).
+    // Recipients are the active HR accounts that auth-service lists (step 1).
     AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
-    // Password-change notifications name the employee through employee-service's batched lookup (T-EMP-10).
+    // Password-change notifications name the employee through employee-service's batched lookup.
     EMPLOYEE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
   }),
 );

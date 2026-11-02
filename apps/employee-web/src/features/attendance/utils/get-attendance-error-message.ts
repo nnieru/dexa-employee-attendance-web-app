@@ -6,12 +6,12 @@ function hasErrorCode(error: unknown, code: string): boolean {
   return error instanceof ApiError && error.code === code;
 }
 
-/** True when no work schedule covers the day, so attendance cannot be recorded or shown (ATT-8, D-42). */
+/** True when no work schedule covers the day, so attendance cannot be recorded or shown. */
 export function isScheduleNotConfiguredError(error: unknown): boolean {
   return hasErrorCode(error, ErrorCode.SCHEDULE_NOT_CONFIGURED);
 }
 
-/** True when the day is an approved Sick leave or Leave, so a punch is refused (COR-7). */
+/** True when the day is an approved Sick leave or Leave, so a punch is refused. */
 export function isDayOnLeaveError(error: unknown): boolean {
   return hasErrorCode(error, ErrorCode.ATTENDANCE_DAY_ON_LEAVE);
 }

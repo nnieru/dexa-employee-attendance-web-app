@@ -4,7 +4,7 @@ import type { CalendarExceptionType } from '../types/calendar-exception-form.sch
 export const HOLIDAY_LABEL = 'Holiday';
 export const SPECIAL_WORKING_DAY_LABEL = 'Special working day';
 
-/** A holiday is a non-working day on a regular working weekday. A special working day is a working day on a regular day off (PRD SCH-5). */
+/** A holiday is a non-working day on a regular working weekday. A special working day is a working day on a regular day off. */
 export function toIsWorkingDay(exceptionType: CalendarExceptionType): boolean {
   return exceptionType === 'specialWorkingDay';
 }

@@ -51,7 +51,7 @@ import {
 } from '../masters/master-assignment.reader.interface.js';
 
 /**
- * Creates an employee in three steps that survive a failure between them (DATABASE §4.3): Auth creates the
+ * Creates an employee in three steps that survive a failure between them: Auth creates the
  * PENDING account, the profile is saved with the account bound, and Auth activates the account. The operation's
  * stored phase says where a retry resumes. No transaction spans the calls, so each step is idempotent on its own.
  */
@@ -224,7 +224,7 @@ function toFingerprintFields(request: CreateEmployeeRequest): {
   };
 }
 
-// A new profile has no photo yet, so its completion follows the rule in DATABASE §4.1.
+// A new profile has no photo yet, so its completion follows the rule.
 function toNewProfile(request: CreateEmployeeRequest, accountId: string): NewEmployeeProfile {
   return {
     accountId,

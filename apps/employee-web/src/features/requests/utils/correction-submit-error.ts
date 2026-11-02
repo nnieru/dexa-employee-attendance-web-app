@@ -17,7 +17,7 @@ export type CorrectionSubmitFailure =
   | { kind: 'field'; field: CorrectionFormField; message: string }
   | { kind: 'general'; message: string };
 
-// Each policy code names the field it is about (PRD COR-1, COR-2). The server message is user-safe, so it is shown as is.
+// Each policy code names the field it is about. The server message is user-safe, so it is shown as is.
 const FIELD_BY_ERROR_CODE: Partial<Record<ErrorCode, CorrectionFormField>> = {
   [ErrorCode.CORRECTION_BUSINESS_DATE_OUTSIDE_WINDOW]: 'businessDate',
   [ErrorCode.CORRECTION_CLOCK_IN_REQUIRED]: 'clockInTime',

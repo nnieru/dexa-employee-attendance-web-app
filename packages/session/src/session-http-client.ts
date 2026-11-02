@@ -35,7 +35,7 @@ export function createSessionHttpClient({
     onAccessTokenExpired: refreshSession,
     onUnauthorized: (code: ApiErrorCode) => {
       const endReason = getSessionEndReason(code);
-      // A 401 without a session (a failed login or refresh) is not a session end (D-13, INVALID_CREDENTIALS).
+      // A 401 without a session (a failed login or refresh) is not a session end (INVALID_CREDENTIALS).
       if (endReason !== null && getAccessToken() !== null) onSessionEnded(endReason);
     },
   });

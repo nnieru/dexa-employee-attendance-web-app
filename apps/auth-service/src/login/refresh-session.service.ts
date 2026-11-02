@@ -21,7 +21,7 @@ const ACCOUNT_DISABLED_MESSAGE = 'Your account has been deactivated.';
 
 /**
  * Exchanges a refresh token for a fresh session. The account is read from the database, so a
- * deactivation or a role change takes effect on the next refresh (AUTH-5, D-13) even though the
+ * deactivation or a role change takes effect on the next refresh even though the
  * refresh token itself is stateless and lives until it expires.
  */
 @Injectable()
@@ -36,7 +36,7 @@ export class RefreshSessionService implements IRefreshSessionService {
     const { accountId } = await this.tokenVerifier.verifyRefreshToken(refreshToken);
     const account = await this.accounts.findAccountById(accountId);
     // The disabled account is named, because its user is already authenticated and must be told to
-    // stop; every other refusal stays generic (AUTH-4).
+    // stop; every other refusal stays generic.
     if (account === undefined || !account.isActive || account.isProvisioningPending) {
       if (account !== undefined && !account.isActive) {
         throw new UnauthorizedError(ErrorCode.ACCOUNT_DISABLED, ACCOUNT_DISABLED_MESSAGE);

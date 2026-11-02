@@ -19,7 +19,7 @@ import type {
 
 // A plain read with no FOR UPDATE. The date range and the date-then-account order are served by the
 // (business_date, account_id) index; an employee filter is served by the unique (account_id, business_date) key
-// (DATABASE §5.4). The raw punches join on the unique (attendance_day_id, type) key, so each day matches at most one
+// The raw punches join on the unique (attendance_day_id, type) key, so each day matches at most one
 // IN and one OUT entry and no row is duplicated. The overtime minutes and the correction flag are per-day probes in
 // the same statement, so a page is one read and not one per row.
 @Injectable()

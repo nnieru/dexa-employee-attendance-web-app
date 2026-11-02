@@ -5,8 +5,7 @@ export type PasswordCredentialRecord = {
   readonly accountId: string;
   readonly passwordHash: string;
   readonly isActive: boolean;
-  // A PENDING provisioning operation keeps the account out of use until HR activates it (DATABASE
-  // §3.1).
+  // A PENDING provisioning operation keeps the account out of use until HR activates it.
   readonly isProvisioningPending: boolean;
 };
 

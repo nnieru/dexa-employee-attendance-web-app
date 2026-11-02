@@ -11,7 +11,7 @@ export type OwnPhonePlan = {
 
 /**
  * Returns undefined when the stored phone already equals the requested one, so nothing is written and no
- * change is reported. Otherwise the status is recomputed (DATABASE §4.1), and profileStatus is reported only
+ * change is reported. Otherwise the status is recomputed, and profileStatus is reported only
  * when it moves.
  */
 export function planOwnPhoneChange(

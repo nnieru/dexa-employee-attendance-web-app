@@ -17,7 +17,7 @@ import {
 // function are hand-written SQL migrations, so Drizzle does not model them (see 0001).
 
 // The outbox table is defined by @dexa/messaging. Re-exporting it here lets db:generate write its migration
-// into this service's own migrations folder (DATABASE §2.2).
+// into this service's own migrations folder.
 export { outboxEvents } from '@dexa/messaging';
 
 export const masterEmployeeStatuses = pgTable(
@@ -64,7 +64,7 @@ export const employees = pgTable(
     name: varchar('name', { length: 150 }).notNull(),
     positionId: uuid('position_id').notNull(),
     employeeStatusId: uuid('employee_status_id').notNull(),
-    // No default: the write path must supply the derived completion result (DATABASE §4.1).
+    // No default: the write path must supply the derived completion result.
     profileStatus: varchar('profile_status', { length: 20 }).notNull(),
     phoneNumber: varchar('phone_number', { length: 30 }),
     photoKey: text('photo_key'),
@@ -103,7 +103,7 @@ export const employees = pgTable(
 );
 
 // accountId is a logical reference to auth_db.accounts.id, and it stays null until Auth returns an
-// account, so the unique constraint allows many unbound operations (DATABASE §4.3).
+// account, so the unique constraint allows many unbound operations.
 export const employeeProvisioningOperations = pgTable(
   'employee_provisioning_operations',
   {

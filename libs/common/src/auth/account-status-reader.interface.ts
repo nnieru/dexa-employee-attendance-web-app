@@ -1,7 +1,7 @@
 import type { AccountStatus } from '@dexa/contracts';
 
 /**
- * Reads whether an account may still use its token. Only api-gateway binds it (D-51): JwtAuthGuard calls it on
+ * Reads whether an account may still use its token. Only api-gateway binds it: JwtAuthGuard calls it on
  * every user request, and the gateway's stream monitor calls it while a stream is open. It reads auth-service
  * over the internal API, so no other service needs the reader.
  */

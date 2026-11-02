@@ -28,7 +28,7 @@ function getEmployeeRowId(employee: EmployeeListItem): string {
   return employee.accountId;
 }
 
-/** HR employee list (ADM-3). The URL owns the search and the page; this component only reflects them. */
+/** HR employee list. The URL owns the search and the page; this component only reflects them. */
 export function EmployeeListPage({
   search,
   onSearch,

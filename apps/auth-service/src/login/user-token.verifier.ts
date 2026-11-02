@@ -42,7 +42,7 @@ export class UserTokenVerifier implements IUserTokenVerifier {
       return { accountId: parsed.data.sub };
     } catch {
       // One refusal for every malformed, expired, or wrongly typed token, so the answer reveals
-      // nothing about which check failed (AUTH-4).
+      // nothing about which check failed.
       throw new UnauthorizedError(ErrorCode.UNAUTHORIZED, INVALID_REFRESH_TOKEN_MESSAGE);
     }
   }

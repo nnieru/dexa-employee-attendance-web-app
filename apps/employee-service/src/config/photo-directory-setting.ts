@@ -7,7 +7,7 @@ const SETTING_FIELD = 'EMPLOYEE_PHOTO_DIRECTORY';
 const LOCAL_PHOTO_DIRECTORY = join('.data', 'photos');
 
 /**
- * Resolves EMPLOYEE_PHOTO_DIRECTORY, the persistent directory that holds uploaded photos (DATABASE §4.2).
+ * Resolves EMPLOYEE_PHOTO_DIRECTORY, the persistent directory that holds uploaded photos.
  * Production must name an absolute directory, because the photos must survive a restart. Other environments
  * fall back to the local work directory. Failure messages name the field only.
  */

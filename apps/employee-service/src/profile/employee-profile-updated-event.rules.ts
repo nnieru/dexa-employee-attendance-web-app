@@ -11,7 +11,7 @@ export type EmployeeProfileUpdatedEventInput = {
 };
 
 /**
- * Builds the employee.profile.updated envelope (ARCHITECTURE §8, DATABASE §4.3). The payload names the changed fields
+ * Builds the employee.profile.updated envelope. The payload names the changed fields
  * only. It is built from these named inputs, so no old value, new value, password, or token can reach it, and the
  * strict payload schema rejects any extra key.
  */

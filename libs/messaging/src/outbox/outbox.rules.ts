@@ -18,7 +18,7 @@ export const CLAIM_LEASE_MILLISECONDS = 60_000;
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1_000;
 
-/** Delay before the next attempt after `attemptCount` failed attempts: 1 s, 2 s, 4 s, ... capped at 60 s. */
+/** Delay before the next attempt after `attemptCount` failed attempts: 1 s, 2 s, 4 s... capped at 60 s. */
 export function calculateRetryDelayMs(attemptCount: number): number {
   if (!Number.isSafeInteger(attemptCount) || attemptCount < 1) {
     throw new RangeError(`Attempt count must be a positive integer, received ${attemptCount}`);

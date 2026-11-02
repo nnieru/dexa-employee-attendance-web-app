@@ -49,7 +49,7 @@ export class CorrectionRequestController {
     private readonly correctionRequestLists: ICorrectionRequestListService,
   ) {}
 
-  // A new request answers 201. An identical retry answers 200 with the request that the first submission saved (APR-5).
+  // A new request answers 201. An identical retry answers 200 with the request that the first submission saved.
   @Post()
   async submit(
     @Body(new ZodValidationPipe(submitCorrectionRequestSchema)) request: SubmitCorrectionRequest,
@@ -61,7 +61,7 @@ export class CorrectionRequestController {
     return result.request;
   }
 
-  // The signed-in account's own requests of every status, newest first (APR-6). The query is strict, and the
+  // The signed-in account's own requests of every status, newest first. The query is strict, and the
   // requester comes only from the token.
   @Get('me')
   listOwnRequests(

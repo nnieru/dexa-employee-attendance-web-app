@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-/** The non-secret fields that identify one create request under its operation ID (DATABASE §4.3). */
+/** The non-secret fields that identify one create request under its operation ID. */
 export type ProvisioningFingerprintFields = {
   readonly email: string;
   readonly name: string;

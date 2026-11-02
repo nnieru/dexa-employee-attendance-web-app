@@ -31,7 +31,7 @@ import {
   type NewHrProfile,
 } from './hr-profile.repository.interface.js';
 
-// The master status that a bootstrap HR profile starts in (DATABASE §4).
+// The master status that a bootstrap HR profile starts in.
 const ACTIVE_EMPLOYEE_STATUS_CODE = 'ACTIVE';
 
 export type HrProfileBootstrapOutcome =
@@ -48,7 +48,7 @@ function finished(outcome: HrProfileBootstrapOutcome): AttemptResult {
 }
 
 /**
- * Creates the bootstrap HR's employee profile (DATABASE §3.3, decided v1.11). Startup does not wait on Auth:
+ * Creates the bootstrap HR's employee profile. Startup does not wait on Auth:
  * the attempts run in the background, retrying with bounded backoff until they finish or the app shuts down.
  * The profile is created once. A restart finds it and changes nothing. No event is published, because the
  * initial creation has no agreed event contract.
@@ -152,7 +152,7 @@ export class HrProfileBootstrapService implements OnApplicationBootstrap, OnModu
       name: settings.name,
       positionId,
       employeeStatusId,
-      // A new profile has no phone or photo, so the derived status is INCOMPLETE (DATABASE §4.1).
+      // A new profile has no phone or photo, so the derived status is INCOMPLETE.
       profileStatus: calculateProfileStatus({
         name: settings.name,
         positionId,

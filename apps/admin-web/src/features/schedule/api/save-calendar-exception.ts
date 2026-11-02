@@ -6,7 +6,7 @@ import type { CalendarExceptionSave } from '../utils/to-calendar-exception-save.
 const WORK_CALENDAR_DATES_PATH = '/work-calendar-dates';
 
 /**
- * Stores the exception for one date (PRD SCH-5). The service replaces any exception already on that date, and refuses
+ * Stores the exception for one date. The service replaces any exception already on that date, and refuses
  * a date that is not after today in WIB with 409. The save is not retried: a lost answer may hide a stored change.
  */
 export async function saveCalendarException(

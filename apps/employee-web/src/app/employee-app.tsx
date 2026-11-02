@@ -24,7 +24,7 @@ export function EmployeeApp({ queryClient, router }: EmployeeAppProps) {
   const sessionConfig = useMemo<SessionConfig>(
     () => ({
       portal: Portal.EMPLOYEE,
-      // The employee portal accepts EMPLOYEE and HR accounts (PRD AUTH-3, contracts Portal).
+      // The employee portal accepts EMPLOYEE and HR accounts (the contracts Portal rejects others).
       allowedRoles: [Role.EMPLOYEE, Role.HR],
       apiBaseUrl: API_BASE_URL,
       onSessionEnded: navigateToLogin,

@@ -1,7 +1,7 @@
-// In-process retries of a failed archive write (DATABASE §6.2, D-46): 1 s, 2 s, 4 s, 8 s, five attempts in total.
+// In-process retries of a failed archive write: 1 s, 2 s, 4 s, 8 s, five attempts in total.
 export const ARCHIVE_RETRY_DELAYS_MS: ReadonlyArray<number> = [1_000, 2_000, 4_000, 8_000];
 
-// How long the archive consumer stays cancelled after a transient failure (D-46).
+// How long the archive consumer stays cancelled after a transient failure.
 export const CONSUMER_PAUSE_MS = 60_000;
 
 /** Timings the consumer runs with. Production uses the defaults; tests inject short values. */

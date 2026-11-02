@@ -7,7 +7,7 @@ type SelectFieldProps = ComponentPropsWithRef<'select'> & {
 };
 
 /**
- * A native select with the same label, error, and hint wiring as TextField (DESIGN §7). The label stays visible and
+ * A native select with the same label, error, and hint wiring as TextField. The label stays visible and
  * the error is linked through aria-describedby.
  */
 export function SelectField({

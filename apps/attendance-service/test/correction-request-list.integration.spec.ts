@@ -44,7 +44,7 @@ function tokenFor(accountId: string, role: Role = Role.EMPLOYEE): string {
   return signGatewayUserToken(keys, ServiceName.ATTENDANCE_SERVICE, accountId, role, expiresAt);
 }
 
-// A leave correction for the given date. Leave outcomes carry no times (COR-1).
+// A leave correction for the given date. Leave outcomes carry no times.
 function leaveBody(businessDate: string) {
   return {
     requestedDayStatus: 'LEAVE',
@@ -64,7 +64,7 @@ async function submitCorrection(accessToken: string, body: object): Promise<stri
 }
 
 // HR decides a request in the database, as the decision endpoint is not built yet (T-REQ-09). The triggers and
-// checks of DATABASE §5.6 and §5.8 still apply: an approved row carries applied_revision, and a rejected row a reason.
+// constraint checks still apply: an approved row carries applied_revision, and a rejected row a reason.
 async function decideCorrection(
   requestId: string,
   status: Exclude<RequestStatus, 'PENDING'>,

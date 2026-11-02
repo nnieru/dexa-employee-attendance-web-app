@@ -1,6 +1,6 @@
 /**
  * Client-side photo checks for PhotoUploader. They give early feedback only: the server decodes the
- * image and makes the real decision (PRO-4), so a file that passes here can still be refused.
+ * image and makes the real decision, so a file that passes here can still be refused.
  */
 
 export const PHOTO_ACCEPT_ATTRIBUTE = 'image/jpeg,image/png';

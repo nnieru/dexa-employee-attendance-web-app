@@ -8,8 +8,8 @@ export type AttendanceRange = {
 };
 
 /**
- * Fills a missing bound with the default range, the first day of today's business month through today (PRD SUM-1,
- * D-17). The range is checked again after filling, because a single bound given by the client can fall out of order
+ * Fills a missing bound with the default range, the first day of today's business month through today.
+ * The range is checked again after filling, because a single bound given by the client can fall out of order
  * with its default.
  */
 export function resolveAttendanceRange(

@@ -11,7 +11,7 @@ export type DatePreset = {
   period: DatePresetPeriod;
 };
 
-/** Presets end on the app-supplied today (D-17). */
+/** Presets end on the app-supplied today. */
 export const DATE_RANGE_PRESETS: readonly DatePreset[] = [
   { label: '1 week', period: { unit: 'days', count: 7 } },
   { label: '1 month', period: { unit: 'months', count: 1 } },
@@ -27,7 +27,7 @@ type CalendarDate = {
 };
 
 /**
- * Returns the range that ends on today and covers the period inclusively (D-52): From is today
+ * Returns the range that ends on today and covers the period inclusively: From is today
  * minus the period plus one day. Month subtraction that lands on a missing day uses the last day
  * of that month, so 2026-10-31 minus one month is 2026-09-30.
  *

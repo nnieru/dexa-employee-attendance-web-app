@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 /**
- * Named by where the mockup uses each size: `compact` is 36px in the app header and table rows,
+ * Named by where the mockup uses each size: `compact` is 36px in the app header and table rows
  * `preview` is 72px for a photo under confirmation, `profile` is 96px on the profile page.
  */
 export type AvatarSize = 'compact' | 'preview' | 'profile';

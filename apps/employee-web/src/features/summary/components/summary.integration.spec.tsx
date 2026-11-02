@@ -55,7 +55,7 @@ const EARLY_DAY: AttendanceSummaryItem = {
   clockOutAt: '2026-11-12T10:00:00.000Z',
   clockOutStatus: 'EARLY_CHECKOUT',
 };
-// A request created these days with no punch, so neither has a clock-in time (D-59).
+// A request created these days with no punch, so neither has a clock-in time.
 const REQUEST_WORKING_DAY_NO_CHECK_IN: AttendanceSummaryItem = {
   businessDate: '2026-11-10',
   dayStatus: 'PENDING',
@@ -93,7 +93,7 @@ const FRACTIONAL_OVERTIME_DAY: AttendanceSummaryItem = {
   clockOutAt: '2026-11-09T12:00:00.000Z',
   clockOutStatus: 'LATE_CHECKOUT',
 };
-// SICK_LEAVE and LEAVE days have no effective punches, so both timing statuses are the not-required codes (DATABASE §5.4).
+// SICK_LEAVE and LEAVE days have no effective punches, so both timing statuses are the not-required codes.
 const SICK_LEAVE_DAY: AttendanceSummaryItem = {
   businessDate: '2026-11-05',
   dayStatus: 'SICK_LEAVE',

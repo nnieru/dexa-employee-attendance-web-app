@@ -17,7 +17,7 @@ export function ProfilePage() {
   );
 }
 
-// Kept profile data stays on screen while a refetch runs (DESIGN §9 refreshing); the error and skeleton
+// Kept profile data stays on screen while a refetch runs (refreshing); the error and skeleton
 // states show only when there is no profile to keep.
 function ProfileContent({ profileQuery }: { profileQuery: UseQueryResult<OwnProfile> }) {
   if (profileQuery.data) return <ProfileDetails profile={profileQuery.data} />;

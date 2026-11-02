@@ -32,7 +32,7 @@ import {
   type INotificationInboxService,
 } from './notification-inbox.service.interface.js';
 
-// HR only, checked here as well as at the gateway (D-08). The recipient is always the token's account, so the
+// HR only, checked here as well as at the gateway. The recipient is always the token's account, so the
 // request never names whose inbox it reads.
 @Controller('notifications')
 @UseGuards(GatewayUserAuthGuard, RolesGuard)

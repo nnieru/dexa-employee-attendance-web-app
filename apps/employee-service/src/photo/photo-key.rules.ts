@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-// A server-generated UUID with the JPEG extension (DATABASE §4.2). The pattern is checked before a key becomes a path.
+// A server-generated UUID with the JPEG extension. The pattern is checked before a key becomes a path.
 const PHOTO_KEY_PATTERN = /^[0-9a-f-]{36}\.jpg$/;
 
 /** Generates the immutable file name for a new photo. The client never chooses it. */

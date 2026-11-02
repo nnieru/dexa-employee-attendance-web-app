@@ -1,16 +1,16 @@
 import { z } from 'zod';
 
-/** The most accounts one thumbnail request names. A longer list is split by the caller (D-57). */
+/** The most accounts one thumbnail request names. A longer list is split by the caller. */
 export const PHOTO_THUMBNAIL_MAX_ACCOUNT_IDS = 100;
 
-/** Every thumbnail is a square of this many pixels (D-57). */
+/** Every thumbnail is a square of this many pixels. */
 export const PHOTO_THUMBNAIL_SIZE = 96;
 
 // Chosen so 100 worst-case thumbnails stay well under the 1 MiB internal response limit (libs/common). The estimate
 // is recorded in the employee-service spec that measures it.
 export const PHOTO_THUMBNAIL_QUALITY = 60;
 
-/** Every thumbnail value starts with this prefix. The bytes after it are base64 of a JPEG (D-57). */
+/** Every thumbnail value starts with this prefix. The bytes after it are base64 of a JPEG. */
 export const PHOTO_THUMBNAIL_DATA_URL_PREFIX = 'data:image/jpeg;base64,';
 
 // Strict, so a caller cannot send fields that the thumbnail lookup does not read. Duplicates are refused, so one

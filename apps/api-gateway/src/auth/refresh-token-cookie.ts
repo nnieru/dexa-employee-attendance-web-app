@@ -1,7 +1,7 @@
 import { API_PREFIX } from '@dexa/contracts';
 
 // The refresh token reaches the browser only through this cookie, never through a response body or
-// script-readable storage (ARCHITECTURE §13). The path limits the cookie to the auth routes, so it
+// script-readable storage. The path limits the cookie to the auth routes, so it
 // is not sent with any other API call.
 export const REFRESH_TOKEN_COOKIE_NAME = 'dexa_refresh_token';
 export const REFRESH_TOKEN_COOKIE_PATH = `/${API_PREFIX}/auth`;

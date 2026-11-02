@@ -11,7 +11,7 @@ export type MasterEmployeeStatusOption =
   { readonly code: string; readonly isActive: boolean } | undefined;
 
 /**
- * Reads the master options that a profile names (DATABASE §4). The answer is the row's current state, so a caller that
+ * Reads the master options that a profile names. The answer is the row's current state, so a caller that
  * acts on it must still rely on the database rule when it writes (see the master-assignment trigger).
  */
 export interface IMasterAssignmentReader {

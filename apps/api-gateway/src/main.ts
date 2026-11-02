@@ -5,7 +5,7 @@ import { loadApiGatewayConfig } from './config/load-api-gateway-config.js';
 import { setupSwaggerDocs } from './docs/setup-swagger-docs.js';
 
 const config = loadApiGatewayConfig();
-// Production keeps the docs off unless SWAGGER_ENABLED=true turns them on for a local run (ARCHITECTURE).
+// Production keeps the docs off unless SWAGGER_ENABLED=true turns them on for a local run.
 const isSwaggerEnabled =
   config.SWAGGER_ENABLED === undefined
     ? config.NODE_ENV !== 'production'
@@ -13,7 +13,7 @@ const isSwaggerEnabled =
 const boot = await bootstrapService({
   module: createAppModule(config),
   defaultPort: 3000,
-  // The production default keeps the docs off (ARCHITECTURE): they load only under development.
+  // The production default keeps the docs off: they load only under development.
   isSwaggerEnabled,
 });
 if (isSwaggerEnabled) {

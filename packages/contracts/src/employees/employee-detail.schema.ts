@@ -9,7 +9,7 @@ export const employeeDetailOptionSchema = z.object({
   name: z.string().min(1),
 });
 
-// The HR view of one employee (ADM-1). Not strict: a reader ignores fields that a later version adds. The schema
+// The HR view of one employee. Not strict: a reader ignores fields that a later version adds. The schema
 // names only the fields it returns, so no password, hash, or stored photo key can be part of it.
 export const employeeDetailSchema = z.object({
   accountId: z.uuid(),

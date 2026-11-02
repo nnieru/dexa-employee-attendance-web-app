@@ -12,7 +12,7 @@ export function calendarDaysBetween(earlier: BusinessDate, later: BusinessDate):
 }
 
 /**
- * True when the business date is today or up to `windowDays` back (OT-2, COR-1). Future dates are outside the
+ * True when the business date is today or up to `windowDays` back. Future dates are outside the
  * window, because a request can only cover a day that has started.
  */
 export function isWithinSubmissionWindow(input: {

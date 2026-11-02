@@ -1,6 +1,6 @@
 import { Portal, Role } from '@dexa/contracts';
 
-// PRD AUTH-3 and D-14: the employee portal also accepts HR accounts, because HR staff clock in and manage
+// The employee portal also accepts HR accounts, because HR staff clock in and manage
 // their own profile. The HR portal accepts HR accounts only.
 const ROLES_ACCEPTED_BY_PORTAL: Readonly<Record<Portal, ReadonlyArray<Role>>> = {
   [Portal.EMPLOYEE]: [Role.EMPLOYEE, Role.HR],

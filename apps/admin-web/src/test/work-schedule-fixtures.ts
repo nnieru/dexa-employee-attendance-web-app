@@ -18,7 +18,7 @@ export const CURRENT_VERSION: WorkScheduleVersion = {
   effectiveUntil: null,
 };
 
-// The same version once an upcoming version exists: the service sets its end to the upcoming start (SCH-4).
+// The same version once an upcoming version exists: the service sets its end to the upcoming start.
 export const CURRENT_VERSION_ENDING = {
   ...CURRENT_VERSION,
   effectiveUntil: '2026-12-01',

@@ -6,8 +6,8 @@ export type CurrentRecordLabel = {
   tone: NonNullable<StatusLabelProps['tone']>;
 };
 
-// DESIGN §8 day labels, with PENDING named "Pending" as the owner asked for this screen. DESIGN §8 proposes
-// "Awaiting record" for the same status; this is a recorded difference, not a silent choice.
+// The day labels, with PENDING named "Pending" as the owner asked for this screen. The same status is
+// "Awaiting record" on the summary screens; this is a recorded difference, not a silent choice.
 export const DAY_STATUS_LABEL: Readonly<Record<AttendanceDayStatus, CurrentRecordLabel>> = {
   PENDING: { text: 'Pending', tone: 'neutral' },
   PRESENT: { text: 'Present', tone: 'success' },
@@ -20,8 +20,8 @@ export const DAY_STATUS_LABEL: Readonly<Record<AttendanceDayStatus, CurrentRecor
 type ClockInStatus = AttendanceSummaryItem['clockInStatus'];
 type ClockOutStatus = AttendanceSummaryItem['clockOutStatus'];
 
-// DESIGN §8 check-in and check-out labels. A copy of the History feature's maps: features do not import each other
-// (AGENTS §10). The same timing word means different things at check-in and at check-out, so the maps are separate.
+// A copy of the History feature's maps: features do not import each other.
+// The same timing word means different things at check-in and at check-out, so the maps are separate.
 export const CHECK_IN_LABEL: Readonly<Record<ClockInStatus, CurrentRecordLabel>> = {
   EARLY_CHECKIN: { text: 'Early clock-in', tone: 'neutral' },
   ON_TIME_CHECKIN: { text: 'On-time clock-in', tone: 'success' },

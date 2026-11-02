@@ -1,6 +1,6 @@
 import { Role } from '@dexa/contracts';
 
-/** The operation fields that a retry under the same operation ID must repeat (DATABASE §3.1). */
+/** The operation fields that a retry under the same operation ID must repeat. */
 export type StoredProvisioningRequest = {
   readonly actorAccountId: string;
   readonly requestedEmail: string;

@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { createPageSchema, paginationQuerySchema } from '../pagination/pagination.schema.js';
 
-// work_calendar_dates.description is varchar(255) (DATABASE §5.3).
+// work_calendar_dates.description is varchar(255).
 export const WORK_CALENDAR_DATE_DESCRIPTION_MAX_LENGTH = 255;
 
-// One company calendar exception (PRD SCH-5). description is null when HR gave none.
+// One company calendar exception. description is null when HR gave none.
 export const workCalendarDateSchema = z.object({
   date: z.iso.date(),
   isWorkingDay: z.boolean(),
@@ -17,7 +17,7 @@ export const workCalendarDatePageSchema = createPageSchema(workCalendarDateSchem
 
 export type WorkCalendarDatePage = z.infer<typeof workCalendarDatePageSchema>;
 
-// Both bounds are required, so every list names the range it reads (D-43). Any range is allowed. YYYY-MM-DD dates
+// Both bounds are required, so every list names the range it reads. Any range is allowed. YYYY-MM-DD dates
 // order the same way as the calendar days they name, so a string comparison is a date comparison. Strict, so an
 // unknown query parameter is refused rather than ignored.
 export const workCalendarDateListQuerySchema = paginationQuerySchema
@@ -37,7 +37,7 @@ export const workCalendarDateParamSchema = z.iso.date();
 
 // Strict, so a client cannot send the date (the route names it) or any other field. A missing description stores
 // none, so a PUT without one clears the description the date had. A blank description is refused, because the table
-// refuses it too (DATABASE §5.3).
+// refuses it too.
 export const workCalendarDateRequestSchema = z.strictObject({
   isWorkingDay: z.boolean(),
   description: z.string().trim().min(1).max(WORK_CALENDAR_DATE_DESCRIPTION_MAX_LENGTH).optional(),

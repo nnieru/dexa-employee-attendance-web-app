@@ -10,7 +10,7 @@ import { DeadLetterConsumerStatus } from './dead-letter-consumer-status.js';
 export const DEAD_LETTER_ARCHIVE_HEALTH_NAME = 'dead-letter-archive';
 export const DEAD_LETTER_ARCHIVE_PAUSED_REASON = 'DEAD_LETTER_ARCHIVE_PAUSED';
 
-/** Reports degraded while the archive consumer is paused after a transient failure (D-46). */
+/** Reports degraded while the archive consumer is paused after a transient failure. */
 @Injectable()
 export class DeadLetterHealthIndicator implements IHealthIndicator, OnModuleInit {
   readonly name = DEAD_LETTER_ARCHIVE_HEALTH_NAME;

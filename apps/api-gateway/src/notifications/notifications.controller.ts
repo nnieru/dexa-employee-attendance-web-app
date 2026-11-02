@@ -25,10 +25,10 @@ import {
 } from './notification-stream-client.interface.js';
 
 /**
- * Proxies the HR notification stream (D-08, ADM-5). The global guards verify the token, the account, and the HR role
+ * Proxies the HR notification stream. The global guards verify the token, the account, and the HR role
  * before this handler runs, so an employee is refused without any call to notification-service. The response is
  * written directly because a Nest return value cannot hold an open stream. While the stream is open, the account is
- * checked again on a timer, so a deactivated HR account loses the stream (D-13).
+ * checked again on a timer, so a deactivated HR account loses the stream.
  */
 @Controller('notifications')
 export class NotificationsController implements BeforeApplicationShutdown {

@@ -12,7 +12,7 @@ type RequestDecisionDialogProps = {
   onConfirm: (reviewReason: string) => void;
 };
 
-/** Approve and Reject share one dialog: the review reason is optional for approve and required for reject (APR-2). */
+/** Approve and Reject share one dialog: the review reason is optional for approve and required for reject. */
 export function RequestDecisionDialog({
   decision,
   isPending,

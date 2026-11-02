@@ -62,7 +62,8 @@ const DAY_OFF_CLOCKED_IN: TodayAttendanceResponse = {
 };
 
 const ALREADY_CLOCKED_IN_MESSAGE = 'You have already clocked in today.';
-// The server's own wording for COR-7. The employee sees DAY_ON_LEAVE_MESSAGE instead, so this text must not appear.
+// The server's own wording when the punch is refused on an approved leave day. The employee sees
+// DAY_ON_LEAVE_MESSAGE instead, so this text must not appear.
 const SERVER_DAY_ON_LEAVE_MESSAGE = 'This day is an approved leave, so the punch was not recorded.';
 const NETWORK_ERROR_MESSAGE = 'The server could not be reached. Try again.';
 

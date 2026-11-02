@@ -8,7 +8,7 @@ import type { ApiClient } from '@dexa/session';
 
 const WORK_CALENDAR_DATES_PATH = '/work-calendar-dates';
 
-/** One page of calendar exceptions for a range (PRD SCH-5). HR only; the gateway refuses other roles. */
+/** One page of calendar exceptions for a range. HR only; the gateway refuses other roles. */
 export async function fetchCalendarExceptions(
   apiClient: ApiClient,
   query: WorkCalendarDateListQuery,

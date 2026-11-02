@@ -16,13 +16,13 @@ function renderStatus(display: AttendanceStatusDisplay) {
   return <StatusLabel tone={display.tone}>{display.text}</StatusLabel>;
 }
 
-/** Approved overtime in minutes, keeping the seconds the server stores (OT-4). */
+/** Approved overtime in minutes, keeping the seconds the server stores. */
 function formatApprovedOvertime(minutes: number): string {
   return `${MINUTES_FORMATTER.format(minutes)} min`;
 }
 
 /**
- * The effective time with the original punch beneath it when a correction has been applied (PRD ADM-4, ADM-6). The
+ * The effective time with the original punch beneath it when a correction has been applied. The
  * "Original" word carries the distinction, so it does not depend on colour.
  */
 function renderTimeWithOriginal(
@@ -43,9 +43,9 @@ function renderTimeWithOriginal(
   );
 }
 
-// Read only: no column renders an action, so a row offers no edit or delete control (ADM-6). A day with no clock in or
-// no clock out leaves that time cell empty; its status cell says the timing is not recorded yet, or not required (ADM-4).
-// A corrected day shows the effective times with the original punch beneath them (T-REQ-21).
+// Read only: no column renders an action, so a row offers no edit or delete control. A day with no clock in or
+// no clock out leaves that time cell empty; its status cell says the timing is not recorded yet, or not required.
+// A corrected day shows the effective times with the original punch beneath them.
 export const ATTENDANCE_MONITORING_COLUMNS = helper.columns([
   helper.display({
     id: 'employee',

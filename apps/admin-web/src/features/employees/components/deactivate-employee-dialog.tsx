@@ -8,7 +8,7 @@ type DeactivateEmployeeDialogProps = {
   onConfirm: () => void;
 };
 
-/** Asks before HR deactivates an account (ADM-2). Deactivation logs the person out at once (AUTH-5). */
+/** Asks before HR deactivates an account. Deactivation logs the person out at once. */
 export function DeactivateEmployeeDialog({
   employeeName,
   isBusy,

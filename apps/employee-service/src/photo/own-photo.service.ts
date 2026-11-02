@@ -44,7 +44,7 @@ export class OwnPhotoService implements IOwnPhotoService {
     @Inject(CLOCK) private readonly clock: IClock,
   ) {}
 
-  // The order is part of the contract (DATABASE §4.2): the file is durable before its key commits, and the replaced
+  // The order is part of the contract: the file is durable before its key commits, and the replaced
   // file is removed only after the commit, so the stored profile never refers to a missing file.
   async replacePhoto(accountId: string, upload: Buffer): Promise<OwnPhotoChangeSet> {
     const photo = await this.processor.normalizePhoto(upload);
@@ -93,7 +93,7 @@ export class OwnPhotoService implements IOwnPhotoService {
 
   // The row lock serializes concurrent photo and phone edits, so the status decision sees the stored fields.
   // The event joins the transaction, so a rolled-back photo change leaves no event. The file was saved before
-  // this transaction (DATABASE §4.2), so a rollback leaves the file behind for operators, as before.
+  // this transaction, so a rollback leaves the file behind for operators, as before.
   private async applyPhotoChange(
     transaction: IEmployeeProfileTransaction,
     accountId: string,

@@ -7,7 +7,7 @@ import type {
 export const AUTH_ACCOUNT_ADMINISTRATION_CLIENT = Symbol('IAuthAccountAdministrationClient');
 
 /**
- * Calls auth-service's HR administration routes (T-AUTH-09) with this service's own token. The HR actor travels in the
+ * Calls auth-service's HR administration routes with this service's own token. The HR actor travels in the
  * body, and Auth checks that it is an active HR account. No call is retried: the change may already have applied when
  * its answer was lost, so the caller reports the step as unconfirmed.
  */

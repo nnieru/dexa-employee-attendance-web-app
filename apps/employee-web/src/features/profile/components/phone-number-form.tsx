@@ -16,7 +16,7 @@ type PhoneNumberFormProps = {
   phoneNumber: string | null;
 };
 
-// The phone is the only profile field the employee edits (PRO-2). The server's answer to the saved values
+// The phone is the only profile field the employee edits. The server's answer to the saved values
 // comes back in the form's own field, and the success message is separate from the photo's.
 export function PhoneNumberForm({ phoneNumber }: PhoneNumberFormProps) {
   const phoneMutation = useUpdateOwnPhone();

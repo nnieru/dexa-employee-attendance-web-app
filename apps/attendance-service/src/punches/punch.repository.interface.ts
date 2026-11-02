@@ -9,18 +9,18 @@ import type {
 
 export const PUNCH_REPOSITORY = Symbol('IPunchRepository');
 
-/** The company schedule version in effect for a business date (DATABASE §5.2). The id is stored on the day. */
+/** The company schedule version in effect for a business date. The id is stored on the day. */
 export type ScheduleVersion = ScheduleVersionInput & {
   readonly id: string;
 };
 
 /**
- * The day status a new day starts with (DATABASE §5.4). A punch sets PRESENT; a request on a working day starts
+ * The day status a new day starts with. A punch sets PRESENT; a request on a working day starts
  * PENDING and on a day off starts DAY_OFF.
  */
 export type DayStatusCode = 'PENDING' | 'PRESENT' | 'DAY_OFF';
 
-/** The check-in status a day starts with, before the first punch classifies it (DATABASE §5.1). */
+/** The check-in status a day starts with, before the first punch classifies it. */
 export type InitialCheckInStatusCode = 'PENDING_CHECKIN' | 'CHECKIN_NOT_REQUIRED';
 
 /** The check-out status a day starts with. A punch never changes it in this task. */
@@ -28,7 +28,7 @@ export type InitialCheckOutStatusCode = 'PENDING_CHECKOUT' | 'CHECKOUT_NOT_REQUI
 
 /**
  * Every status code that a punch, a new day, or an approved correction writes. Each one is seeded in
- * master_attendance_statuses (DATABASE §5.1). SICK_LEAVE and LEAVE are written only by an approved correction.
+ * master_attendance_statuses. SICK_LEAVE and LEAVE are written only by an approved correction.
  */
 export type AttendanceStatusCode =
   | DayStatusCode
@@ -39,7 +39,7 @@ export type AttendanceStatusCode =
   | CheckInStatusCode
   | CheckOutStatusCode;
 
-/** A new attendance day with its schedule snapshot (DATABASE §5.4). Status codes are resolved to ids on write. */
+/** A new attendance day with its schedule snapshot. Status codes are resolved to ids on write. */
 export type NewAttendanceDay = {
   readonly accountId: string;
   readonly businessDate: BusinessDate;
@@ -55,7 +55,7 @@ export type NewAttendanceDay = {
 
 /**
  * The day row after it is locked, with the schedule snapshot that classification reads, the effective check-in
- * that a check-out must not precede (D-41), and the day status that decides whether a punch is refused (COR-7).
+ * that a check-out must not precede, and the day status that decides whether a punch is refused.
  * The effective check-in is null only when the day has no check-in yet. The status is a master code, so it is a
  * string here, as in the summary read.
  */
@@ -66,10 +66,10 @@ export type LockedAttendanceDay = {
   readonly effectiveCheckinAt: Date | null;
 };
 
-/** The stored raw punch types (DATABASE §5.5). */
+/** The stored raw punch types. */
 export type PunchType = 'IN' | 'OUT';
 
-/** A raw punch (DATABASE §5.5). The server instant is the only time it carries. */
+/** A raw punch. The server instant is the only time it carries. */
 export type NewAttendanceEntry = {
   readonly attendanceDayId: string;
   readonly type: PunchType;

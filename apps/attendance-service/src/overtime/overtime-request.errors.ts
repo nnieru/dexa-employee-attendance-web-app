@@ -28,7 +28,7 @@ const POLICY_VIOLATION_ERROR: Record<OvertimePolicyViolation, { code: string; me
   },
 };
 
-/** A policy rule refused the request (PRD OT-2..OT-4). The code names the rule, so the client can show it on the field. */
+/** A policy rule refused the request. The code names the rule, so the client can show it on the field. */
 export class OvertimePolicyViolationError extends ValidationError {
   constructor(violation: OvertimePolicyViolation) {
     const { code, message } = POLICY_VIOLATION_ERROR[violation];
@@ -36,7 +36,7 @@ export class OvertimePolicyViolationError extends ValidationError {
   }
 }
 
-/** The interval overlaps a pending or approved overtime request of the same employee (PRD OT-5, DATABASE §5.7). */
+/** The interval overlaps a pending or approved overtime request of the same employee. */
 export class OvertimeOverlapError extends ConflictError {
   constructor() {
     super(
@@ -47,7 +47,7 @@ export class OvertimeOverlapError extends ConflictError {
 }
 
 /**
- * The same idempotency key was sent with different content (DATABASE §5.6). The stored request keeps the key, so the
+ * The same idempotency key was sent with different content. The stored request keeps the key, so the
  * retry is refused rather than answered with the earlier request.
  */
 export class IdempotencyKeyConflictError extends ConflictError {

@@ -8,7 +8,7 @@ import {
 import type { EventMessage } from '@dexa/messaging';
 import type { ZodType } from 'zod';
 
-/** One audit_logs row (DATABASE §6). Holds field names only, never values or password material. */
+/** One audit_logs row. Holds field names only, never values or password material. */
 export type AuditLogRecord = {
   readonly eventId: string;
   readonly eventType: string;

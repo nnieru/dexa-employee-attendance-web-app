@@ -11,7 +11,7 @@ export const PASSWORD_MISMATCH_MESSAGE = 'The new passwords do not match.';
 export const CURRENT_PASSWORD_INCORRECT_MESSAGE = 'The current password is incorrect.';
 
 // The new password is checked by the shared contract, so the form names the same rule the server enforces
-// (PRO-5). The current password only has to be present: it may predate the policy, so the policy does not apply.
+// The current password only has to be present: it may predate the policy, so the policy does not apply.
 export const changePasswordFormSchema = z
   .object({
     currentPassword: z.string().min(1, { error: CURRENT_PASSWORD_REQUIRED_MESSAGE }),

@@ -33,9 +33,9 @@ const PHOTO_TIMEOUT_MILLISECONDS = 10_000;
 const PHOTO_PATH = `/${API_PREFIX}/employees/me/photo`;
 const EMPLOYEES_PATH = `/${API_PREFIX}/employees`;
 // A create that stopped partway answers 503 with this code, its operation ID, and the saved phase. The gateway
-// passes that answer on, so HR can retry the same operation (DATABASE §4.3).
+// passes that answer on, so HR can retry the same operation.
 const PASS_THROUGH_CREATE_CODES = [ErrorCode.EMPLOYEE_PROVISIONING_INCOMPLETE];
-// An update that stopped after its first save answers 503 with this code and the steps that saved (DATABASE §4.3).
+// An update that stopped after its first save answers 503 with this code and the steps that saved.
 const PASS_THROUGH_UPDATE_CODES = [ErrorCode.EMPLOYEE_UPDATE_INCOMPLETE];
 
 @Injectable()
@@ -60,7 +60,7 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
     });
   }
 
-  // The employee-service derives the identity from the forwarded user, which the gateway's token names (D-51).
+  // The employee-service derives the identity from the forwarded user, which the gateway's token names.
   getOwnProfile(user: AuthenticatedUser): Promise<OwnProfile> {
     return this.httpClient.get({
       target: ServiceName.EMPLOYEE_SERVICE,
@@ -152,7 +152,7 @@ export class EmployeeServiceClient implements IEmployeeServiceClient {
     });
   }
 
-  // A POST that only reads, so it is not retried: the answer is bounded by the request schema (D-57). employee-service
+  // A POST that only reads, so it is not retried: the answer is bounded by the request schema. employee-service
   // decides whether HR may read thumbnails, so the call acts for the caller.
   getPhotoThumbnails(
     user: AuthenticatedUser,

@@ -8,7 +8,7 @@ import { ServiceName } from './service-name.js';
 import type { IServiceTokenSigner } from './service-token-signer.interface.js';
 
 // Long enough to cover one internal call, short enough that a leaked token is nearly useless. A stream
-// is checked only at connect, so the token does not have to outlive the connection (D-51).
+// is checked only at connect, so the token does not have to outlive the connection.
 export const SERVICE_TOKEN_LIFETIME_SECONDS = 60;
 
 @Injectable()

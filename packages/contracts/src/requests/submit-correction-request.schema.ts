@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { requestIdempotencyKeySchema, requestReasonSchema } from './request-fields.schema.js';
 import { requestStatusSchema } from './request-status.schema.js';
 
-// The outcomes an employee can ask for (PRD COR-1, DATABASE §5.8). The values are the DAY status codes.
+// The outcomes an employee can ask for. The values are the DAY status codes.
 export const requestedCorrectionDayStatusSchema = z.enum(['PRESENT', 'SICK_LEAVE', 'LEAVE']);
 
 const correctionCommonFields = {
@@ -12,7 +12,7 @@ const correctionCommonFields = {
 };
 
 // Present needs a clock-in; the clock-out is optional. Leave outcomes carry no times, so a time in their body is refused
-// by the strict object (COR-1). Strict objects also refuse any requester, status, or review field, as for overtime.
+// by the strict object. Strict objects also refuse any requester, status, or review field, as for overtime.
 const presentCorrectionSchema = z.strictObject({
   ...correctionCommonFields,
   requestedDayStatus: z.literal('PRESENT'),
@@ -34,7 +34,7 @@ export const submitCorrectionRequestSchema = z.discriminatedUnion('requestedDayS
 export type SubmitCorrectionRequest = z.infer<typeof submitCorrectionRequestSchema>;
 
 // clockInAt and clockOutAt are UTC instants with a Z suffix. Both are null for a leave outcome.
-// reviewReason and reviewedAt are null until HR decides (APR-6). A rejection carries its reason (DATABASE §5.6).
+// reviewReason and reviewedAt are null until HR decides. A rejection carries its reason.
 export const correctionRequestSchema = z.object({
   id: z.uuid(),
   businessDate: z.iso.date(),

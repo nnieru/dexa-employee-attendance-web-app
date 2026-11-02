@@ -10,7 +10,7 @@ export const CORRECTION_REQUEST_DECISION_REPOSITORY = Symbol(
 
 /**
  * A stored correction locked for the rest of the transaction. It carries the requester for the self-review check, and
- * the day and the revision the requester saw for the stale-day check (DATABASE §5.8).
+ * the day and the revision the requester saw for the stale-day check.
  */
 export type LockedCorrectionRequest = StoredCorrectionRequest & {
   readonly requesterAccountId: string;
@@ -25,7 +25,7 @@ export type LockedCorrectionDay = {
   readonly daySchedule: DaySchedule;
 };
 
-/** The decision to store. appliedRevision is set only for an approval (DATABASE §5.8). */
+/** The decision to store. appliedRevision is set only for an approval. */
 export type NewRequestDecision = {
   readonly requestId: string;
   readonly status: TerminalRequestStatus;

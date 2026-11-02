@@ -1,5 +1,5 @@
-// The company timezone (PRD ADM-4 shows WIB for every time). Repeated from the attendance feature on purpose:
-// features do not import from each other (AGENTS §10).
+// The company timezone. Repeated from the attendance feature on purpose:
+// features do not import from each other.
 const BUSINESS_TIME_ZONE = 'Asia/Jakarta';
 const BUSINESS_TIME_LABEL = 'WIB';
 

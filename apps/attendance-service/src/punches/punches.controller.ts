@@ -21,8 +21,8 @@ import { CLOCK_IN_SERVICE, type IClockInService } from './clock-in.service.inter
 import { CLOCK_OUT_SERVICE, type IClockOutService } from './clock-out.service.interface.js';
 import { TODAY_STATE_SERVICE, type ITodayStateService } from './today-state.service.interface.js';
 
-// The identity comes only from the verified token. The body is validated for its shape only: a strict empty object,
-// so a client timestamp, date, or account is refused before the service runs (ATT-3).
+// The identity comes only from the verified token. The body is validated for its shape only: a strict empty object
+// so a client timestamp, date, or account is refused before the service runs.
 @Controller('attendance')
 @UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.EMPLOYEE, Role.HR)

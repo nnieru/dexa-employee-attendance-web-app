@@ -25,7 +25,7 @@ import type {
 const currentDayStatuses = alias(masterAttendanceStatuses, 'current_day_status');
 
 // A plain read with no row lock. The (status, created_at) index serves the queue order and the status filter
-// (DATABASE §5.8). The day joins supply the business date for the range and the current times.
+// The day joins supply the business date for the range and the current times.
 @Injectable()
 export class CorrectionRequestReviewRepository implements ICorrectionRequestReviewReader {
   constructor(@Inject(DATABASE) private readonly database: Database) {}

@@ -7,7 +7,7 @@ export type AccountRecord = {
   readonly companyEmail: string;
   readonly roleCode: string;
   readonly isActive: boolean;
-  // A provisioning operation that is still PENDING keeps the account out of sign-in (DATABASE §3.1).
+  // A provisioning operation that is still PENDING keeps the account out of sign-in.
   readonly isProvisioningPending: boolean;
 };
 

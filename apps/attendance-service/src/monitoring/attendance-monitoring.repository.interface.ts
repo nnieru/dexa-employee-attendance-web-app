@@ -5,8 +5,8 @@ export const ATTENDANCE_MONITORING_READER = Symbol('IAttendanceMonitoringReader'
 
 /**
  * One stored day of one account, as the HR list shows it. The day fields are the same as the own summary's. The raw
- * punches are the original IN and OUT entries (DATABASE §5.5), null when there is none. isCorrected is true when an
- * approved correction has been applied to the day (DATABASE §5.8).
+ * punches are the original IN and OUT entries, null when there is none. isCorrected is true when an
+ * approved correction has been applied to the day.
  */
 export type AttendanceMonitoringRecord = AttendanceSummaryRecord & {
   readonly accountId: string;

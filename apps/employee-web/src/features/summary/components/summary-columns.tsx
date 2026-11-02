@@ -22,10 +22,11 @@ function renderStatus(display: SummaryStatusDisplay) {
   return <StatusLabel tone={display.tone}>{display.text}</StatusLabel>;
 }
 
-// Columns follow PRD SUM-3 to SUM-6: the day outcome, then the check-in and check-out with their classifications, then
+// Columns follow the day outcome's ordering: the day outcome, then the check-in and check-out with their
+// classifications, then
 // the approved overtime. A day with no check-in or no check-out leaves that time cell empty; the status cell says it is
-// not recorded yet (SUM-4), or not required on a day off or a leave day.
-// The action links to the correction form with the day pre-filled (COR-1). Only days still inside the correction
+// not recorded yet, or not required on a day off or a leave day.
+// The action links to the correction form with the day pre-filled. Only days still inside the correction
 // window get the link, so a row the form would refuse does not offer one.
 export function createSummaryColumns(today: BusinessDate) {
   return helper.columns([

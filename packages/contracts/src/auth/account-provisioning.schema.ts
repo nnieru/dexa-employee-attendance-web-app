@@ -4,7 +4,7 @@ import { companyEmailSchema } from './company-email.schema.js';
 import { passwordSchema } from './password.schema.js';
 import { roleSchema } from './role.js';
 
-// Values match accounts and account_provisioning_operations in DATABASE §3.1.
+// Values match accounts and account_provisioning_operations.
 export const AccountProvisioningStatus = { PENDING: 'PENDING', ACTIVE: 'ACTIVE' } as const;
 
 export type AccountProvisioningStatus =
@@ -15,7 +15,7 @@ export const accountProvisioningStatusSchema = z.enum(AccountProvisioningStatus)
 export const accountProvisioningOperationIdSchema = z.uuid();
 
 // Strict, so a caller cannot send an account ID or status that the server must decide itself. The email
-// is lowercased after it is validated, because company email matching ignores letter case (DATABASE §3).
+// is lowercased after it is validated, because company email matching ignores letter case.
 export const accountProvisioningRequestSchema = z.strictObject({
   operationId: accountProvisioningOperationIdSchema,
   actorAccountId: accountIdSchema,

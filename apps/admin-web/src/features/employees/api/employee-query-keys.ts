@@ -5,7 +5,7 @@ export const employeeQueryKeys = {
   all: ['employees'] as const,
   lists: () => [...employeeQueryKeys.all, 'list'] as const,
   list: (query: EmployeeListQuery) => [...employeeQueryKeys.lists(), query] as const,
-  // One employee's HR view (ADM-2). Keyed by account ID, so each edit page has its own entry.
+  // One employee's HR view. Keyed by account ID, so each edit page has its own entry.
   details: () => [...employeeQueryKeys.all, 'detail'] as const,
   detail: (accountId: string) => [...employeeQueryKeys.details(), accountId] as const,
   // Keyed by the sorted account IDs of one page, so the same page reuses its thumbnails.

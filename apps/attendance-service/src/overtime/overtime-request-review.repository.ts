@@ -15,8 +15,8 @@ import type {
 } from './overtime-request-review.repository.interface.js';
 
 // A plain read with no row lock. The (status, created_at) index serves the queue order and the status filter
-// (DATABASE §5.6). The approved minutes are summed once per page, for the days on that page, through the
-// (attendance_day_id, created_at) index (DATABASE §5.6).
+// The approved minutes are summed once per page, for the days on that page, through the
+// (attendance_day_id, created_at) index.
 @Injectable()
 export class OvertimeRequestReviewRepository implements IOvertimeRequestReviewReader {
   constructor(@Inject(DATABASE) private readonly database: Database) {}

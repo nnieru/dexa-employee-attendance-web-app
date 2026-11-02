@@ -16,7 +16,7 @@ export type DeadLetterDelivery = {
   readonly headers: unknown;
 };
 
-/** One dlq_messages row to upsert (DATABASE §6.1). Holds the original bytes, and only non-sensitive headers. */
+/** One dlq_messages row to upsert. Holds the original bytes, and only non-sensitive headers. */
 export type DeadLetterArchiveRecord = {
   readonly messageId: string;
   readonly eventId: string | null;
@@ -68,7 +68,7 @@ export function buildDeadLetterArchiveRecord(input: {
 
 /**
  * The AMQP message ID when it is usable. Otherwise a key derived from the source queue and the body, so a redelivery
- * of the same message maps to the same row (DATABASE §6.1).
+ * of the same message maps to the same row.
  */
 export function readMessageId(delivery: DeadLetterDelivery, sourceQueue: string): string {
   const { messageId } = delivery;

@@ -20,7 +20,7 @@ type OvertimeClockTimes = {
 
 /**
  * An end time earlier than the start time means the overtime runs past midnight, so the end is on the next calendar
- * date (OT-2). An end equal to the start is not decided here: the form rejects it before this rule runs.
+ * date. An end equal to the start is not decided here: the form rejects it before this rule runs.
  */
 export function isEndTimeOnNextDay(startTime: string, endTime: string): boolean {
   // HH:mm with zero-padded hours and minutes sorts in clock order, so plain comparison is enough.

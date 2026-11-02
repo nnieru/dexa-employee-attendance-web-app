@@ -21,7 +21,7 @@ function toThumbnailMap(response: PhotoThumbnailResponse): EmployeePhotoThumbnai
 }
 
 /**
- * One batched request for the photos of the rows on the current page (D-57). The list never waits for it, and a
+ * One batched request for the photos of the rows on the current page. The list never waits for it, and a
  * failed request is not an error for the table: rows without a thumbnail show initials.
  */
 export function useEmployeePhotoThumbnails({

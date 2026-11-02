@@ -8,7 +8,7 @@ export type PunchStatusDisplay = {
 
 const NOT_REQUIRED_TEXT = 'Not required';
 
-// DESIGN §8: the same timing word has a different treatment at check-in and at check-out, so the two maps are separate.
+// The same timing word has a different treatment at check-in and at check-out, so the two maps are separate.
 const CHECK_IN_STATUS_DISPLAY: Readonly<Record<CheckInClassification, PunchStatusDisplay>> = {
   EARLY_CHECKIN: { text: 'Early clock-in', tone: 'neutral' },
   ON_TIME_CHECKIN: { text: 'On-time clock-in', tone: 'success' },

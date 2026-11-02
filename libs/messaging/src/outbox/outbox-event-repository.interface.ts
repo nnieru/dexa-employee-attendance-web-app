@@ -33,7 +33,7 @@ export type ReleaseLeaseInput = {
 /**
  * Reads and writes one outbox event at a time, in one short transaction that claims, leases, publishes, and
  * settles the event. The row lock and the pool connection are held for at most one publish timeout, so a
- * degraded broker never freezes the owning database (ARCHITECTURE §17 review). Other relays are kept out by
+ * degraded broker never freezes the owning database (review). Other relays are kept out by
  * the lease, not by a long lock: a leased event is not due, so it cannot be claimed again, and the claim
  * query refuses to hand out a later event while an earlier unpublished one is not due.
  */

@@ -22,7 +22,7 @@ type RequestsPageProps = {
 };
 
 /**
- * The employee's requests (PRD APR-6). The URL owns the tab, the status and the page; this component reflects them.
+ * The employee's requests. The URL owns the tab, the status and the page; this component reflects them.
  * Only the selected tab's table is mounted, so the other type's list is not requested.
  */
 export function RequestsPage({

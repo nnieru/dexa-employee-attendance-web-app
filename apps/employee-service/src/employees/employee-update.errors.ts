@@ -15,7 +15,7 @@ export const NOTHING_SAVED: EmployeeUpdateProgress = {
   passwordReset: null,
 };
 
-/** A step after the first save failed, so the answer names which steps saved (DATABASE §4.3). */
+/** A step after the first save failed, so the answer names which steps saved. */
 export function employeeUpdateIncompleteError(
   accountId: string,
   progress: EmployeeUpdateProgress,

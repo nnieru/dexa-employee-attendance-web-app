@@ -41,7 +41,7 @@ const POLICY_VIOLATION_ERROR: Record<CorrectionPolicyViolation, { code: string; 
     },
   };
 
-/** A policy rule refused the correction (PRD COR-1, COR-2). The code names the rule, so the client can show it on the field. */
+/** A policy rule refused the correction. The code names the rule, so the client can show it on the field. */
 export class CorrectionPolicyViolationError extends ValidationError {
   constructor(violation: CorrectionPolicyViolation) {
     const { code, message } = POLICY_VIOLATION_ERROR[violation];
@@ -49,7 +49,7 @@ export class CorrectionPolicyViolationError extends ValidationError {
   }
 }
 
-/** The day already has a pending correction (PRD COR-4, DATABASE §5.8). Checked before the insert and guarded by the partial unique index. */
+/** The day already has a pending correction. Checked before the insert and guarded by the partial unique index. */
 export class CorrectionAlreadyPendingError extends ConflictError {
   constructor() {
     super(
@@ -60,7 +60,7 @@ export class CorrectionAlreadyPendingError extends ConflictError {
 }
 
 /**
- * The day changed after the correction was submitted, so applying it would overwrite newer values (DATABASE §5.8).
+ * The day changed after the correction was submitted, so applying it would overwrite newer values.
  * Nothing is written. HR can reject the stale request, and the employee then submits against the current revision.
  */
 export class AttendanceDayChangedError extends ConflictError {

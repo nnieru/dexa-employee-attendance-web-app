@@ -53,7 +53,7 @@ function gatewayUserClaims(
 }
 
 /**
- * Signs the token that api-gateway sends to one target service for a call made on behalf of a user (D-51): ES256 with
+ * Signs the token that api-gateway sends to one target service for a call made on behalf of a user: ES256 with
  * the gateway's key, kid and issuer = api-gateway, audience = the target, and the user claim. Only the gateway holds
  * that key in production, so a test that signs here plays the gateway.
  */
@@ -92,7 +92,7 @@ export function forgeGatewayUserToken(
 
 /**
  * Signs the end-user JWT that auth-service issues at sign-in (RS256). Only auth-service holds the key in production.
- * A service must refuse this token, because only api-gateway verifies end-user tokens (D-51).
+ * A service must refuse this token, because only api-gateway verifies end-user tokens.
  */
 export function signEndUserJwt(keys: AuthKeySet, accountId: string, role: Role): string {
   const signingInput = [

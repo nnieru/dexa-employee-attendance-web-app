@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-// Matches the integer grace columns in work_schedules (DATABASE §5.2), so an out-of-range value fails here
+// Matches the integer grace columns in work_schedules, so an out-of-range value fails here
 // with a field name instead of a database error at startup.
 const MAX_GRACE_MINUTES = 2_147_483_647;
-// 24-hour HH:MM. Overnight schedules are out of scope (DATABASE §9, decision 4), so start must precede end.
+// 24-hour HH:MM. Overnight schedules are out of scope, so start must precede end.
 const TIME_OF_DAY_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const WEEKDAY_PATTERN = /^[1-7]$/;
 const WHOLE_NUMBER_PATTERN = /^\d+$/;
@@ -18,7 +18,7 @@ export type DefaultScheduleSettings = {
   readonly lateCheckoutGraceMinutes: number;
 };
 
-// Monday to Friday 09:00 to 18:00, late check-in grace 15 minutes, other graces 0 (PRD SCH-2, decision D-18).
+// Monday to Friday 09:00 to 18:00, late check-in grace 15 minutes, other graces 0.
 const DEFAULT_SETTINGS: DefaultScheduleSettings = {
   workingWeekdays: [1, 2, 3, 4, 5],
   startTime: '09:00',
@@ -108,7 +108,7 @@ function parseGraceMinutes(
 
 /**
  * Resolves the default schedule settings. A field that fails is reported, and the whole result is undefined, so no
- * partial schedule is ever seeded. Start must be before end on the same day (PRD SCH-1).
+ * partial schedule is ever seeded. Start must be before end on the same day.
  */
 export function resolveDefaultScheduleSettings(
   environment: DefaultScheduleEnvironment,

@@ -32,7 +32,7 @@ export class OwnProfileController {
     return this.ownProfiles.getOwnProfile(user.accountId);
   }
 
-  // The service returns the committed change set for the profile-change event (T-EVT-02). This response is the
+  // The service returns the committed change set for the profile-change event. This response is the
   // profile as stored after the change, so it is read once the change has committed.
   @Patch('me')
   async updateOwnProfile(

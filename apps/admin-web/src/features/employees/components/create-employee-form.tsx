@@ -38,7 +38,7 @@ type CreateEmployeeFormProps = {
 
 /**
  * One form session. The operation ID is created with the form and kept for every submit in this session, so a retry
- * after a failure sends the same ID (DATABASE §4.3). A new session, such as a second visit to the page, gets a new one.
+ * after a failure sends the same ID. A new session, such as a second visit to the page, gets a new one.
  */
 export function CreateEmployeeForm({ onCancel, onCreated }: CreateEmployeeFormProps) {
   const [operationId] = useState(createOperationId);

@@ -24,7 +24,7 @@ export function AdminApp({ queryClient, router }: AdminAppProps) {
   const sessionConfig = useMemo<SessionConfig>(
     () => ({
       portal: Portal.HR,
-      // The HR portal accepts HR accounts only (PRD AUTH-3, contracts Portal).
+      // The HR portal accepts HR accounts only (the contracts Portal rejects others).
       allowedRoles: [Role.HR],
       apiBaseUrl: API_BASE_URL,
       onSessionEnded: navigateToLogin,

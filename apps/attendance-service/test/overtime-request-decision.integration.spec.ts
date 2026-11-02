@@ -54,7 +54,7 @@ function tokenFor(accountId: string, role: Role = Role.EMPLOYEE): string {
   return signGatewayUserToken(keys, ServiceName.ATTENDANCE_SERVICE, accountId, role, expiresAt);
 }
 
-// Each test uses its own requester, so one test's pending overtime never overlaps another's (PRD OT-5).
+// Each test uses its own requester, so one test's pending overtime never overlaps another's.
 async function submitOvertime(accountId: string, role: Role = Role.EMPLOYEE): Promise<string> {
   mutableClock.current = SUBMIT_MOMENT;
   const response = await request(app.getHttpServer())

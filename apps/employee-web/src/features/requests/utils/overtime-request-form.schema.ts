@@ -10,7 +10,7 @@ import {
 import { toOvertimeInterval } from './overtime-interval.js';
 import type { OvertimeRequestPayload } from './idempotency-key.js';
 
-// PRD OT-2: the business date is today or up to this many days back.
+// The business date is today or up to this many days back.
 const OVERTIME_BUSINESS_DATE_WINDOW_DAYS = 7;
 
 export const OVERTIME_FORM_MESSAGES = {

@@ -20,7 +20,7 @@ export type AppShellProps = {
 };
 
 /**
- * Header, navigation and main region for the employee and HR apps (DESIGN §6). The layout switches
+ * Header, navigation and main region for the employee and HR apps. The layout switches
  * with CSS only: a side rail in landscape at 1024px and wider, and a bottom bar everywhere else.
  * The hidden navigation is `display: none`, so assistive technology sees one landmark.
  */

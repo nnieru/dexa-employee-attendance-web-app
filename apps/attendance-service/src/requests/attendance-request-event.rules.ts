@@ -33,7 +33,7 @@ export function attendanceRequestDecisionEventType(
 
 /**
  * Builds the event envelope for attendance request events (submitted, approved, rejected)
- * per ARCHITECTURE §8 and PRD APR-7.
+ * per the event envelope conventions.
  *
  * The payload carries resource identity and business date only. Reasons, times, status details,
  * or tokens are never part of the payload.

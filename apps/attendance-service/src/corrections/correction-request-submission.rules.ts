@@ -22,7 +22,7 @@ export type StoredCorrectionSubmission = {
 };
 
 /**
- * True when a retry asks for the same correction as the stored one, so the stored request is returned (DATABASE §5.6).
+ * True when a retry asks for the same correction as the stored one, so the stored request is returned.
  * Instants compare as instants, so the same moment written with another offset is the same correction.
  */
 export function isSameCorrectionSubmission(

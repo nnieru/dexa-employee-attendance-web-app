@@ -192,7 +192,7 @@ export class InternalHttpClient implements IInternalHttpClient {
   // cut short by the timeout of the attempt before it.
   private async buildRequestConfig(call: InternalCall): Promise<AxiosRequestConfig> {
     const baseUrl = this.resolveBaseUrl(call.target);
-    // The token is signed per attempt, and names the end user when the call acts for one (D-51).
+    // The token is signed per attempt, and names the end user when the call acts for one.
     const credential = await this.tokenSigner.signFor(call.target, call.onBehalfOf);
     const timeout = call.timeoutMilliseconds ?? DEFAULT_TIMEOUT_MILLISECONDS;
     const limits = RESPONSE_LIMITS[call.responseKind];

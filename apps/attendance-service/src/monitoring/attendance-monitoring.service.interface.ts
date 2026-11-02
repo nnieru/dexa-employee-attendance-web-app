@@ -2,7 +2,7 @@ import type { AttendanceMonitoringPage, AttendanceMonitoringQuery } from '@dexa/
 
 export const ATTENDANCE_MONITORING_SERVICE = Symbol('IAttendanceMonitoringService');
 
-/** Every account's attendance days for HR (PRD ADM-4). Read only: there is no write use case (ADM-6). */
+/** Every account's attendance days for HR. Read only: there is no write use case. */
 export interface IAttendanceMonitoringService {
   /**
    * A missing from or to is filled from the clock as for the own summary. Rejects with a validation error when the

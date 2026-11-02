@@ -2,7 +2,7 @@ import type { AttendanceSummaryPage, AttendanceSummaryQuery } from '@dexa/contra
 
 export const ATTENDANCE_SUMMARY_SERVICE = Symbol('IAttendanceSummaryService');
 
-/** The signed-in employee's own attendance days over a date range (PRD SUM-1..SUM-6). Read only. */
+/** The signed-in employee's own attendance days over a date range. Read only. */
 export interface IAttendanceSummaryService {
   /**
    * The account comes from the verified token. A missing from or to is filled from the clock: the first day of the

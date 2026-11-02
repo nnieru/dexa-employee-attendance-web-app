@@ -22,7 +22,7 @@ const DEPENDENCY_UNAVAILABLE_MESSAGE = 'A dependent service is unavailable. Try 
 const MAX_ERROR_BODY_BYTES = 4_096;
 
 /**
- * Opens the HR notification stream on notification-service with a token that names the user (D-51). It uses fetch
+ * Opens the HR notification stream on notification-service with a token that names the user. It uses fetch
  * rather than the shared internal client, because that client buffers its answers and bounds the whole call, which
  * would end a stream that is meant to stay open. The connect timeout covers only the wait for the answer's headers.
  */
@@ -76,7 +76,7 @@ export class NotificationStreamClient implements INotificationStreamClient {
   }
 
   // A 401 is never passed on: the token is the gateway's, and a refusal of it is a misconfiguration, not the user's
-  // fault. The account was checked by the gateway before this call (D-13).
+  // fault. The account was checked by the gateway before this call.
   private async toUpstreamError(response: Response): Promise<DomainError> {
     const cause = new Error(`Notification stream answered with HTTP ${response.status}.`);
     const remoteError = errorResponseSchema.safeParse(await readErrorBody(response));

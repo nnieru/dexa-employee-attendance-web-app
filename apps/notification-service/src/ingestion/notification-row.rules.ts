@@ -2,7 +2,7 @@ import { EventName, type AttendanceRequestResourceType } from '@dexa/contracts';
 import type { NotifiableEvent, NotifiableField } from './notifiable-event.rules.js';
 import type { NotificationText } from './notification-text.rules.js';
 
-/** The data a row carries: changed field names, plus the request resource for an attendance request (DATABASE §7.1). */
+/** The data a row carries: changed field names, plus the request resource for an attendance request. */
 export type NotificationData = {
   readonly changedFields: ReadonlyArray<NotifiableField>;
   readonly resourceType?: AttendanceRequestResourceType;
@@ -10,7 +10,7 @@ export type NotificationData = {
   readonly businessDate?: string;
 };
 
-/** One inbox row for one HR recipient (DATABASE §7.1), before the database assigns its id. */
+/** One inbox row for one HR recipient, before the database assigns its id. */
 export type NotificationDraft = {
   readonly eventId: string;
   readonly eventType: NotifiableEvent['eventType'];
@@ -25,7 +25,7 @@ export type NotificationDraft = {
 };
 
 /**
- * The HR accounts that receive an attendance request notification (PRD APR-7): every active HR account except the
+ * The HR accounts that receive an attendance request notification: every active HR account except the
  * employee who submitted the request. An HR requester sees no popup and no inbox row for their own request.
  */
 export function excludeRequesterFromRecipients(
@@ -47,7 +47,7 @@ export type BuildNotificationRowsInput = {
 /**
  * One draft per HR recipient. Only an attendance request excludes an account (its requester); the profile and password
  * events name no excluded account, so the actor and the subject are recipients like any other active HR account
- * (DATABASE §7, D-48).
+ *
  */
 export function buildNotificationRows(input: BuildNotificationRowsInput): NotificationDraft[] {
   const { event, text, createdAt } = input;

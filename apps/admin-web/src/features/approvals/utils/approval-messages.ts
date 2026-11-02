@@ -31,7 +31,7 @@ const REQUEST_TYPE_PLURAL: Readonly<Record<'overtime' | 'corrections', string>> 
   corrections: 'correction requests',
 };
 
-/** Names the type and the filter, so an empty table is not mistaken for a missing request (DESIGN §9). */
+/** Names the type and the filter, so an empty table is not mistaken for a missing request. */
 export function getApprovalsEmptyMessage(
   tab: 'overtime' | 'corrections',
   status: RequestStatus,

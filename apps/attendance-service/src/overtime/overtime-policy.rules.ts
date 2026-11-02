@@ -2,10 +2,10 @@ import { toBusinessDate, type BusinessDate } from '@dexa/common';
 import type { DaySchedule } from '../classification/punch-classification.rules.js';
 import { isWithinSubmissionWindow } from '../requests/request-business-date.rules.js';
 
-/** PRD OT-2: the business date is today or up to this many days back. */
+/**The business date is today or up to this many days back. */
 export const OVERTIME_SUBMISSION_WINDOW_DAYS = 7;
 
-/** PRD OT-4 and DATABASE §5.7: pending plus approved minutes for one business date, with no rounding. */
+/**Pending plus approved minutes for one business date, with no rounding. */
 export const OVERTIME_DAILY_CAP_MINUTES = 240;
 
 const MS_PER_MINUTE = 60_000;
@@ -28,7 +28,7 @@ export type OvertimePolicyInput = {
   readonly businessDate: BusinessDate;
   readonly startAt: Date;
   readonly endAt: Date;
-  /** The business date's schedule snapshot. A day off has no scheduled end, so any start is allowed (OT-3). */
+  /** The business date's schedule snapshot. A day off has no scheduled end, so any start is allowed. */
   readonly daySchedule: DaySchedule;
   /** Pending plus approved overtime already requested for the business date, in whole minutes. */
   readonly existingActiveMinutes: number;
@@ -39,7 +39,7 @@ export type OvertimePolicyResult =
   | { readonly kind: 'violation'; readonly violation: OvertimePolicyViolation };
 
 /**
- * Applies the overtime submission rules (PRD OT-2..OT-4, DATABASE §5.7). The first failing rule is returned, in the
+ * Applies the overtime submission rules. The first failing rule is returned, in the
  * order the employee fixes them: the date, then the interval, then the schedule, then the daily cap. Overlap with
  * other requests is enforced by the database exclusion constraint, not here.
  */

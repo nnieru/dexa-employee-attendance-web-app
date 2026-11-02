@@ -54,7 +54,7 @@ function minutesAfter(base: Date, minutes: number): Date {
   return new Date(base.getTime() + minutes * 60_000);
 }
 
-// Newest first by created_at, then by id, the order the history index serves (DATABASE §7.1).
+// Newest first by created_at, then by id, the order the history index serves.
 function newestFirst(
   rows: ReadonlyArray<{ readonly id: string; readonly createdAt: Date }>,
 ): string[] {

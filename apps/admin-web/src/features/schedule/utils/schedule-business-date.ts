@@ -1,4 +1,4 @@
-// The company timezone as an IANA name (DATABASE §8). The schedule API does not send it to the browser, so the screen
+// The company timezone as an IANA name. The schedule API does not send it to the browser, so the screen
 // keeps the same constant as the attendance feature. Features do not import each other, so it is repeated here.
 export const BUSINESS_TIME_ZONE = 'Asia/Jakarta';
 
@@ -32,7 +32,7 @@ export function addCalendarDays(businessDate: BusinessDate, days: number): Busin
 }
 
 /**
- * The earliest date a schedule version may take effect (PRD SCH-4): tomorrow in the company timezone. Today and earlier
+ * The earliest date a schedule version may take effect: tomorrow in the company timezone. Today and earlier
  * are never accepted, because a version that already applies today would change punches that are being recorded.
  */
 export function getEarliestEffectiveFrom(today: BusinessDate): BusinessDate {

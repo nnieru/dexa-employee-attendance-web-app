@@ -14,9 +14,9 @@ export function getDistinctAccountIds(
 }
 
 /**
- * Maps one stored day to its HR row (PRD ADM-4). The day fields follow the own summary, and the original punch times sit
+ * Maps one stored day to its HR row. The day fields follow the own summary, and the original punch times sit
  * next to the effective ones. An account that Employee does not know is shown as unavailable (null), so one missing
- * profile never fails the page (DATABASE §8).
+ * profile never fails the page.
  */
 export function toAttendanceMonitoringItem(
   record: AttendanceMonitoringRecord,

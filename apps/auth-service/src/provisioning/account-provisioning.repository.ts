@@ -20,7 +20,7 @@ import type {
   ProvisioningOperationRecord,
 } from './account-provisioning.repository.interface.js';
 
-// Index and constraint names from DATABASE §3 and the schema. The driver reports the one that refused a row.
+// Index and constraint names match the schema. The driver reports the one that refused a row.
 const ACCOUNT_EMAIL_CONSTRAINT = 'accounts_company_email_uq';
 const OPERATION_ID_CONSTRAINT = 'account_provisioning_operations_operation_id_pk';
 

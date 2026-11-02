@@ -3,7 +3,7 @@ import { WorkSchedulePage } from '../../features/schedule/components/work-schedu
 import { calendarExceptionSearchSchema } from '../../features/schedule/types/calendar-exception-search.schema.js';
 import { getCurrentBusinessDate } from '../../features/schedule/utils/current-business-date.js';
 
-// The calendar exception range and page live in the URL, so a reload or a shared link shows the same list (PRD SCH-5).
+// The calendar exception range and page live in the URL, so a reload or a shared link shows the same list.
 export const Route = createFileRoute('/_authenticated/schedule')({
   validateSearch: calendarExceptionSearchSchema,
   component: WorkScheduleRoute,

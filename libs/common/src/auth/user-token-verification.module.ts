@@ -5,7 +5,7 @@ import { USER_JWT_VERIFIER_CONFIG } from './auth-config.token.js';
 import { UserJwtStrategy } from './user-jwt.strategy.js';
 
 /**
- * Registers the strategy that verifies end-user JWTs. Only api-gateway imports it (D-51): every other service
+ * Registers the strategy that verifies end-user JWTs. Only api-gateway imports it: every other service
  * accepts the gateway's internal token through GatewayUserAuthGuard instead.
  */
 @Module({})

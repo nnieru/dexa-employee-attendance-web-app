@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// The phases that a provisioning operation can stop in before it is ACTIVE (DATABASE §4.3). ACTIVE is the
+// The phases that a provisioning operation can stop in before it is ACTIVE. ACTIVE is the
 // only phase that is not partial, so it never appears here.
 export const EmployeeProvisioningSavedPhase = {
   RESERVED: 'RESERVED',

@@ -18,7 +18,7 @@ export const profileFieldSchema = z.enum(PROFILE_FIELDS);
 // Matches the employee name column length, so the popup text fits what is stored.
 const EMPLOYEE_NAME_MAX_LENGTH = 150;
 
-// ARCHITECTURE §8 lists the common envelope fields eventId and occurredAt; they live in eventEnvelopeSchema.
+// The common envelope fields eventId and occurredAt live in eventEnvelopeSchema.
 // This payload carries the rest of the common fields (accountId, actorAccountId) plus the event's own fields.
 // Strict, so no value, hash or token can ride along as an extra key.
 export const employeeProfileUpdatedPayloadSchema = z.strictObject({

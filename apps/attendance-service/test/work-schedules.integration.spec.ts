@@ -19,7 +19,7 @@ import {
 } from './attendance-service-environment.js';
 import { CONTAINER_TIMEOUT_MS, TEST_TIMEOUT_MS, createEmptyDatabaseUri } from './test-database.js';
 
-// The lifetime of the token api-gateway sends for a call (D-51).
+// The lifetime of the token api-gateway sends for a call.
 const TOKEN_LIFETIME_SECONDS = 60;
 
 const WORK_SCHEDULES_PATH = '/api/v1/work-schedules';
@@ -48,7 +48,7 @@ const fixedClock: IClock = { now: () => new Date(mutableClock.current) };
 let container: StartedPostgreSqlContainer;
 let keys: AuthKeySet;
 
-// Signs the token that api-gateway sends to this service for the user (D-51).
+// Signs the token that api-gateway sends to this service for the user.
 function signUserToken(accountId: string, role: Role, expiresAtSeconds: number): string {
   return signGatewayUserToken(
     keys,
@@ -98,8 +98,8 @@ async function startApp(
   return { app, database: moduleRef.get<Database>(DATABASE) };
 }
 
-// Ends the version in effect on the upcoming date and inserts the upcoming version in the same transaction, as
-// DATABASE §5.2 describes, so the exclusion constraint sees no overlap.
+// Ends the version in effect on the upcoming date and inserts the upcoming version in the same transaction,
+// so the exclusion constraint sees no overlap.
 async function scheduleUpcomingVersion(database: Database): Promise<void> {
   await database.db.transaction(async (transaction) => {
     await transaction

@@ -9,7 +9,7 @@ import {
 import { createDefaultWorkSchedule } from './default-work-schedule.rules.js';
 
 /**
- * Seeds the default company schedule on startup when no schedule exists (PRD SCH-2). Runs after the migrations, and
+ * Seeds the default company schedule on startup when no schedule exists. Runs after the migrations, and
  * a restart finds the version and inserts nothing, so the seed is idempotent.
  */
 @Injectable()

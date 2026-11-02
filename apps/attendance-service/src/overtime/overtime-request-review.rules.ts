@@ -3,7 +3,7 @@ import { toOvertimeRequest } from './overtime-request.rules.js';
 import type { StoredOvertimeReviewRequest } from './overtime-request-review.repository.interface.js';
 
 // The requester is shown by name, or unnamed when Employee does not know the account. The reviewer's account is never
-// returned; only the ownership flag that the UI needs to disable self-review (APR-4).
+// returned; only the ownership flag that the UI needs to disable self-review.
 export function toOvertimeRequestReviewItem(
   record: StoredOvertimeReviewRequest,
   reviewerAccountId: string,

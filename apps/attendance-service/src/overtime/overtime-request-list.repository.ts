@@ -14,7 +14,7 @@ import type {
 } from './overtime-request-list.repository.interface.js';
 
 // A plain read with no row lock. The account predicate is served by the leading column of the unique
-// (requested_by_account_id, idempotency_key) key, so no extra index is needed for this list (DATABASE §5.6).
+// (requested_by_account_id, idempotency_key) key, so no extra index is needed for this list.
 @Injectable()
 export class OvertimeRequestListRepository implements IOvertimeRequestListReader {
   constructor(@Inject(DATABASE) private readonly database: Database) {}

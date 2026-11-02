@@ -9,7 +9,7 @@ export type EmployeeNavigationEntry = {
   to: EmployeeNavigationPath;
 };
 
-// DESIGN §6 order: Attendance, History, Requests, Profile, then Logout (rendered by the shell).
+// order: Attendance, History, Requests, Profile, then Logout (rendered by the shell).
 export const EMPLOYEE_NAVIGATION: ReadonlyArray<EmployeeNavigationEntry> = [
   { id: 'attendance', label: 'Attendance', icon: 'clock', to: '/attendance' },
   { id: 'history', label: 'History', icon: 'history', to: '/history' },

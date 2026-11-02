@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// The stored phases of one provisioning operation (DATABASE §4.3). A retry resumes from the stored phase.
+// The stored phases of one provisioning operation. A retry resumes from the stored phase.
 export const EmployeeProvisioningState = {
   RESERVED: 'RESERVED',
   PROFILE_SAVED: 'PROFILE_SAVED',

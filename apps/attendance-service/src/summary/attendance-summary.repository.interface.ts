@@ -4,9 +4,9 @@ export const ATTENDANCE_SUMMARY_READER = Symbol('IAttendanceSummaryReader');
 
 /**
  * One stored day as the summary shows it. The times and status codes are the effective ones after any approved
- * correction (DATABASE §5.4). The status codes are the master codes as stored. A null check-in time is returned as
+ * correction. The status codes are the master codes as stored. A null check-in time is returned as
  * stored, and the rules decide what that means for the row. approvedOvertimeMinutes is the day's approved overtime
- * (DATABASE §5.7), 0 when there is none.
+ * , 0 when there is none.
  */
 export type AttendanceSummaryRecord = {
   readonly businessDate: BusinessDate;
@@ -35,7 +35,7 @@ export type AttendanceSummaryRecordPage = {
 
 /**
  * Read-only access to one account's attendance days. Writes belong to the punch transaction port, and this port takes
- * no row lock, so a summary never waits on a punch in progress (AGENTS §9).
+ * no row lock, so a summary never waits on a punch in progress.
  */
 export interface IAttendanceSummaryReader {
   findDayPage(criteria: AttendanceSummaryCriteria): Promise<AttendanceSummaryRecordPage>;

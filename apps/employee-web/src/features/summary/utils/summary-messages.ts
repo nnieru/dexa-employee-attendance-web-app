@@ -13,7 +13,7 @@ export function getCorrectionLinkName(businessDate: string): string {
   return `${CORRECTION_LINK_TEXT} for ${businessDate}`;
 }
 
-/** Names the range, so the employee can tell an empty result from a filter that is too narrow (DESIGN §9). */
+/** Names the range, so the employee can tell an empty result from a filter that is too narrow. */
 export function getSummaryEmptyMessage(range: { from: string; to: string }): string {
   return `No attendance was recorded from ${range.from} to ${range.to}.`;
 }

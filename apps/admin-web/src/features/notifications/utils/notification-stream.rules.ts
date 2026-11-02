@@ -13,7 +13,7 @@ export function calculateReconnectDelayMilliseconds(failedAttempts: number): num
   return Math.min(doubledDelay, NOTIFICATION_STREAM_RECONNECT_MAX_MILLISECONDS);
 }
 
-// The token or the HR role is refused. Retrying the same token cannot succeed (D-13, D-08).
+// The token or the HR role is refused. Retrying the same token cannot succeed.
 export function isRefusedStatus(status: number): boolean {
   return status === HTTP_STATUS_UNAUTHORIZED || status === HTTP_STATUS_FORBIDDEN;
 }

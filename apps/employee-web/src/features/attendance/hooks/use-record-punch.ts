@@ -17,7 +17,7 @@ const RECORD_PUNCH_BY_TYPE: Readonly<Record<PunchType, RecordPunch>> = {
 /**
  * Records one punch. A punch is never retried automatically: a retry could repeat a write or hit a 409. Whatever
  * the outcome, today's state is read again before the mutation settles, so the action stays disabled until the
- * server's state is shown (DESIGN §8, §9).
+ * server's state is shown.
  */
 export function useRecordPunch() {
   const { apiClient } = useSession();

@@ -25,7 +25,7 @@ const REQUEST_TYPE_PLURAL: Readonly<Record<RequestTab, string>> = {
   corrections: 'correction requests',
 };
 
-/** Names the type and the filter, so an empty table is not mistaken for a missing request (DESIGN §9). */
+/** Names the type and the filter, so an empty table is not mistaken for a missing request. */
 export function getRequestsEmptyMessage(
   tab: RequestTab,
   status: RequestStatus | undefined,
@@ -36,7 +36,7 @@ export function getRequestsEmptyMessage(
   return `No ${typePlural} have the status ${statusText}. Choose All to see every status.`;
 }
 
-/** The words for each requested outcome (PRD COR-1). They are the employee's own choice, not a DAY status label. */
+/** The words for each requested outcome. They are the employee's own choice, not a DAY status label. */
 export const REQUESTED_OUTCOME_TEXT: Readonly<
   Record<CorrectionRequest['requestedDayStatus'], string>
 > = {
@@ -56,7 +56,7 @@ export const OVERTIME_END_TIME_HELP_TEXT =
 export const OVERTIME_REASON_LABEL = 'Reason';
 export const OVERTIME_SUBMIT_LABEL = 'Submit request';
 export const OVERTIME_CANCEL_LABEL = 'Cancel';
-/** Shown when the server has no schedule for the employee, so the employee cannot pick a valid day (OT-3). */
+/** Shown when the server has no schedule for the employee, so the employee cannot pick a valid day. */
 export const OVERTIME_SCHEDULE_NOT_CONFIGURED_MESSAGE =
   'Your work schedule is not set up yet, so overtime cannot be requested. Contact HR.';
 /** A key reused with other content. The form never does that, so this only happens when another attempt used the key. */
@@ -82,7 +82,7 @@ export const CORRECTION_CLOCK_OUT_HINT = 'Optional. Leave it empty if you do not
 export const CORRECTION_REASON_LABEL = 'Reason';
 export const CORRECTION_SUBMIT_LABEL = 'Submit request';
 export const CORRECTION_CANCEL_LABEL = 'Cancel';
-/** Shown above the form, because the employee already has a pending correction for the date (COR-4). */
+/** Shown above the form, because the employee already has a pending correction for the date. */
 export const CORRECTION_ALREADY_PENDING_MESSAGE =
   'You already have a pending correction for this date. Wait for HR to decide it.';
 // Reuses the overtime copy as the correction spec asks. It names overtime, so it should be generalized with a shared copy home.

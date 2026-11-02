@@ -23,7 +23,7 @@ export class TodayStateService implements ITodayStateService {
   ) {}
 
   // The instant is read once, so the business date is the one the state is derived for. The schedule check runs
-  // first, so a day with no schedule version answers the same error as a punch (D-42).
+  // first, so a day with no schedule version answers the same error as a punch.
   async getToday(accountId: string): Promise<TodayAttendanceResponse> {
     const businessDate = toBusinessDate(this.clock.now(), this.config.BUSINESS_TIMEZONE);
     const scheduleVersion = await this.reader.findScheduleInEffect(businessDate);

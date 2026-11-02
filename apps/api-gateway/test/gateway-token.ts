@@ -5,7 +5,7 @@ import { roleSchema } from '@dexa/contracts';
 import { z } from 'zod';
 import { servicePair, type AuthKeySet } from './auth-key-set.js';
 
-// The longest lifetime a token from api-gateway may have (D-51).
+// The longest lifetime a token from api-gateway may have.
 export const GATEWAY_TOKEN_MAX_LIFETIME_SECONDS = 60;
 
 const gatewayUserClaimsSchema = z.object({

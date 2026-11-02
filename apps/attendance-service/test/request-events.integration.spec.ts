@@ -44,7 +44,7 @@ const SUBMIT_CORRECTION_PATH = '/api/v1/attendance-corrections';
 const CLOCK_IN_PATH = '/api/v1/attendance/clock-in';
 const TOKEN_LIFETIME_SECONDS = 60;
 // The fixed clock reads 2026-11-02 18:00 WIB. The default schedule is seeded from that day, so no earlier date has a
-// schedule (SCHEDULE_NOT_CONFIGURED). A later date has one but is outside the request window (OT-1, COR-1).
+// schedule (SCHEDULE_NOT_CONFIGURED). A later date has one but is outside the request window.
 const WORKING_DATE = '2026-11-02';
 const FUTURE_OVERTIME_DATE = '2026-11-03';
 const FIRST_START_INSTANT = new Date('2026-11-02T11:00:00Z');

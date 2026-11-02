@@ -19,7 +19,7 @@ export type NewEmployeeProvisioningOperation = {
   readonly requestFingerprintSha256: string;
 };
 
-/** The profile that a RESERVED operation saves. The caller derives profileStatus (DATABASE §4.1). */
+/** The profile that a RESERVED operation saves. The caller derives profileStatus. */
 export type NewEmployeeProfile = {
   readonly accountId: string;
   readonly name: string;

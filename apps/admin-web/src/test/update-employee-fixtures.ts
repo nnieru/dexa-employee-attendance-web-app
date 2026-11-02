@@ -6,7 +6,7 @@ import {
   PRODUCT_ANALYST_POSITION_ID,
 } from './create-employee-fixtures.js';
 
-// The employee detail and the update share one path (ADM-2). The account ID is the path parameter.
+// The employee detail and the update share one path. The account ID is the path parameter.
 export const EMPLOYEE_DETAIL_URL = '/api/v1/employees/:accountId';
 export const UPDATE_EMPLOYEE_URL = '/api/v1/employees/:accountId';
 

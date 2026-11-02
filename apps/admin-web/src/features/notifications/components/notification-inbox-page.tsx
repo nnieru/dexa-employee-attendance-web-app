@@ -27,7 +27,7 @@ type NotificationInboxPageProps = {
 const NO_ITEMS: ReadonlyArray<Notification> = [];
 
 /**
- * The HR notification inbox (ADM-7). The URL owns the page; this component reflects it. The durable inbox is the
+ * The HR notification inbox. The URL owns the page; this component reflects it. The durable inbox is the
  * source of truth, and live delivery only refreshes it (see useNotificationStream).
  */
 export function NotificationInboxPage({ search, onCursorsChange }: NotificationInboxPageProps) {

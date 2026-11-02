@@ -11,7 +11,7 @@ export const USER_JWT_STRATEGY_NAME = 'jwt';
 
 /**
  * Verifies end-user tokens from the Authorization header. Routes reach it through JwtAuthGuard, which only
- * api-gateway uses (D-51). Only the public key is loaded here, so the gateway cannot mint user tokens.
+ * api-gateway uses. Only the public key is loaded here, so the gateway cannot mint user tokens.
  */
 @Injectable()
 export class UserJwtStrategy extends PassportStrategy(Strategy, USER_JWT_STRATEGY_NAME) {

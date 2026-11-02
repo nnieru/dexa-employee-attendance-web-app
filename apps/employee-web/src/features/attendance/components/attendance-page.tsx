@@ -17,7 +17,7 @@ export function AttendancePage() {
 }
 
 // A read that failed replaces the panel rather than sitting beside it. Without a confirmed state the employee
-// cannot act, so no punch is offered on data that may be out of date (DESIGN §9 conflict).
+// cannot act, so no punch is offered on data that may be out of date (conflict).
 function AttendanceContent({
   todayQuery,
 }: {

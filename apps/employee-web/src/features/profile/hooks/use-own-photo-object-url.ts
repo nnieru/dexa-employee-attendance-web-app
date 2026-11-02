@@ -7,7 +7,7 @@ import { useObjectUrl } from './use-object-url.js';
 
 /**
  * Returns a local object URL for the owner's photo, or null when there is no photo, it is not yet loaded, or
- * its request failed. A failure is not an error state: the caller falls back to initials (PRO-1).
+ * its request failed. A failure is not an error state: the caller falls back to initials.
  */
 export function useOwnPhotoObjectUrl(photoUrl: string | null): string | null {
   const { apiClient } = useSession();

@@ -24,7 +24,7 @@ import {
   type IWorkScheduleClient,
 } from './work-schedule-client.interface.js';
 
-// HR only (SCH-7). Employees never see the grace values, so the gateway refuses them before the call.
+// HR only. Employees never see the grace values, so the gateway refuses them before the call.
 @Controller('work-schedules')
 export class WorkScheduleController {
   constructor(@Inject(WORK_SCHEDULE_CLIENT) private readonly schedules: IWorkScheduleClient) {}

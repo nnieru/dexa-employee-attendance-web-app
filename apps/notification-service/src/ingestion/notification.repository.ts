@@ -11,7 +11,7 @@ type NotificationRecord = typeof notifications.$inferSelect;
 export class NotificationRepository implements INotificationWriter {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
 
-  // The conflict target is the unique (event_id, recipient_account_id) of DATABASE §7.1. A redelivered event hits
+  // The conflict target is the unique (event_id, recipient_account_id). A redelivered event hits
   // the conflict and inserts nothing, and an existing row keeps its read state. RETURNING lists only the rows that
   // were inserted, so a no-op never reaches the live stream. The transaction resolves after COMMIT.
   async insertForRecipients(

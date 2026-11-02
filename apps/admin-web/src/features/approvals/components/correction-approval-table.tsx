@@ -97,7 +97,7 @@ type CorrectionApprovalTableProps = {
   onPageChange: (page: number) => void;
 };
 
-/** The correction review queue (PRD APR-1). The URL owns the filters and the page; this table reflects them. */
+/** The correction review queue. The URL owns the filters and the page; this table reflects them. */
 export function CorrectionApprovalTable({ search, onPageChange }: CorrectionApprovalTableProps) {
   const queue = useCorrectionApprovalQueue(toReviewQueueQuery(search));
   const page = queue.data;

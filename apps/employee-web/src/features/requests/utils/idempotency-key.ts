@@ -16,7 +16,7 @@ export type SubmittedAttempt<TPayload extends Readonly<Record<string, unknown>>>
 
 /**
  * The key for the next submission. A retry with the same content as the last submitted attempt reuses that key, so the
- * server can answer the first request's result (APR-5). Changed content gets a new key, because the server refuses a
+ * server can answer the first request's result. Changed content gets a new key, because the server refuses a
  * key that comes back with different content (IDEMPOTENCY_KEY_CONFLICT). With no earlier attempt, a new key is made.
  * Used by the overtime and the correction forms, which share this rule.
  */

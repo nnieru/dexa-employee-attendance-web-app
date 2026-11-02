@@ -18,7 +18,7 @@ function getOvertimeRequestId(request: OvertimeRequest): string {
   return request.id;
 }
 
-/** The employee's overtime requests, one server page at a time (PRD APR-6). */
+/** The employee's overtime requests, one server page at a time. */
 export function OvertimeRequestsTable({ search, onPageChange }: OvertimeRequestsTableProps) {
   const requestsQuery = useOwnOvertimeRequests(toOwnRequestListQuery(search));
   const page = requestsQuery.data;

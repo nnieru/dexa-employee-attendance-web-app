@@ -16,7 +16,7 @@ import {
 import type { BusinessDate } from '../utils/schedule-business-date.js';
 
 type CalendarExceptionColumnOptions = {
-  /** Today in WIB. Only dates after it show edit and remove controls (PRD SCH-5). */
+  /** Today in WIB. Only dates after it show edit and remove controls. */
   today: BusinessDate;
   onEdit: (exception: WorkCalendarDate) => void;
   onRemove: (exception: WorkCalendarDate) => void;
@@ -24,7 +24,7 @@ type CalendarExceptionColumnOptions = {
 
 /**
  * The list columns. A row for a past date or today has no action control at all, so the actions cell is empty
- * (PRD SCH-5). The columns are built by a factory because the action handlers belong to the section.
+ * The columns are built by a factory because the action handlers belong to the section.
  */
 export function createCalendarExceptionColumns({
   today,

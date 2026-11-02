@@ -40,7 +40,7 @@ const POSTGRES_IMAGE = 'postgres:18';
 const RABBITMQ_IMAGE = 'rabbitmq:4-management';
 const WAIT_TIMEOUT_MS = 20_000;
 const WAIT_INTERVAL_MS = 25;
-// Retries and pauses short enough for a test. The production values (D-46) are 1-8 s and 60 s.
+// Retries and pauses short enough for a test. The production values are 1-8 s and 60 s.
 const FAST_RETRY_DELAYS_MS = [1, 1, 1, 1];
 const FAST_TIMING: DeadLetterTiming = {
   archiveRetryDelaysMs: FAST_RETRY_DELAYS_MS,

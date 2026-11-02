@@ -13,7 +13,7 @@ const SIGN_IN_MESSAGE = 'Sign in to continue.';
 const ACCOUNT_DISABLED_MESSAGE = 'This account is no longer active.';
 
 /**
- * Requires a valid end-user token and an account that is still active. Only api-gateway uses it (D-51), so the
+ * Requires a valid end-user token and an account that is still active. Only api-gateway uses it, so the
  * status check runs once per request at the edge. Handlers read the caller's identity with @CurrentUser(). The
  * check runs on every request with no cache. A reader failure propagates: the request is refused, never allowed.
  */

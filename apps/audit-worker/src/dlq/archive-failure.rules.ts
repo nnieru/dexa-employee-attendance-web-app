@@ -1,5 +1,5 @@
 /**
- * permanent: a retry cannot change the outcome, so the message is parked for review without retries (D-46).
+ * permanent: a retry cannot change the outcome, so the message is parked for review without retries.
  * transient: the database may accept the write later, so it is retried, then requeued and the consumer pauses.
  */
 export type ArchiveFailureKind = 'transient' | 'permanent';

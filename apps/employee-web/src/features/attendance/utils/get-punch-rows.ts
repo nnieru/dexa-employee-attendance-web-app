@@ -9,7 +9,7 @@ import {
 
 type PunchRow = {
   label: string;
-  /** Null when the punch is not recorded yet. A missing time is never shown as 00:00 (DESIGN §8). */
+  /** Null when the punch is not recorded yet. A missing time is never shown as 00:00. */
   recordedTime: string | null;
   statusDisplay: PunchStatusDisplay | null;
 };

@@ -10,7 +10,7 @@ const REQUEST_TYPE_BY_RESOURCE: Readonly<
 };
 
 /**
- * The authorized detail path for an attendance request notification (ADM-7, DESIGN §7), or undefined for the other
+ * The authorized detail path for an attendance request notification, or undefined for the other
  * notification types. Both resource fields are required, because a link without an ID cannot open a request.
  */
 export function getNotificationRequestLink(

@@ -35,7 +35,7 @@ export function isWithinGatewayTokenLifetime(payload: unknown, nowSeconds: numbe
 }
 
 /**
- * Accepts only a token that api-gateway signed for this service on behalf of an end user (D-51). The user
+ * Accepts only a token that api-gateway signed for this service on behalf of an end user. The user
  * JWT itself never reaches a service, so this strategy is the only way a service learns who the caller is.
  * The issuer must be api-gateway and the audience must be this service, so a token addressed to another
  * service is refused even when its signature is valid.

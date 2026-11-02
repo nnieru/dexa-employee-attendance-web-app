@@ -81,7 +81,7 @@ export class CorrectionRequestDecisionService implements ICorrectionRequestDecis
   }
 
   // The request is locked before the rule runs, so the status it judges is the one that will be stored. A replay returns
-  // the recorded request and writes nothing. Only a first approval touches the day (DATABASE §5.8).
+  // the recorded request and writes nothing. Only a first approval touches the day.
   private async decideInTransaction(
     transaction: ICorrectionRequestDecisionTransaction,
     command: DecisionCommand,
@@ -131,7 +131,7 @@ export class CorrectionRequestDecisionService implements ICorrectionRequestDecis
 }
 
 // The day is locked after the request. A day that changed since submission is refused before anything is written, so
-// the request stays PENDING and HR can reject it with a reason (DATABASE §5.8).
+// the request stays PENDING and HR can reject it with a reason.
 async function applyApprovedCorrection(
   transaction: ICorrectionRequestDecisionTransaction,
   locked: LockedCorrectionRequest,

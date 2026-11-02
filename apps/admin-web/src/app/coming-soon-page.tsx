@@ -7,7 +7,7 @@ type ComingSoonPageProps = {
 
 /**
  * Placeholder for an HR page that a later task builds. Its empty state says the page is not available
- * yet; it offers no action and shows no fake counts or records (DESIGN §6, §9).
+ * yet; it offers no action and shows no fake counts or records.
  */
 export function ComingSoonPage({ title, description }: ComingSoonPageProps) {
   return (

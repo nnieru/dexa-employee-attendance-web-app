@@ -42,7 +42,7 @@ type UpdateEmployeeFormProps = {
 };
 
 /**
- * One edit session (ADM-2). The stored employee is the baseline: only changed fields are sent. A deactivating save waits
+ * One edit session. The stored employee is the baseline: only changed fields are sent. A deactivating save waits
  * for confirmation. After a partial failure, the next save repeats the status so the Auth account is brought in line.
  */
 export function UpdateEmployeeForm({

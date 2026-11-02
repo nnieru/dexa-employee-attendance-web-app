@@ -8,7 +8,7 @@ export type ProfileCompletionFields = {
 };
 
 /**
- * DATABASE §4.1: a profile is complete when it has a name and a position and a non-empty phone number and
+ * A profile is complete when it has a name and a position and a non-empty phone number and
  * photo reference. An inactive position still counts as present. The employees_profile_status_completion_ck
  * check enforces the phone and photo part of the same rule, so a status this returns is always storable.
  */

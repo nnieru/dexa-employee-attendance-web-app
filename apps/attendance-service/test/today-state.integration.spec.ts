@@ -28,7 +28,7 @@ import {
 } from './attendance-service-environment.js';
 import { CONTAINER_TIMEOUT_MS, TEST_TIMEOUT_MS, createEmptyDatabaseUri } from './test-database.js';
 
-// The lifetime of the token api-gateway sends for a call (D-51).
+// The lifetime of the token api-gateway sends for a call.
 const TOKEN_LIFETIME_SECONDS = 60;
 
 const TODAY_PATH = '/api/v1/attendance/me/today';
@@ -60,7 +60,7 @@ let app: INestApplication;
 let database: Database;
 let keys: AuthKeySet;
 
-// Signs the token that api-gateway sends to this service for the user (D-51).
+// Signs the token that api-gateway sends to this service for the user.
 function signUserToken(accountId: string, role: Role, expiresAtSeconds: number): string {
   return signGatewayUserToken(
     keys,
@@ -140,7 +140,7 @@ describe('attendance today state', () => {
     mutableClock.current = FIRST_START_INSTANT;
   });
 
-  // Only api-gateway verifies end-user tokens (D-51), so this service refuses anything else on the route.
+  // Only api-gateway verifies end-user tokens, so this service refuses anything else on the route.
   it(
     'should return 401 when an end-user JWT is sent instead of a gateway token',
     async () => {

@@ -22,7 +22,7 @@ import {
 } from './attendance-service-client.interface.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 
-// The body is strict here and again in attendance-service, so a client timestamp is refused at the edge (ATT-3).
+// The body is strict here and again in attendance-service, so a client timestamp is refused at the edge.
 // The body parameter comes first because the pipe runs for its check and its value is not used.
 @Controller('attendance')
 export class AttendanceController {
@@ -64,8 +64,8 @@ export class AttendanceController {
     return this.attendanceService.listOwnSummary(user, query);
   }
 
-  // HR monitoring of every account's days (ADM-4). The query is strict here and again in attendance-service. The
-  // service has no write route for these records, so only this GET exists (ADM-6).
+  // HR monitoring of every account's days. The query is strict here and again in attendance-service. The
+  // service has no write route for these records, so only this GET exists.
   @Roles(Role.HR)
   @Get()
   listAttendance(

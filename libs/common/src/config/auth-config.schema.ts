@@ -21,14 +21,14 @@ export type AuthConfig = {
   readonly SERVICE_JWT_PUBLIC_KEYS: ReadonlyMap<ServiceName, string>;
 };
 
-/** User token settings for verifying tokens. Only api-gateway reads them (D-51). */
+/** User token settings for verifying tokens. Only api-gateway reads them. */
 export type UserJwtVerifierConfig = {
   readonly USER_JWT_ISSUER: string;
   readonly USER_JWT_AUDIENCE: string;
   readonly USER_JWT_PUBLIC_KEY: string;
 };
 
-/** User token settings for signing tokens. Only auth-service reads them (D-51). */
+/** User token settings for signing tokens. Only auth-service reads them. */
 export type UserJwtSigningConfig = UserJwtVerifierConfig & {
   readonly USER_JWT_PRIVATE_KEY: string | undefined;
 };

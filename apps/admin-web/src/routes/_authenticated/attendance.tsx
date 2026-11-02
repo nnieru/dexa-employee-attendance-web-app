@@ -3,7 +3,7 @@ import { AttendanceMonitoringPage } from '../../features/attendance/components/a
 import { attendanceMonitoringSearchSchema } from '../../features/attendance/types/attendance-monitoring-search.schema.js';
 import { getCurrentBusinessDate } from '../../features/attendance/utils/current-business-date.js';
 
-// The range, employee, and page live in the URL, so a reload or a shared link shows the same list (PRD ADM-4).
+// The range, employee, and page live in the URL, so a reload or a shared link shows the same list.
 export const Route = createFileRoute('/_authenticated/attendance')({
   validateSearch: attendanceMonitoringSearchSchema,
   component: AttendanceRoute,

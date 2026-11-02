@@ -22,7 +22,7 @@ const MONITORED_DAY = {
   clockOutStatus: 'ON_TIME_CHECKOUT',
 };
 
-// A correction moved both effective times, and the raw punches stay as the employee made them (ADM-4).
+// A correction moved both effective times, and the raw punches stay as the employee made them.
 const CORRECTED_DAY = {
   ...MONITORED_DAY,
   rawClockInAt: '2026-11-02T03:10:00.000Z',

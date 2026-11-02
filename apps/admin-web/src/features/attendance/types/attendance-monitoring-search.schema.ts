@@ -6,7 +6,7 @@ const FIRST_PAGE = 1;
 const businessDateSchema = z.iso.date();
 
 /**
- * The monitoring state in the URL (PRD ADM-4). Each key is optional and an unusable value is dropped (`.catch`), so a
+ * The monitoring state in the URL. Each key is optional and an unusable value is dropped (`.catch`), so a
  * stale or hand-edited link still opens the list. The defaults are applied by resolveAttendanceMonitoringSearch, not
  * written into the URL, so the address stays as short as HR typed it (for example in a sign-in redirect). An
  * out-of-order range is kept: the page reports it, so HR sees why nothing loaded.
@@ -29,7 +29,7 @@ export type ResolvedAttendanceMonitoringSearch = {
 
 /**
  * Fills the defaults from today: the range is the first of the WIB month through today (the employee summary's
- * default, PRD SUM-1, since ADM-4 names none), and the page is 1. Today is passed in so the function stays pure.
+ * default), and the page is 1. Today is passed in so the function stays pure.
  */
 export function resolveAttendanceMonitoringSearch(
   search: AttendanceMonitoringSearch,

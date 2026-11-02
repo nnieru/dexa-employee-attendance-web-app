@@ -5,14 +5,14 @@ import { FIXTURE_MASTER_DATA } from './master-data-fixtures.js';
 // The setting value that selects the labeled local-development fixtures instead of JSON.
 const FIXTURES_SETTING = 'fixtures';
 const SETTING_FIELD = 'EMPLOYEE_MASTER_DATA';
-// Matches the code and name rules of the master tables (DATABASE §2).
+// Matches the code and name rules of the master tables.
 const MASTER_CODE_PATTERN = /^[A-Z0-9_]+$/;
 const MASTER_CODE_MAX_LENGTH = 50;
 const MASTER_NAME_MAX_LENGTH = 150;
-// Deactivation assigns INACTIVE and blocks access (DATABASE §4), so both codes must exist for it to work.
+// Deactivation assigns INACTIVE and blocks access, so both codes must exist for it to work.
 const REQUIRED_EMPLOYEE_STATUS_CODES = ['ACTIVE', 'INACTIVE'] as const;
 
-// Shared with the bootstrap HR position code, so both settings accept the same codes (DATABASE §2).
+// Shared with the bootstrap HR position code, so both settings accept the same codes.
 export const masterCodeSchema = z
   .string()
   .max(MASTER_CODE_MAX_LENGTH, { error: `must be at most ${MASTER_CODE_MAX_LENGTH} characters` })

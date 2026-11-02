@@ -10,8 +10,8 @@ const YEAR_MONTH_LENGTH = 7;
 // Length of "YYYY-MM-DD".
 const BUSINESS_DATE_LENGTH = 10;
 const MILLISECONDS_PER_DAY = 86_400_000;
-// PRD COR-1: a correction can target today or up to this many days back. The requests feature keeps the same value for
-// its form; features do not import each other (AGENTS §10).
+// A correction can target today or up to this many days back. The requests feature keeps the same value for
+// its form; features do not import each other.
 const CORRECTION_WINDOW_DAYS = 30;
 
 const businessDateFormatter = new Intl.DateTimeFormat('en-CA', {
@@ -41,7 +41,7 @@ export function getMonthStartBusinessDate(businessDate: BusinessDate): BusinessD
   return `${businessDate.slice(0, YEAR_MONTH_LENGTH)}-01`;
 }
 
-/** A server instant as `YYYY-MM-DD HH:mm` in the company timezone (PRD SUM-3). */
+/** A server instant as `YYYY-MM-DD HH:mm` in the company timezone. */
 export function formatBusinessDateTime(instant: string): string {
   const formatted = businessDateTimeFormatter.format(new Date(instant));
   // en-CA puts a comma between the date and the time; the required format has a space.

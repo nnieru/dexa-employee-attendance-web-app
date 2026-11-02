@@ -7,7 +7,7 @@ type CorrectionOutcomeRadioGroupProps = {
   register: UseFormRegister<CorrectionRequestFormValues>;
 };
 
-/** The requested outcome as native radio buttons in a fieldset (DESIGN §7). Each label is the whole 44px hit area. */
+/** The requested outcome as native radio buttons in a fieldset. Each label is the whole 44px hit area. */
 export function CorrectionOutcomeRadioGroup({ register }: CorrectionOutcomeRadioGroupProps) {
   return (
     <fieldset className="correction-outcome">

@@ -6,7 +6,7 @@ import type { RequestedCorrectionOutcome } from './correction-policy.rules.js';
 
 export const CORRECTION_REQUEST_REPOSITORY = Symbol('ICorrectionRequestRepository');
 
-/** A stored correction request (DATABASE §5.8), with the business date of its day and the instants as stored. */
+/** A stored correction request, with the business date of its day and the instants as stored. */
 export type StoredCorrectionRequest = {
   readonly id: string;
   readonly businessDate: BusinessDate;
@@ -15,7 +15,7 @@ export type StoredCorrectionRequest = {
   readonly requestedCheckoutAt: Date | null;
   readonly reason: string;
   readonly status: RequestStatus;
-  /** The reviewer's reason. Set only when REJECTED (DATABASE §5.6). */
+  /** The reviewer's reason. Set only when REJECTED. */
   readonly reviewReason: string | null;
   /** The decision instant, or null while PENDING. */
   readonly reviewedAt: Date | null;
@@ -23,7 +23,7 @@ export type StoredCorrectionRequest = {
 };
 
 /**
- * The day as it stands when the correction is submitted (DATABASE §5.8): the revision HR will check against, the
+ * The day as it stands when the correction is submitted: the revision HR will check against, the
  * effective times, and the day status. Read under the day's row lock, so it is the value the employee saw.
  */
 export type DayRevisionSnapshot = {
@@ -48,10 +48,10 @@ export type NewCorrectionRequest = {
 
 /**
  * The reads and writes that one correction submission needs, inside one transaction. The day is found or created, and
- * locked, by the shared day creation (T-REQ-03), the same way as for a punch and an overtime request.
+ * locked, by the shared day creation, the same way as for a punch and an overtime request.
  */
 export interface ICorrectionRequestTransaction extends AttendanceDayTransaction, OutboxTransaction {
-  /** The employee's request with this key, or undefined. The key is unique per requester (DATABASE §5.6). */
+  /** The employee's request with this key, or undefined. The key is unique per requester. */
   findRequestByIdempotencyKey(
     accountId: string,
     idempotencyKey: string,

@@ -30,7 +30,7 @@ import {
   requireRow,
 } from './test-database.js';
 
-// The lifetime of the token api-gateway sends for a call (D-51).
+// The lifetime of the token api-gateway sends for a call.
 const TOKEN_LIFETIME_SECONDS = 60;
 
 const CLOCK_IN_PATH = '/api/v1/attendance/clock-in';
@@ -53,7 +53,7 @@ let app: INestApplication;
 let database: Database;
 let keys: AuthKeySet;
 
-// Signs the token that api-gateway sends to this service for the user (D-51).
+// Signs the token that api-gateway sends to this service for the user.
 function signUserToken(accountId: string, role: Role, expiresAtSeconds: number): string {
   return signGatewayUserToken(
     keys,

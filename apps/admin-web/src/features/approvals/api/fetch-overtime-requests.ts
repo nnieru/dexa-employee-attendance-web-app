@@ -8,7 +8,7 @@ import type { ApiClient } from '@dexa/session';
 
 const OVERTIME_REQUESTS_PATH = '/overtime-requests';
 
-/** One page of the HR overtime review queue (PRD APR-1). The gateway accepts this only for HR. */
+/** One page of the HR overtime review queue. The gateway accepts this only for HR. */
 export async function fetchOvertimeRequests(
   apiClient: ApiClient,
   query: RequestReviewQueueQuery,

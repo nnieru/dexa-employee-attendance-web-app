@@ -23,7 +23,7 @@ export function getDecisionErrorMessage(error: unknown): string {
   return MESSAGE_BY_ERROR_CODE[error.code] ?? error.message;
 }
 
-/** True when the day changed under the request, so the detail must be reloaded before another decision (COR-6). */
+/** True when the day changed under the request, so the detail must be reloaded before another decision. */
 export function isAttendanceDayChanged(error: unknown): boolean {
   return error instanceof ApiError && error.code === ErrorCode.ATTENDANCE_DAY_CHANGED;
 }

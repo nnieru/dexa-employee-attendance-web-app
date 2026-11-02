@@ -7,7 +7,7 @@ import {
 } from './master-lookup.service.interface.js';
 
 // Both lists are returned whole, without pagination. The catalogs are small, fixed by configuration
-// (DATABASE §2), and HR selects from them, so a page would only split a short list. Every list that
+// , and HR selects from them, so a page would only split a short list. Every list that
 // grows with data (employees, attendance) must still be paginated.
 // The gateway checks the role too. This service checks it again, so the route stays closed if the
 // gateway is bypassed.

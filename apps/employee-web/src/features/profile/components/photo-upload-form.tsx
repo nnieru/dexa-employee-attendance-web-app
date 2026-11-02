@@ -3,7 +3,7 @@ import { Alert, PhotoUploader } from '@dexa/ui';
 import { useReplaceOwnPhoto } from '../hooks/use-replace-own-photo.js';
 import { getProfileErrorMessage } from '../utils/get-profile-error-message.js';
 
-// The uploader checks type and size on the client (PRO-4) and only then calls onSelect, so a rejected file
+// The uploader checks type and size on the client and only then calls onSelect, so a rejected file
 // never reaches the request. The server still decides for the bytes it receives.
 export function PhotoUploadForm() {
   const photoMutation = useReplaceOwnPhoto();

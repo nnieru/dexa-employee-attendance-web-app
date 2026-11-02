@@ -19,7 +19,7 @@ export type StoredOvertimeSubmission = {
 };
 
 /**
- * True when a retry asks for the same request as the stored one, so the stored request is returned (DATABASE §5.6).
+ * True when a retry asks for the same request as the stored one, so the stored request is returned.
  * The instants compare as instants, so the same moment written with another offset is the same request.
  */
 export function isSameOvertimeSubmission(

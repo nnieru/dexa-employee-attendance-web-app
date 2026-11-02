@@ -16,7 +16,7 @@ export type OvertimeSubmitFailure =
   | { kind: 'field'; field: OvertimeFormField; message: string }
   | { kind: 'general'; message: string };
 
-// Each policy code names the field it is about (PRD OT-2..OT-5). The server message is user-safe, so it is shown as is.
+// Each policy code names the field it is about. The server message is user-safe, so it is shown as is.
 // A start-time conflict with the schedule or with another request is on the start field; the cap is on the end field.
 const FIELD_BY_ERROR_CODE: Partial<Record<ErrorCode, OvertimeFormField>> = {
   [ErrorCode.OVERTIME_BUSINESS_DATE_OUTSIDE_WINDOW]: 'businessDate',

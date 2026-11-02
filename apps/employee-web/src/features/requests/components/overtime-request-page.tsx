@@ -10,7 +10,7 @@ type OvertimeRequestPageProps = {
   onSubmitted: (request: OvertimeRequest) => void;
 };
 
-/** The overtime request screen (PRD OT-1). The route decides where a submission leads; this page only frames the form. */
+/** The overtime request screen. The route decides where a submission leads; this page only frames the form. */
 export function OvertimeRequestPage({ onSubmitted }: OvertimeRequestPageProps) {
   return (
     <PageShell

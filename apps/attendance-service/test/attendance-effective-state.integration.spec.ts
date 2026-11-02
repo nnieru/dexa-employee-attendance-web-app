@@ -25,7 +25,7 @@ import {
 import { signGatewayUserToken } from './gateway-user-token.js';
 import { CONTAINER_TIMEOUT_MS, TEST_TIMEOUT_MS, createEmptyDatabaseUri } from './test-database.js';
 
-// The lifetime of the token api-gateway sends for a call (D-51).
+// The lifetime of the token api-gateway sends for a call.
 const TOKEN_LIFETIME_SECONDS = 60;
 const CLOCK_IN_PATH = '/api/v1/attendance/clock-in';
 const CLOCK_OUT_PATH = '/api/v1/attendance/clock-out';

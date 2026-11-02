@@ -16,7 +16,7 @@ import {
 } from './user-token-signer.interface.js';
 
 // One message for every refusal, so the response never shows whether the email exists or which check
-// failed (AUTH-4).
+// failed.
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password.';
 const BEARER_TOKEN_TYPE = 'Bearer';
 

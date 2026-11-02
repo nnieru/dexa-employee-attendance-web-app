@@ -14,13 +14,13 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-// Raw message bodies are kept as bytes so non-JSON input can be archived and replayed (DATABASE §6.1).
+// Raw message bodies are kept as bytes so non-JSON input can be archived and replayed.
 // drizzle-orm/pg-core has no built-in bytea column.
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   dataType: () => 'bytea',
 });
 
-// Field names only, never before/after values (DATABASE §6, decision D-06).
+// Field names only, never before/after values.
 export const auditLogs = pgTable(
   'audit_logs',
   {
@@ -52,7 +52,7 @@ export const auditLogs = pgTable(
   ],
 );
 
-// Failed audit messages awaiting or recording replay (DATABASE §6.1). No foreign key to audit_logs: a failed
+// Failed audit messages awaiting or recording replay. No foreign key to audit_logs: a failed
 // event may not have an audit row yet.
 export const dlqMessages = pgTable(
   'dlq_messages',

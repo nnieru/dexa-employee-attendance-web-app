@@ -17,7 +17,7 @@ type CorrectionRequestPageProps = {
 };
 
 /**
- * The correction request screen (PRD COR-1). The current record sits beside the form on wide screens and above it on
+ * The correction request screen. The current record sits beside the form on wide screens and above it on
  * narrow ones. The page keeps the chosen date, so the record panel follows the form's date field.
  */
 export function CorrectionRequestPage({

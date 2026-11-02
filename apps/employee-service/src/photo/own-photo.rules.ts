@@ -10,7 +10,7 @@ export type OwnPhotoPlan = {
 
 /**
  * A new photo always changes the stored reference, so the photo is always reported. The status is reported
- * only when the photo moves it (DATABASE §4.1).
+ * only when the photo moves it.
  */
 export function planOwnPhotoChange(stored: LockedEmployeeProfile, photoKey: string): OwnPhotoPlan {
   const profileStatus = calculateProfileStatus({

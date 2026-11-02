@@ -1,11 +1,11 @@
 import { toBusinessDate, type BusinessDate } from '@dexa/common';
 import { isWithinSubmissionWindow } from '../requests/request-business-date.rules.js';
 
-/** PRD COR-1: the business date is today or up to this many days back, including days with no punch. */
+/**The business date is today or up to this many days back, including days with no punch. */
 export const CORRECTION_SUBMISSION_WINDOW_DAYS = 30;
 
 /**
- * The requested day outcomes a correction can ask for (DATABASE §5.8). Values match the DAY master codes, so they
+ * The requested day outcomes a correction can ask for. Values match the DAY master codes, so they
  * are stored as they are.
  */
 export const REQUESTED_CORRECTION_OUTCOME = {
@@ -62,10 +62,10 @@ const CLOCK_OUT_CODES: TimeViolationCodes = {
 };
 
 /**
- * Applies the correction submission rules (PRD COR-1, COR-2, DATABASE §5.8). A PRESENT correction needs a clock-in;
+ * Applies the correction submission rules. A PRESENT correction needs a clock-in;
  * its clock-out is optional. Leave outcomes carry no times. The first failing rule is returned.
  *
- * The clock-out must be strictly after the clock-in. DATABASE §5.8 only checks `>=`, so this policy is the stricter
+ * The clock-out must be strictly after the clock-in. The database check only accepts `>=`, so this policy is the stricter
  * gate: an equal pair is refused here, and the database check does not need to match it.
  */
 export function evaluateCorrectionPolicy(input: CorrectionPolicyInput): CorrectionPolicyResult {
@@ -107,7 +107,7 @@ function findPresentTimesViolation(input: CorrectionPolicyInput): CorrectionPoli
     : CORRECTION_POLICY_VIOLATION.CLOCK_OUT_NOT_AFTER_CLOCK_IN;
 }
 
-// COR-2: a requested time is on the business date in the business timezone and not after the server's now.
+// A requested time is on the business date in the business timezone and not after the server's now.
 function findTimeViolation(
   instant: Date,
   input: CorrectionPolicyInput,

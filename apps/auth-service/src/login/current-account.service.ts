@@ -23,7 +23,7 @@ export class CurrentAccountService implements ICurrentAccountService {
     if (account === undefined || account.isProvisioningPending) {
       throw new UnauthorizedError(ErrorCode.UNAUTHORIZED, SESSION_NOT_FOUND_MESSAGE);
     }
-    // The client signs out on ACCOUNT_DISABLED, so a deactivated account gets its own code (D-13).
+    // The client signs out on ACCOUNT_DISABLED, so a deactivated account gets its own code.
     if (!account.isActive) {
       throw new UnauthorizedError(ErrorCode.ACCOUNT_DISABLED, ACCOUNT_DISABLED_MESSAGE);
     }

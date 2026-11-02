@@ -91,7 +91,7 @@ async function findRequestForUpdate(
 }
 
 // The day's schedule is joined for its grace minutes, which the snapshot keeps fixed while the version is in effect
-// (DATABASE §5.2). FOR UPDATE locks only the day row.
+// FOR UPDATE locks only the day row.
 async function findDayForUpdate(
   runner: PunchRunner,
   attendanceDayId: string,

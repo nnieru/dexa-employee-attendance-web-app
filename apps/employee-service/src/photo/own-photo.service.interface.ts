@@ -8,7 +8,7 @@ export type OwnPhotoChangeSet = {
   readonly changedFields: ReadonlyArray<ProfileField>;
 };
 
-/** The signed-in employee's photo (PRO-2). The account ID comes from the verified token, never from the request. */
+/** The signed-in employee's photo. The account ID comes from the verified token, never from the request. */
 export interface IOwnPhotoService {
   /**
    * Resolves once the photo file is durable and its reference and the recomputed status have committed. Rejects

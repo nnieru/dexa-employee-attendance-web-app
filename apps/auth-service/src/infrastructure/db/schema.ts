@@ -18,7 +18,7 @@ import {
 // function, and seed rows are hand-written SQL migrations, so Drizzle does not model them.
 
 // The outbox table is defined by @dexa/messaging. Re-exporting it here lets db:generate write its migration
-// into this service's own migrations folder (DATABASE §2.2).
+// into this service's own migrations folder.
 export { outboxEvents } from '@dexa/messaging';
 
 export const masterRoles = pgTable(

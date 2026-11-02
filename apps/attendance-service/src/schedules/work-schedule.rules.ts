@@ -23,14 +23,14 @@ export function selectWorkScheduleOverview(
   };
 }
 
-// effective_from is inclusive and effective_until is exclusive (DATABASE §5.2).
+// effective_from is inclusive and effective_until is exclusive.
 function isInEffectOn(version: WorkScheduleVersion, businessDate: BusinessDate): boolean {
   if (version.effectiveFrom > businessDate) return false;
   return version.effectiveUntil === null || businessDate < version.effectiveUntil;
 }
 
 /**
- * A version that has not taken effect yet (DATABASE §5.2). Only such a version can be edited, and a new version can
+ * A version that has not taken effect yet. Only such a version can be edited, and a new version can
  * be created only when none exists.
  */
 export function isUpcomingVersion(
@@ -46,7 +46,7 @@ export function nextBusinessDate(businessDate: BusinessDate): BusinessDate {
   return new Date(midnightUtc.getTime() + ONE_DAY_MILLISECONDS).toISOString().slice(0, 10);
 }
 
-/** A schedule change takes effect tomorrow or later, never on the business date itself (PRD SCH-4). */
+/** A schedule change takes effect tomorrow or later, never on the business date itself. */
 export function isEffectiveFromAllowed(
   effectiveFrom: BusinessDate,
   businessDate: BusinessDate,

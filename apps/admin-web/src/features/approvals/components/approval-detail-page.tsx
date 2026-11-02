@@ -49,7 +49,7 @@ type PendingDecision = {
 };
 
 /**
- * The review detail (PRD APR-2..APR-4). Current and requested values sit side by side. Approve and Reject are disabled
+ * The review detail. Current and requested values sit side by side. Approve and Reject are disabled
  * on a decided request and on the reviewer's own request. A stale correction reloads the day before another attempt.
  */
 export function ApprovalDetailPage({ target, requestId, isValidPath }: ApprovalDetailPageProps) {

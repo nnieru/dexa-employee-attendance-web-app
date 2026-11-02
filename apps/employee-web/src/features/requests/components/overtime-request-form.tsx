@@ -30,7 +30,7 @@ type OvertimeRequestFormProps = {
 const EMPTY_TIME = '';
 
 /**
- * One overtime request, entered in WIB (PRD OT-1..OT-5). "Today" is read once per form session, so the date limits and
+ * One overtime request, entered in WIB. "Today" is read once per form session, so the date limits and
  * the default date stay the same while the employee is on the form. Field errors come from the rules here or from the
  * server, and every entered value is kept when a submission is refused.
  */

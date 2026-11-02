@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 /**
- * Whether the archive consumer is paused after a transient failure (D-46). The consumer server writes it and the
+ * Whether the archive consumer is paused after a transient failure. The consumer server writes it and the
  * health indicator reads it. The read side has no setter, so health cannot change the consumer's state.
  */
 @Injectable()

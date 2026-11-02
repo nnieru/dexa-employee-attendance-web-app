@@ -56,7 +56,7 @@ export class EmployeesController {
     return this.employeeService.getOwnProfile(user);
   }
 
-  // HR's roster (ADM-3). The query is validated here and again by employee-service. HR accounts are listed too (D-14).
+  // HR's roster. The query is validated here and again by employee-service. HR accounts are listed too.
   @Roles(Role.HR)
   @Get()
   listEmployees(
@@ -66,7 +66,7 @@ export class EmployeesController {
     return this.employeeService.listEmployees(user, query);
   }
 
-  // HR creates an employee (ADM-1). The body is validated strictly here and again by employee-service. The body holds
+  // HR creates an employee. The body is validated strictly here and again by employee-service. The body holds
   // a password, so it is never logged. A matching retry answers 201 with the same employee, as a first create does.
   @Roles(Role.HR)
   @Post()
@@ -89,7 +89,7 @@ export class EmployeesController {
     return this.employeeService.updateOwnProfile(user, request);
   }
 
-  // HR updates an employee (ADM-2). The body is strict and validated here and again by employee-service. It can carry a
+  // HR updates an employee. The body is strict and validated here and again by employee-service. It can carry a
   // new password, so it is never logged. A partial failure answers 503 with the steps that saved, and it is not retried.
   @Roles(Role.HR)
   @Patch(':accountId')
@@ -122,7 +122,7 @@ export class EmployeesController {
     return new StreamableFile(photo.body, { type: PHOTO_CONTENT_TYPE });
   }
 
-  // HR's view of an employee photo for the list thumbnails (ADM-3). This route is declared after `me/photo`, so the
+  // HR's view of an employee photo for the list thumbnails. This route is declared after `me/photo`, so the
   // static segment is matched first and `me` never reaches the UUID check.
   @Roles(Role.HR)
   @Get(':accountId/photo')
@@ -136,7 +136,7 @@ export class EmployeesController {
     return new StreamableFile(photo.body, { type: PHOTO_CONTENT_TYPE });
   }
 
-  // HR's batched thumbnails for the employee list (D-57). One request per page: the body holds at most 100 unique IDs,
+  // HR's batched thumbnails for the employee list. One request per page: the body holds at most 100 unique IDs
   // checked here and again by employee-service. A POST that reads answers 200, and it is never retried by the gateway.
   @Roles(Role.HR)
   @Post('photo-thumbnails')

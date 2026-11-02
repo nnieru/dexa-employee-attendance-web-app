@@ -9,7 +9,7 @@ import {
 } from '@dexa/contracts';
 import type { EventMessage } from '@dexa/messaging';
 
-/** A field name that an event may report as changed. Names only, never values (ARCHITECTURE §8). */
+/** A field name that an event may report as changed. Names only, never values. */
 export type NotifiableField = ProfileField | typeof ACCOUNT_PASSWORD_CHANGED_FIELD;
 
 type NotifiableEventBase = {
@@ -29,7 +29,7 @@ export type PasswordChangedNotifiableEvent = NotifiableEventBase & {
   readonly eventType: typeof EventName.ACCOUNT_PASSWORD_CHANGED;
 };
 
-// The requester is actorAccountId. The event names no field, and it carries no reason (PRD APR-7).
+// The requester is actorAccountId. The event names no field, and it carries no reason.
 export type AttendanceRequestSubmittedNotifiableEvent = NotifiableEventBase & {
   readonly eventType: typeof EventName.ATTENDANCE_REQUEST_SUBMITTED;
   readonly resourceType: AttendanceRequestResourceType;
@@ -37,7 +37,7 @@ export type AttendanceRequestSubmittedNotifiableEvent = NotifiableEventBase & {
   readonly businessDate: string;
 };
 
-/** The events the notification service turns into HR inbox rows (ADM-5, EVT-2, PRD APR-7). */
+/** The events the notification service turns into HR inbox rows. */
 export type NotifiableEvent =
   | ProfileUpdatedNotifiableEvent
   | PasswordChangedNotifiableEvent

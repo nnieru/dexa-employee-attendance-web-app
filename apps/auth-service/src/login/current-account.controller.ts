@@ -6,7 +6,7 @@ import {
   type ICurrentAccountService,
 } from './current-account-service.interface.js';
 
-// The gateway checks the user and forwards its own signed token here, so GatewayUserAuthGuard admits it (D-51).
+// The gateway checks the user and forwards its own signed token here, so GatewayUserAuthGuard admits it.
 @Controller('auth')
 export class CurrentAccountController {
   constructor(

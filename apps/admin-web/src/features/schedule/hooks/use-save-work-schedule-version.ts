@@ -6,7 +6,7 @@ import { scheduleQueryKeys } from '../api/schedule-query-keys.js';
 import { updateWorkScheduleVersion } from '../api/update-work-schedule-version.js';
 import { isWorkScheduleConflictError } from '../utils/work-schedule-messages.js';
 
-/** A save is either a new upcoming version or an edit of the one that exists (DATABASE §5.2). */
+/** A save is either a new upcoming version or an edit of the one that exists. */
 export type WorkScheduleSave =
   | { kind: 'create'; request: WorkScheduleVersionRequest }
   | { kind: 'update'; versionId: string; request: WorkScheduleVersionRequest };

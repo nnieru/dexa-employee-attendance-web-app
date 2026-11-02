@@ -78,7 +78,7 @@ export class PasswordChangeService implements IPasswordChangeService {
 }
 
 // A missing or still-provisioning account is no session, and a deactivated one gets its own code so
-// the client signs out (D-13). Both are refused before the password is checked.
+// the client signs out. Both are refused before the password is checked.
 function assertCanChangePassword(
   credential: PasswordCredentialRecord | undefined,
 ): asserts credential is PasswordCredentialRecord {

@@ -28,13 +28,13 @@ import { WorkScheduleVersionPanel } from './work-schedule-version-panel.js';
 type WorkSchedulePageProps = {
   /** Today in the company timezone. The route reads the clock, so this page stays a function of its props. */
   today: BusinessDate;
-  /** The calendar exception range and page, read from the URL by the route (PRD SCH-5). */
+  /** The calendar exception range and page, read from the URL by the route. */
   calendarSearch: CalendarExceptionSearch;
   onCalendarRangeSearch: (range: CalendarExceptionRange) => void;
   onCalendarPageChange: (page: number) => void;
 };
 
-/** The HR work schedule screen (PRD SCH-3, SCH-4) and its calendar exceptions (PRD SCH-5). */
+/** The HR work schedule screen and its calendar exceptions. */
 export function WorkSchedulePage({
   today,
   calendarSearch,

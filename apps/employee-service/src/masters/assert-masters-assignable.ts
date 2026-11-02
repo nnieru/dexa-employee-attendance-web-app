@@ -16,7 +16,7 @@ export type MasterReferenceToAssign = {
 
 /**
  * Rejects with a 400 that names the field when a reference is about to name an option that cannot be newly assigned.
- * The rule covers new assignments only (DATABASE §4), so callers pass the references that change, not the stored ones.
+ * The rule covers new assignments only, so callers pass the references that change, not the stored ones.
  */
 export async function assertMastersAssignable(
   reader: IMasterAssignmentReader,

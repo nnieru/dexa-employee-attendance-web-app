@@ -10,7 +10,7 @@ export const GRACE_MINUTES_MESSAGE = 'Enter whole minutes, 0 or more.';
 export const EFFECTIVE_FROM_REQUIRED_MESSAGE = 'Enter the date the version takes effect.';
 export const EFFECTIVE_FROM_TOO_EARLY_MESSAGE = 'Choose tomorrow or a later date (WIB).';
 
-// HH:mm in 24 hours, the shape of the contract's clock times (DATABASE §5.2).
+// HH:mm in 24 hours, the shape of the contract's clock times.
 const CLOCK_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const WHOLE_MINUTES_PATTERN = /^\d+$/;
 

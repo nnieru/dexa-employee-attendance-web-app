@@ -1,5 +1,5 @@
 // The company timezone as an IANA name. The API does not send BUSINESS_TIMEZONE to the browser, and every approval
-// time is shown in WIB (PRD APR-1).
+// time is shown in WIB.
 const BUSINESS_TIME_ZONE = 'Asia/Jakarta';
 
 const dateTimeFormatter = new Intl.DateTimeFormat('en-CA', {

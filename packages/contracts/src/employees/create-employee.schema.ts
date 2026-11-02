@@ -4,11 +4,11 @@ import { passwordSchema } from '../auth/password.schema.js';
 import { roleSchema } from '../auth/role.js';
 import { phoneNumberSchema } from './update-own-profile.schema.js';
 
-// Bounds from DATABASE §4 (employees.name is varchar(150)).
+// Bounds (employees.name is varchar(150)).
 export const EMPLOYEE_NAME_MAX_LENGTH = 150;
 
 // Strict, so a caller cannot send an account ID, a profile status, or any other field the server decides.
-// The email is lowercased after it is validated, as provisioning compares it (DATABASE §3). The phone key is
+// The email is lowercased after it is validated, as provisioning compares it. The phone key is
 // required: null means no phone number, and the server records it as stored. The password goes only to Auth.
 export const createEmployeeRequestSchema = z.strictObject({
   operationId: z.uuid(),

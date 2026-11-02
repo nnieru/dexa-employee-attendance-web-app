@@ -25,7 +25,7 @@ export function getEmploymentStatusPresentation(employeeStatus: {
   return { label: employeeStatus.name, tone };
 }
 
-// The profile is incomplete until the phone number and photo are present (DATABASE §4.1, EMP-02).
+// The profile is incomplete until the phone number and photo are present.
 export function getProfileStatusPresentation(profileStatus: ProfileStatus): StatusPresentation {
   if (profileStatus === ProfileStatus.COMPLETE) return { label: 'Complete', tone: 'success' };
   return { label: 'Incomplete', tone: 'warning' };

@@ -24,7 +24,7 @@ export type NewWorkCalendarDate = {
   readonly description: string | null;
 };
 
-/** Read access to the calendar exceptions that HR lists (PRD SCH-5). */
+/** Read access to the calendar exceptions that HR lists. */
 export interface IWorkCalendarDateReader {
   findDatePage(criteria: WorkCalendarDateCriteria): Promise<WorkCalendarDateRecordPage>;
 }

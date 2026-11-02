@@ -6,7 +6,7 @@ export type EmployeePhotoKeyRecord = {
   readonly photoKey: string;
 };
 
-/** Reads photo keys for a bounded list of accounts, so a page of thumbnails costs one query (D-57). */
+/** Reads photo keys for a bounded list of accounts, so a page of thumbnails costs one query. */
 export interface IEmployeePhotoKeyReader {
   /** Accounts without a profile or without a photo are absent from the result. */
   findPhotoKeysByAccountIds(accountIds: ReadonlyArray<string>): Promise<EmployeePhotoKeyRecord[]>;

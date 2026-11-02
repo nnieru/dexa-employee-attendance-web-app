@@ -5,7 +5,7 @@ import {
 import { parseResponse } from '@dexa/api-client';
 import type { ApiClient } from '@dexa/session';
 
-/** One correction request for the review detail screen (PRD APR-2). The gateway accepts this only for HR. */
+/** One correction request for the review detail screen. The gateway accepts this only for HR. */
 export async function fetchCorrectionRequest(
   apiClient: ApiClient,
   requestId: string,

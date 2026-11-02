@@ -9,7 +9,7 @@ type ButtonProps = Omit<ComponentPropsWithRef<'button'>, 'type'> & {
 /**
  * While busy the button is disabled, so it cannot be activated twice. The spinner sits in a reserved
  * slot beside the label, so the label keeps its text and position and the width does not change
- * (DESIGN §7). The spinner is decorative.
+ * The spinner is decorative.
  */
 export function Button({
   'aria-busy': ariaBusy,

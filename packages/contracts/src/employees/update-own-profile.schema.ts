@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-// Matches employees_phone_number_ck (DATABASE §4.2): an optional leading plus, then 8 to 15 digits. The
+// Matches employees_phone_number_ck: an optional leading plus, then 8 to 15 digits. The
 // database check repeats this rule, so a value that passes here is always storable.
 export const PHONE_NUMBER_PATTERN = /^\+?[0-9]{8,15}$/;
 
-// Outer whitespace is trimmed before the pattern runs, and leading zeros are kept (DATABASE §4.2).
+// Outer whitespace is trimmed before the pattern runs, and leading zeros are kept.
 export const phoneNumberSchema = z.string().trim().regex(PHONE_NUMBER_PATTERN, {
   error: 'must be an optional leading + followed by 8 to 15 digits',
 });

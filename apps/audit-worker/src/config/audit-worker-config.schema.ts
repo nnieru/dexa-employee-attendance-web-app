@@ -26,7 +26,7 @@ function hasHostAndDatabase(value: string): boolean {
 // so it has no token settings.
 export const AuditWorkerConfigSchema = BaseConfigSchema.extend({
   AUDIT_DATABASE_URL: postgresUrlSchema,
-  // The consumer declares its queue and dead-letter queue on this broker at startup (DATABASE §6.2).
+  // The consumer declares its queue and dead-letter queue on this broker at startup.
   RABBITMQ_URL: rabbitMqUrlSchema,
 });
 

@@ -18,7 +18,7 @@ import {
   type IWorkScheduleVersionService,
 } from './work-schedule-version.service.interface.js';
 
-// HR only (SCH-7). The grace values are in these responses, so an employee must never reach them.
+// HR only. The grace values are in these responses, so an employee must never reach them.
 @Controller('work-schedules')
 @UseGuards(GatewayUserAuthGuard, RolesGuard)
 @Roles(Role.HR)

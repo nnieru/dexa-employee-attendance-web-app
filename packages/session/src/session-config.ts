@@ -7,7 +7,7 @@ import type { Portal, Role } from '@dexa/contracts';
 export type SessionConfig = {
   /** The portal the login request names: EMPLOYEE or HR. */
   portal: Portal;
-  /** Roles whose accounts this app keeps a session for. Any other role ends the session (AUTH-3). */
+  /** Roles whose accounts this app keeps a session for. Any other role ends the session. */
   allowedRoles: ReadonlyArray<Role>;
   /** Base URL of the API gateway. The app reads its own environment and passes the value in. */
   apiBaseUrl: string;

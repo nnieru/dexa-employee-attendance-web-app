@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { checkInClassificationSchema } from './clock-in.schema.js';
 import { checkOutClassificationSchema } from './clock-out.schema.js';
 
-// The state of the employee's day as the punch screen shows it (PRD ATT-6). The status discriminates the union:
-// before the first punch, after it, and after the check-out. The times are the effective times (PRD SUM-6).
+// The state of the employee's day as the punch screen shows it. The status discriminates the union:
+// before the first punch, after it, and after the check-out. The times are the effective times.
 export const todayStateSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('NOT_CLOCKED_IN') }),
   z.object({
@@ -22,7 +22,7 @@ export const todayStateSchema = z.discriminatedUnion('status', [
 
 export type TodayAttendanceState = z.infer<typeof todayStateSchema>;
 
-// The schedule fields are discriminated on isWorkingDay: a day off carries no scheduled instants (ATT-7, SCH-7).
+// The schedule fields are discriminated on isWorkingDay: a day off carries no scheduled instants.
 // Grace values are not part of this response, so employees see no schedule configuration.
 const todayBaseSchema = z.object({
   businessDate: z.iso.date(),

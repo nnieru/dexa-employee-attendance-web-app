@@ -3,7 +3,7 @@ import type { CurrentAccount, Portal, Role } from '@dexa/contracts';
 import type { SessionEndReason } from './auth/session-end-reason.js';
 import type { ApiClient } from './session-http-client.js';
 
-// The token lives only in memory: never in localStorage or sessionStorage (AUTH-4, AGENTS §11). The
+// The token lives only in memory: never in localStorage or sessionStorage. The
 // account is not kept here; it is read from the React Query cache, which owns server data.
 export type SessionState =
   | { status: 'signed-in'; accessToken: string }

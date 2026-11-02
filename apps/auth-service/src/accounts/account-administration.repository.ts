@@ -52,7 +52,7 @@ function createTransactionScope(
 }
 
 // Only the password column is written. The update is by ID alone, because an HR reset overrides the
-// stored hash without verifying it (DATABASE §3.2).
+// stored hash without verifying it.
 async function replacePasswordHash(
   runner: AccountAdministrationRunner,
   accountId: string,

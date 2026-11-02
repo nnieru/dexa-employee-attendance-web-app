@@ -1,4 +1,4 @@
-// The rows the loaded panel will show, so the skeleton keeps the same shape (DESIGN §9). Keys are names, not indexes.
+// The rows the loaded panel will show, so the skeleton keeps the same shape. Keys are names, not indexes.
 const SKELETON_ROW_NAMES = ['schedule', 'clock-in', 'clock-out'] as const;
 
 // No placeholder times or statuses: the skeleton only reserves the space.

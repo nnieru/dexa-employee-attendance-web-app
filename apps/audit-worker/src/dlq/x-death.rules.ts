@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * One entry of RabbitMQ's x-death header. RabbitMQ keeps one entry per (queue, reason) pair and increments its
- * count on each dead-letter event, so the entry for the latest failure carries the attempt count (DATABASE §6.1).
+ * count on each dead-letter event, so the entry for the latest failure carries the attempt count.
  */
 export type DeathRecord = {
   readonly queue: string;
@@ -78,7 +78,7 @@ function readXDeathEntries(headers: unknown): ReadonlyArray<unknown> {
 /**
  * Derives the failure facts for one source queue. The latest failure (largest time) supplies the reason; the
  * earliest failure supplies first_failed_at. Entries from other queues are ignored. The attempt count is not here:
- * it comes from the delivery counters (delivery-count.rules.ts, D-45).
+ * it comes from the delivery counters (delivery-count.rules.ts).
  */
 export function summarizeFailures(
   deaths: ReadonlyArray<DeathRecord>,

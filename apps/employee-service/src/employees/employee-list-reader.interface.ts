@@ -25,7 +25,7 @@ export type EmployeeListRecord = {
 
 /**
  * The name term matches an employee's name as a case-insensitive substring. The email-matching IDs come from Auth
- * (D-15) and are combined with the name match in the same query, so pagination sees each employee once.
+ * and are combined with the name match in the same query, so pagination sees each employee once.
  */
 export type EmployeeListSearch = {
   readonly nameTerm: string;
@@ -35,7 +35,7 @@ export type EmployeeListSearch = {
 export type EmployeeListCriteria = {
   readonly page: number;
   readonly pageSize: number;
-  /** Undefined lists every employee, in every employment status (D-14). */
+  /** Undefined lists every employee, in every employment status. */
   readonly search: EmployeeListSearch | undefined;
 };
 

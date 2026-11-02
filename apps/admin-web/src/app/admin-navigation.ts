@@ -10,7 +10,7 @@ export type AdminNavigationEntry = {
   to: AdminNavigationPath;
 };
 
-// DESIGN §6 order: Employees, Attendance, Approvals, Schedule, Notifications, then Logout (rendered by the shell).
+// order: Employees, Attendance, Approvals, Schedule, Notifications, then Logout (rendered by the shell).
 export const ADMIN_NAVIGATION: ReadonlyArray<AdminNavigationEntry> = [
   { id: 'employees', label: 'Employees', icon: 'users', to: '/employees' },
   { id: 'attendance', label: 'Attendance', icon: 'clock', to: '/attendance' },

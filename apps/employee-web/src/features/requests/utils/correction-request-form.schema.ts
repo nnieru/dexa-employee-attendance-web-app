@@ -66,7 +66,7 @@ function addPresentTimeIssues(values: PresentTimeValues, context: z.RefinementCt
     addFieldIssue(context, 'clockOutTime', CORRECTION_FORM_MESSAGES.clockTimeInvalid);
     return;
   }
-  // HH:mm on the same business date compares correctly as text. Corrections never cross midnight (PRD COR-2).
+  // HH:mm on the same business date compares correctly as text. Corrections never cross midnight.
   if (values.clockOutTime <= values.clockInTime) {
     addFieldIssue(context, 'clockOutTime', CORRECTION_FORM_MESSAGES.clockOutNotAfterClockIn);
   }
@@ -97,7 +97,7 @@ export type CorrectionRequestPayload = DistributiveOmit<SubmitCorrectionRequest,
 /**
  * The request content from valid form values. Present sends the clock-in instant, and the clock-out only when one was
  * entered (the key is left out, not set to null, because the contract refuses null). A leave outcome sends no time key
- * at all, whatever was typed before the outcome changed (PRD COR-1). Call only on values that passed the form schema.
+ * at all, whatever was typed before the outcome changed. Call only on values that passed the form schema.
  */
 export function toCorrectionRequestPayload(
   values: CorrectionRequestFormValues,

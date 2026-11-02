@@ -1,6 +1,6 @@
 // The company timezone as an IANA name. The request responses carry UTC instants only, and the API does not send
 // BUSINESS_TIMEZONE to the browser, so the name is kept here. The summary and attendance features keep their own copies
-// for the same reason (features do not import from each other, AGENTS §10).
+// for the same reason (features do not import from each other).
 const BUSINESS_TIME_ZONE = 'Asia/Jakarta';
 
 /** A calendar date as YYYY-MM-DD in the company timezone. */

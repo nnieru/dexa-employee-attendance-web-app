@@ -23,7 +23,7 @@ import {
 // and the status seed (see the migration files), because Drizzle does not model them.
 
 // The outbox table is defined by @dexa/messaging. Re-exporting it here lets db:generate write its migration
-// into this service's own migrations folder (DATABASE §2.2).
+// into this service's own migrations folder.
 export { outboxEvents } from '@dexa/messaging';
 
 export const masterAttendanceStatuses = pgTable(
@@ -51,7 +51,7 @@ export const masterAttendanceStatuses = pgTable(
   ],
 );
 
-// The company schedule versions (DATABASE §5.2). The no-overlap rule is an exclusion constraint in
+// The company schedule versions. The no-overlap rule is an exclusion constraint in
 // migration 0002, and the weekday rule is a check function in migration 0002.
 export const workSchedules = pgTable(
   'work_schedules',
@@ -75,7 +75,7 @@ export const workSchedules = pgTable(
     primaryKey({ name: 'work_schedules_id_pk', columns: [table.id] }),
     check('work_schedules_name_ck', sql`btrim(${table.name}) <> ''`),
     check('work_schedules_timezone_ck', sql`btrim(${table.timezone}) <> ''`),
-    // Baseline schedules do not cross midnight (DATABASE §9, decision 4).
+    // Baseline schedules do not cross midnight.
     check('work_schedules_time_order_ck', sql`${table.startTime} < ${table.endTime}`),
     check('work_schedules_late_checkin_grace_ck', sql`${table.lateCheckinGraceMinutes} >= 0`),
     check('work_schedules_early_checkout_grace_ck', sql`${table.earlyCheckoutGraceMinutes} >= 0`),
@@ -87,7 +87,7 @@ export const workSchedules = pgTable(
   ],
 );
 
-// Company calendar exceptions (DATABASE §5.3). A row overrides the regular working weekdays for its date.
+// Company calendar exceptions. A row overrides the regular working weekdays for its date.
 export const workCalendarDates = pgTable(
   'work_calendar_dates',
   {
@@ -121,7 +121,7 @@ export const attendanceDays = pgTable(
     scheduledStartAt: timestamp('scheduled_start_at', { withTimezone: true }),
     scheduledEndAt: timestamp('scheduled_end_at', { withTimezone: true }),
     // Stored constants: each status column pairs with one of these, so the composite foreign key
-    // accepts only a status of the matching category (DATABASE §5.1). They are not written by the app.
+    // accepts only a status of the matching category. They are not written by the app.
     dayStatusCategory: varchar('day_status_category', { length: 20 })
       .notNull()
       .generatedAlwaysAs(sql`'DAY'`),
@@ -143,7 +143,7 @@ export const attendanceDays = pgTable(
   (table) => [
     primaryKey({ name: 'attendance_days_id_pk', columns: [table.id] }),
     unique('attendance_days_account_id_business_date_uq').on(table.accountId, table.businessDate),
-    // Lets request tables prove ownership with a composite foreign key (DATABASE §5.6–5.7).
+    // Lets request tables prove ownership with a composite foreign key.
     unique('attendance_days_id_account_id_uq').on(table.id, table.accountId),
     foreignKey({
       name: 'attendance_days_work_schedule_id_fk',
@@ -187,7 +187,7 @@ export const attendanceDays = pgTable(
   ],
 );
 
-// Raw punches (DATABASE §5.5). The table has no updated_at, and a trigger in migration 0001 rejects
+// Raw punches. The table has no updated_at, and a trigger in migration 0001 rejects
 // UPDATE and DELETE, so recordedAt and type never change after insert.
 export const attendanceEntries = pgTable(
   'attendance_entries',
@@ -210,7 +210,7 @@ export const attendanceEntries = pgTable(
   ],
 );
 
-// Overtime requests (DATABASE §5.6–5.7). accountId is the verified requester; it must own the day, which the
+// Overtime requests. accountId is the verified requester; it must own the day, which the
 // composite foreign key proves. The overlap exclusion constraint is hand-written SQL (migration 0005), because
 // Drizzle does not model exclusion constraints with a partial predicate.
 // The requester and the review fields are logical account references, so no cross-database foreign key exists.
@@ -281,9 +281,9 @@ export const overtimeRequests = pgTable(
   ],
 );
 
-// Attendance corrections (DATABASE §5.6, §5.8). The before-snapshot and the requested values are fixed at
+// Attendance corrections. The before-snapshot and the requested values are fixed at
 // submission; the request-immutability trigger in migration 0005 enforces that. The partial unique index keeps
-// one PENDING correction per day (COR-4).
+// one PENDING correction per day.
 export const attendanceAdjustmentRequests = pgTable(
   'attendance_adjustment_requests',
   {
@@ -299,7 +299,7 @@ export const attendanceAdjustmentRequests = pgTable(
     baseRevision: integer('base_revision').notNull(),
     beforeCheckinAt: timestamp('before_checkin_at', { withTimezone: true }),
     beforeCheckoutAt: timestamp('before_checkout_at', { withTimezone: true }),
-    // Stored constants that pin each status column to the DAY category, as attendance_days does (DATABASE §5.1).
+    // Stored constants that pin each status column to the DAY category, as attendance_days does.
     beforeDayStatusCategory: varchar('before_day_status_category', { length: 20 })
       .notNull()
       .generatedAlwaysAs(sql`'DAY'`),
@@ -335,7 +335,7 @@ export const attendanceAdjustmentRequests = pgTable(
       table.requestedByAccountId,
       table.idempotencyKey,
     ),
-    // Only one PENDING correction per day (COR-4). Terminal requests do not count, so a new one can follow a rejection.
+    // Only one PENDING correction per day. Terminal requests do not count, so a new one can follow a rejection.
     uniqueIndex('attendance_adjustment_requests_pending_day_uq')
       .on(table.attendanceDayId)
       .where(sql`${table.status} = 'PENDING'`),

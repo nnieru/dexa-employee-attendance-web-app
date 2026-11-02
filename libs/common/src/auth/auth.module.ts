@@ -11,7 +11,7 @@ import { SERVICE_TOKEN_SIGNER } from './service-token-signer.interface.js';
 /**
  * Registers the Passport strategies for internal tokens and the service token signer. A service imports it
  * once, with its validated service key config. It holds no user JWT settings: only api-gateway verifies
- * end-user tokens (UserTokenVerificationModule), and only auth-service signs them (D-51).
+ * end-user tokens (UserTokenVerificationModule), and only auth-service signs them.
  */
 @Module({})
 export class AuthModule {

@@ -36,7 +36,7 @@ type CalendarExceptionFormDialogProps = {
   mode: CalendarExceptionDialogMode;
   /** The values the form starts from. The dialog mounts when it opens, so a refetch never resets what HR typed. */
   defaultValues: Partial<CalendarExceptionFormValues>;
-  /** Tomorrow in WIB. Earlier dates are refused on the client (PRD SCH-5). */
+  /** Tomorrow in WIB. Earlier dates are refused on the client. */
   earliestEditableDate: BusinessDate;
   isSaving: boolean;
   /** A message from the failed save, shown as a general alert. */

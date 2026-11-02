@@ -4,7 +4,7 @@ export type AdministeredAccount = {
 };
 
 /**
- * HR reaches only accounts that provisioning has activated (DATABASE §3.1). A missing or still-provisioning
+ * HR reaches only accounts that provisioning has activated. A missing or still-provisioning
  * account is refused the same way, so HR cannot tell a pending account from one that does not exist.
  */
 export function isAdministrableAccount(account: AdministeredAccount | undefined): boolean {
@@ -12,7 +12,7 @@ export function isAdministrableAccount(account: AdministeredAccount | undefined)
 }
 
 /**
- * An HR account cannot deactivate itself (D-13, D-25). Restating the current active flag, or
+ * An HR account cannot deactivate itself. Restating the current active flag, or
  * reactivating, is not a self-deactivation.
  */
 export function isSelfDeactivation(change: {

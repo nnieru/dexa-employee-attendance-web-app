@@ -29,7 +29,7 @@ export class AttendanceMonitoringService implements IAttendanceMonitoringService
     @Inject(CONFIG) private readonly config: Pick<AttendanceServiceConfig, 'BUSINESS_TIMEZONE'>,
   ) {}
 
-  // Names are resolved after the page is read, with one batched lookup for the page (DATABASE §8). The page size is
+  // Names are resolved after the page is read, with one batched lookup for the page. The page size is
   // bounded by MAX_PAGE_SIZE, which is no larger than EMPLOYEE_LOOKUP_MAX_IDS, so one lookup always fits.
   async listAttendance(query: AttendanceMonitoringQuery): Promise<AttendanceMonitoringPage> {
     const today = toBusinessDate(this.clock.now(), this.config.BUSINESS_TIMEZONE);

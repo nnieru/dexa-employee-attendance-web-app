@@ -40,7 +40,7 @@ export function getUpdateEmployeeErrorMessage(error: unknown): string {
   return error instanceof ApiError ? error.message : FALLBACK_ERROR_MESSAGE;
 }
 
-/** True when some steps of the update saved and others did not, so the next save must repeat the status (DATABASE §4.3). */
+/** True when some steps of the update saved and others did not, so the next save must repeat the status. */
 export function isPartialUpdateError(error: unknown): boolean {
   return error instanceof ApiError && error.code === ErrorCode.EMPLOYEE_UPDATE_INCOMPLETE;
 }

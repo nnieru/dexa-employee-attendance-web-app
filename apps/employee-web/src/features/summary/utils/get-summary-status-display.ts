@@ -9,9 +9,9 @@ export type SummaryStatusDisplay = {
 type ClockInStatus = AttendanceSummaryItem['clockInStatus'];
 type ClockOutStatus = AttendanceSummaryItem['clockOutStatus'];
 
-// DESIGN §8 day outcome labels, with PENDING named "Pending" as the owner asked for this screen (DESIGN §8 proposes
-// "Awaiting record"). NOT_ATTEND is named "Absent" (DESIGN section 8). The text carries the meaning, so a tone
-// is never the only signal (DESIGN §8).
+// The day outcome labels, with PENDING named "Pending" as the owner asked for this screen.
+// NOT_ATTEND is named "Absent". The text carries the meaning, so a tone
+// is never the only signal.
 const DAY_STATUS_DISPLAY: Readonly<Record<AttendanceDayStatus, SummaryStatusDisplay>> = {
   PENDING: { text: 'Pending', tone: 'neutral' },
   PRESENT: { text: 'Present', tone: 'success' },
@@ -21,10 +21,10 @@ const DAY_STATUS_DISPLAY: Readonly<Record<AttendanceDayStatus, SummaryStatusDisp
   DAY_OFF: { text: 'Day off', tone: 'neutral' },
 };
 
-// DESIGN §8 labels. The same timing word has a different treatment at check-in and at check-out, so the two maps are
-// separate. This copy repeats the attendance feature's map on purpose: features do not import from each other
-// (AGENTS §10). It is a candidate for a shared home once a third screen needs it.
-// PENDING_CHECKIN is a day a request created with no punch yet, labelled like the check-out it pairs with (D-59).
+// The same timing word has a different treatment at check-in and at check-out, so the two maps are
+// separate. This copy repeats the attendance feature's map on purpose: features do not import from each other.
+// It is a candidate for a shared home once a third screen needs it.
+// PENDING_CHECKIN is a day a request created with no punch yet, labelled like the check-out it pairs with.
 // CHECKIN_NOT_REQUIRED and CHECKOUT_NOT_REQUIRED are what a SICK_LEAVE or LEAVE day stores (correction-apply rules).
 const CHECK_IN_STATUS_DISPLAY: Readonly<Record<ClockInStatus, SummaryStatusDisplay>> = {
   EARLY_CHECKIN: { text: 'Early clock-in', tone: 'neutral' },

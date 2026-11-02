@@ -1,5 +1,5 @@
 // The company timezone as an IANA name. The monitoring response carries no timezone and the API does not send
-// BUSINESS_TIMEZONE to the browser, so the name is kept here (PRD ADM-4 uses WIB for every time).
+// BUSINESS_TIMEZONE to the browser, so the name is kept here.
 export const BUSINESS_TIME_ZONE = 'Asia/Jakarta';
 
 /** A calendar date as YYYY-MM-DD in the company timezone. */
@@ -35,7 +35,7 @@ export function getMonthStartBusinessDate(businessDate: BusinessDate): BusinessD
   return `${businessDate.slice(0, YEAR_MONTH_LENGTH)}-01`;
 }
 
-/** A server instant as `YYYY-MM-DD HH:mm` in the company timezone (PRD ADM-4). */
+/** A server instant as `YYYY-MM-DD HH:mm` in the company timezone. */
 export function formatBusinessDateTime(instant: string): string {
   const formatted = businessDateTimeFormatter.format(new Date(instant));
   // en-CA puts a comma between the date and the time; the required format has a space.

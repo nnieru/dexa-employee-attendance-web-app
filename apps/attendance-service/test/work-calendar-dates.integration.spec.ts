@@ -15,7 +15,7 @@ import {
 } from './attendance-service-environment.js';
 import { CONTAINER_TIMEOUT_MS, TEST_TIMEOUT_MS, createEmptyDatabaseUri } from './test-database.js';
 
-// The lifetime of the token api-gateway sends for a call (D-51).
+// The lifetime of the token api-gateway sends for a call.
 const TOKEN_LIFETIME_SECONDS = 60;
 
 const CALENDAR_DATES_PATH = '/api/v1/work-calendar-dates';
@@ -42,7 +42,7 @@ const fixedClock: IClock = { now: () => new Date(mutableClock.current) };
 let container: StartedPostgreSqlContainer;
 let keys: AuthKeySet;
 
-// Signs the token that api-gateway sends to this service for the user (D-51).
+// Signs the token that api-gateway sends to this service for the user.
 function signUserToken(accountId: string, role: Role, expiresAtSeconds: number): string {
   return signGatewayUserToken(
     keys,
@@ -335,7 +335,7 @@ describe('work calendar dates', () => {
     it(
       'should store an exception that matches the regular schedule, since the day is already off',
       async () => {
-        // 2026-11-07 is a Saturday, which the default schedule already leaves off (D-44).
+        // 2026-11-07 is a Saturday, which the default schedule already leaves off.
         const response = await putCalendarDate(app, tokenFor(hrAccountId, Role.HR), '2026-11-07', {
           isWorkingDay: false,
           description: 'Holiday on a day off',

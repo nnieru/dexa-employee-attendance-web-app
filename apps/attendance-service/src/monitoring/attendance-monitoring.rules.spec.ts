@@ -26,7 +26,7 @@ const PUNCHED_RECORD: AttendanceMonitoringRecord = {
   isCorrected: false,
 };
 
-// The HR list shows a request-created day with no punch as a row with no clock-in time (D-59), and the raw punches
+// The HR list shows a request-created day with no punch as a row with no clock-in time, and the raw punches
 // are null because the employee never punched.
 describe('toAttendanceMonitoringItem', () => {
   it.each<{

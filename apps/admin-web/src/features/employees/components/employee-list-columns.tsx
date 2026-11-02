@@ -24,7 +24,7 @@ function renderPhoto(
 
 /**
  * Plain columns with an id and a cell renderer: the list is paged by the server, so no column needs sorting or a
- * value accessor. The photo column takes the thumbnails of this page (D-57); a row without one shows initials, and
+ * value accessor. The photo column takes the thumbnails of this page; a row without one shows initials, and
  * so does every row while the thumbnails are pending or after they failed.
  */
 export function createEmployeeListColumns(

@@ -7,7 +7,7 @@ export type OwnPhoneChangeSet = {
   readonly changedFields: ReadonlyArray<ProfileField>;
 };
 
-/** The signed-in employee's phone number (PRO-2). The account ID comes from the verified token. */
+/** The signed-in employee's phone number. The account ID comes from the verified token. */
 export interface IOwnPhoneService {
   /**
    * Resolves once the phone and the recomputed profile status have committed together, or immediately with an

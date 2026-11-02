@@ -17,7 +17,7 @@ type EmployeeFilterSelectProps = {
 };
 
 /**
- * A native select with a visible label and a linked hint (DESIGN §7). When the URL names an employee outside the
+ * A native select with a visible label and a linked hint. When the URL names an employee outside the
  * listed page, that employee still gets an option, so the select never shows "All employees" for a filtered list.
  */
 export function EmployeeFilterSelect({

@@ -129,7 +129,7 @@ async function submitCorrection(
 }
 
 // HR decides a request in the database, as the decision endpoints are not built yet (T-REQ-08, T-REQ-09). The reviewer
-// is a different account, so the constraints of DATABASE §5.6 hold.
+// is a different account, so the constraints hold.
 async function decideOvertime(
   requestId: string,
   status: Exclude<RequestStatus, 'PENDING'>,

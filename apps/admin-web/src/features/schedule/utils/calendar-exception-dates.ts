@@ -5,7 +5,7 @@ const WEEKDAY_LABELS: ReadonlyArray<string> = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu'
 const NO_WEEKDAY_LABEL = '';
 
 /**
- * The first date an exception may be added, changed, or removed (PRD SCH-5, DATABASE §5.3): tomorrow in the company
+ * The first date an exception may be added, changed, or removed: tomorrow in the company
  * timezone. Today and earlier dates are read-only, so attendance already recorded on them cannot change.
  */
 export function getEarliestEditableExceptionDate(today: BusinessDate): BusinessDate {

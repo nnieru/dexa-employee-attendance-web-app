@@ -19,7 +19,7 @@ import {
   type IEmployeeUpdateService,
 } from './employee-update.service.interface.js';
 
-// HR only (ADM-2). The actor is the verified token's account, so the body cannot name who makes the change. The
+// HR only. The actor is the verified token's account, so the body cannot name who makes the change. The
 // self-service route PATCH employees/me is registered before this one (see AppModule), so `me` never reaches the
 // UUID check here.
 @Controller('employees')

@@ -7,7 +7,7 @@ export type StoredProvisioningRequest = {
   readonly requestFingerprintSha256: string;
 };
 
-/** A request matches only when the same HR actor sent the same non-secret fields (DATABASE §4.3). */
+/** A request matches only when the same HR actor sent the same non-secret fields. */
 export function isSameProvisioningRequest(
   stored: StoredProvisioningRequest,
   actorAccountId: string,

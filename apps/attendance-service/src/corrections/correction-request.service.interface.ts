@@ -8,7 +8,7 @@ export type SubmitCorrectionRequestResult = {
   readonly request: CorrectionRequest;
 };
 
-/** Records the signed-in employee's correction request for one business date (COR-1..COR-4, APR-5). */
+/** Records the signed-in employee's correction request for one business date. */
 export interface ICorrectionRequestService {
   /** The account comes from the verified token. Rejects with a domain error when the request is refused. */
   submit(

@@ -18,7 +18,7 @@ import type {
 } from './work-schedule.repository.interface.js';
 
 const DEFAULT_SCHEDULE_SEED_LOCK_KEY = 720_416_101;
-// The version in effect and the nearest upcoming one are the only two the schedule view needs (DATABASE §5.2).
+// The version in effect and the nearest upcoming one are the only two the schedule view needs.
 const SCHEDULE_OVERVIEW_VERSION_LIMIT = 2;
 
 type ScheduleQueryRunner = Pick<Database['db'], 'select' | 'insert'>;
@@ -39,7 +39,7 @@ export class WorkScheduleRepository
       );
     } catch (error: unknown) {
       if (error instanceof DomainError) throw error;
-      // The exclusion constraint rejects a version that overlaps another one (DATABASE §5.2, 23P01).
+      // The exclusion constraint rejects a version that overlaps another one.
       if (isExclusionViolation(error)) throw new WorkScheduleOverlapError();
       throw wrapStorageError(error, 'Could not save the work schedule.');
     }

@@ -10,7 +10,7 @@ import {
   type RequestedCorrectionOutcome,
 } from './correction-policy.rules.js';
 
-/** A PRESENT day with no check-out yet on a working day (DATABASE §5.4). */
+/** A PRESENT day with no check-out yet on a working day. */
 export type AppliedCheckOutStatusCode = CheckOutStatusCode | 'PENDING_CHECKOUT';
 
 /** The request fields and the day snapshot that an approval applies. The times are the complete proposed values. */
@@ -21,7 +21,7 @@ export type CorrectionApplyInput = {
   readonly requestedCheckoutAt: Date | null;
 };
 
-/** The effective values an approved correction stores on the day (DATABASE §5.4, §5.8). */
+/** The effective values an approved correction stores on the day. */
 export type AppliedCorrectionDay = {
   readonly dayStatusCode: RequestedCorrectionOutcome;
   readonly effectiveCheckinAt: Date | null;
@@ -33,7 +33,7 @@ export type AppliedCorrectionDay = {
 /**
  * Computes the effective day that an approved correction produces. PRESENT reclassifies both times against the day's
  * schedule snapshot. A leave outcome clears the times and sets the not-required timing statuses. Raw punches are not an
- * input: they are never changed by a correction (DATABASE §5.5).
+ * input: they are never changed by a correction.
  */
 export function applyCorrectionToDay(input: CorrectionApplyInput): AppliedCorrectionDay {
   if (input.requestedOutcome === REQUESTED_CORRECTION_OUTCOME.PRESENT) {
@@ -42,7 +42,7 @@ export function applyCorrectionToDay(input: CorrectionApplyInput): AppliedCorrec
   return applyLeaveCorrection(input.requestedOutcome);
 }
 
-// Submission requires a clock-in for PRESENT (COR-2), so a missing one here means the stored request is broken.
+// Submission requires a clock-in for PRESENT, so a missing one here means the stored request is broken.
 function applyPresentCorrection(input: CorrectionApplyInput): AppliedCorrectionDay {
   const { daySchedule, requestedCheckinAt, requestedCheckoutAt } = input;
   if (requestedCheckinAt === null) {
@@ -65,7 +65,7 @@ function classifyPresentCheckOut(
   return daySchedule.isWorkingDay ? 'PENDING_CHECKOUT' : 'CHECKOUT_NOT_REQUIRED';
 }
 
-// A leave day has no effective punches, so both timing statuses are not required (DATABASE §5.4).
+// A leave day has no effective punches, so both timing statuses are not required.
 function applyLeaveCorrection(
   outcome: Exclude<RequestedCorrectionOutcome, 'PRESENT'>,
 ): AppliedCorrectionDay {

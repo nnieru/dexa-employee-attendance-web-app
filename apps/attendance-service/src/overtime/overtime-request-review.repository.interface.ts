@@ -6,7 +6,7 @@ export const OVERTIME_REQUEST_REVIEW_READER = Symbol('IOvertimeRequestReviewRead
 /** A stored overtime request with the requester and the requester's approved minutes on the same business date. */
 export type StoredOvertimeReviewRequest = StoredOvertimeRequest & {
   readonly requesterAccountId: string;
-  /** Minutes of the requester's APPROVED overtime on the same business date (OT-4), this request included if approved. */
+  /** Minutes of the requester's APPROVED overtime on the same business date, this request included if approved. */
   readonly approvedMinutes: number;
 };
 

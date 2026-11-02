@@ -6,7 +6,7 @@ import { requestStatusSchema } from './request-status.schema.js';
 import { correctionRequestSchema } from './submit-correction-request.schema.js';
 import { overtimeRequestSchema } from './submit-overtime-request.schema.js';
 
-// The HR review queue (APR-1). status defaults to PENDING. employeeId is the requester's account ID. A missing from or
+// The HR review queue. status defaults to PENDING. employeeId is the requester's account ID. A missing from or
 // to leaves that end of the business-date range open, because a pending request can be up to 30 days old. Strict, so an
 // unknown parameter is refused rather than ignored.
 export const requestReviewQueueQuerySchema = paginationQuerySchema
@@ -24,7 +24,7 @@ export const requestReviewQueueQuerySchema = paginationQuerySchema
 
 export type RequestReviewQueueQuery = z.infer<typeof requestReviewQueueQuerySchema>;
 
-// The requester's name comes from employee-service. It is null when Employee does not know the account (DATABASE §8), so
+// The requester's name comes from employee-service. It is null when Employee does not know the account, so
 // one unknown profile never fails the page.
 export const requestRequesterSchema = z.object({
   accountId: z.uuid(),
@@ -33,7 +33,7 @@ export const requestRequesterSchema = z.object({
 
 export type RequestRequester = z.infer<typeof requestRequesterSchema>;
 
-// approvedMinutes is the requester's APPROVED overtime on the same business date (OT-4). It includes this request when
+// approvedMinutes is the requester's APPROVED overtime on the same business date. It includes this request when
 // this request is approved. Minutes keep their seconds, so the value is not rounded.
 export const overtimeRequestReviewItemSchema = overtimeRequestSchema.extend({
   requester: requestRequesterSchema,
@@ -45,7 +45,7 @@ export const overtimeRequestReviewItemSchema = overtimeRequestSchema.extend({
 
 export type OvertimeRequestReviewItem = z.infer<typeof overtimeRequestReviewItemSchema>;
 
-// current holds the business day as it stands now: the effective times and the DAY status (APR-1, DATABASE §5.4).
+// current holds the business day as it stands now: the effective times and the DAY status.
 // The requested values are the top-level clockInAt and clockOutAt, as in the own list.
 export const correctionRequestReviewItemSchema = correctionRequestSchema.extend({
   requester: requestRequesterSchema,
