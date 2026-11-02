@@ -301,7 +301,8 @@ describe('api-gateway sign-in through a running auth-service', () => {
           .set('cookie', firstCookie)
           .expect(204);
 
-        const setCookie = (response.headers['set-cookie'] ?? []) as unknown as ReadonlyArray<string>;
+        const setCookie = (response.headers['set-cookie'] ??
+          []) as unknown as ReadonlyArray<string>;
         const cleared = setCookie.join(';');
         expect(cleared).toMatch(/dexa_refresh_token=;/);
         // The refresh token is stateless: logout only drops it from the browser, and the token
