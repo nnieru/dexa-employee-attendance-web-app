@@ -18,7 +18,8 @@ const HR_LOGIN_COPY: LoginFormCopy = {
 // A signed-in visit has nothing to sign in to, so it goes to the default page, not to a `redirect` target.
 export const Route = createFileRoute('/login')({
   validateSearch: loginSearchSchema,
-  beforeLoad: ({ context }) => {
+  beforeLoad: async ({ context }) => {
+    await context.restoreSession();
     if (context.isSignedIn()) throw redirect({ to: DEFAULT_SIGNED_IN_PATH });
   },
   component: HrLoginPage,

@@ -30,7 +30,9 @@ if (!existsSync(`${REPOSITORY_ROOT}/node_modules`)) {
 }
 
 console.log('Building and starting the stack (first build takes a few minutes)...');
-run('docker', ['compose', '--profile', 'apps', 'up', '-d', '--build']);
+run('docker', ['compose', '--profile', 'apps', 'up', '-d', '--build'], {
+  COMPOSE_PARALLEL_LIMIT: '1',
+});
 
 console.log('Waiting for the services to finish their migrations and seeds...');
 await waitForGateway();
@@ -52,8 +54,12 @@ console.log(`
   Reset from scratch:     docker compose --profile apps down -v && rm .env && npm run setup
   Seed accounts again:    npm run seed:dev`);
 
-function run(command, arguments_) {
-  const result = spawnSync(command, arguments_, { cwd: REPOSITORY_ROOT, stdio: 'inherit' });
+function run(command, arguments_, environment = {}) {
+  const result = spawnSync(command, arguments_, {
+    cwd: REPOSITORY_ROOT,
+    stdio: 'inherit',
+    env: { ...process.env, ...environment },
+  });
   if (result.status !== 0) {
     throw new Error(
       `\`${command} ${arguments_.join(' ')}\` failed with exit code ${result.status}.`,

@@ -9,6 +9,7 @@ import {
   REFRESH_TOKEN_LIFETIME_SECONDS,
   changePasswordRequestSchema,
   loginRequestSchema,
+  sessionPortalSchema,
   ErrorCode,
   Role,
   type ChangePasswordRequest,
@@ -16,6 +17,7 @@ import {
   type CurrentAccount,
   type LoginRequest,
   type LoginResponse,
+  type SessionPortal,
 } from '@dexa/contracts';
 import {
   Body,
@@ -26,15 +28,16 @@ import {
   Inject,
   Patch,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AUTH_SERVICE_CLIENT, type IAuthServiceClient } from './auth-service-client.interface.js';
 import {
-  REFRESH_TOKEN_COOKIE_NAME,
   REFRESH_TOKEN_COOKIE_PATH,
   buildRefreshTokenCookieOptions,
+  getRefreshTokenCookieName,
 } from './refresh-token-cookie.js';
 import { readRefreshTokenCookie } from './read-refresh-cookie.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
@@ -56,7 +59,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<LoginResponse> {
     const session = await this.authService.createSession(request);
-    return answerWithRefreshCookie(session, response);
+    return answerWithRefreshCookie(session, request.portal, response);
   }
 
   @Public()
@@ -64,22 +67,28 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refreshSession(
     @Req() request: Request,
+    @Query(new ZodValidationPipe(sessionPortalSchema)) query: SessionPortal,
     @Res({ passthrough: true }) response: Response,
   ): Promise<LoginResponse> {
-    const refreshToken = readRefreshTokenCookie(request.headers.cookie);
+    const refreshToken = readRefreshTokenCookie(request.headers.cookie, query.portal);
     if (refreshToken === undefined) {
       throw new UnauthorizedError(ErrorCode.UNAUTHORIZED, MISSING_REFRESH_TOKEN_MESSAGE);
     }
     const session = await this.authService.refreshSession(refreshToken);
-    return answerWithRefreshCookie(session, response);
+    return answerWithRefreshCookie(session, query.portal, response);
   }
 
   @Public()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  logout(@Res({ passthrough: true }) response: Response): void {
+  logout(
+    @Query(new ZodValidationPipe(sessionPortalSchema)) query: SessionPortal,
+    @Res({ passthrough: true }) response: Response,
+  ): void {
     // The refresh token is stateless, so logout only drops the cookie; the token itself expires.
-    response.clearCookie(REFRESH_TOKEN_COOKIE_NAME, { path: REFRESH_TOKEN_COOKIE_PATH });
+    response.clearCookie(getRefreshTokenCookieName(query.portal), {
+      path: REFRESH_TOKEN_COOKIE_PATH,
+    });
   }
 
   @Roles(Role.EMPLOYEE, Role.HR)
@@ -103,10 +112,11 @@ export class AuthController {
 // response, which never carries the refresh token.
 function answerWithRefreshCookie(
   session: CreateSessionResponse,
+  portal: LoginRequest['portal'],
   response: Response,
 ): LoginResponse {
   response.cookie(
-    REFRESH_TOKEN_COOKIE_NAME,
+    getRefreshTokenCookieName(portal),
     session.refreshToken,
     buildRefreshTokenCookieOptions(REFRESH_TOKEN_LIFETIME_SECONDS, isHttps(response)),
   );

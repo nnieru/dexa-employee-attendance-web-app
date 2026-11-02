@@ -101,8 +101,8 @@ describe('api-gateway sign-in through a running auth-service', () => {
     await container?.stop();
   }, SETUP_TIMEOUT_MS);
 
-  function login(email: string, password: string) {
-    return request(app.getHttpServer()).post(LOGIN_PATH).send({ email, password, portal: 'HR' });
+  function login(email: string, password: string, portal: 'HR' | 'EMPLOYEE' = 'HR') {
+    return request(app.getHttpServer()).post(LOGIN_PATH).send({ email, password, portal });
   }
 
   it(
@@ -215,10 +215,10 @@ describe('api-gateway sign-in through a running auth-service', () => {
   describe('refresh-token cookie and session restore', () => {
     const REFRESH_URL = '/api/v1/auth/refresh';
     const LOGOUT_URL = '/api/v1/auth/logout';
-    const REFRESH_COOKIE_PATTERN = /dexa_refresh_token=/;
+    const REFRESH_COOKIE_PATTERN = /dexa_refresh_token_hr=/;
 
     function refreshWith(cookieHeader: string | undefined) {
-      const post = request(app.getHttpServer()).post(REFRESH_URL);
+      const post = request(app.getHttpServer()).post(`${REFRESH_URL}?portal=HR`);
       return cookieHeader === undefined ? post : post.set('cookie', cookieHeader);
     }
 
@@ -236,7 +236,7 @@ describe('api-gateway sign-in through a running auth-service', () => {
 
         expect(response.text).not.toContain('refreshToken');
         const cookie = refreshCookie(response);
-        expect(cookie).toMatch(/dexa_refresh_token=[^;]+/);
+        expect(cookie).toMatch(/dexa_refresh_token_hr=[^;]+/);
         expect(cookie).toContain('HttpOnly');
         expect(cookie).toContain('Path=/api/v1/auth');
         expect(cookie).toContain('SameSite=Lax');
@@ -252,7 +252,10 @@ describe('api-gateway sign-in through a running auth-service', () => {
         const signedIn = await login(HR_EMAIL, HR_PASSWORD).expect(200);
         const firstCookie = refreshCookie(signedIn);
 
-        const response = await refreshWith(firstCookie).expect(200);
+        const response = await request(app.getHttpServer())
+          .post(`${REFRESH_URL}?portal=HR`)
+          .set('cookie', firstCookie)
+          .expect(200);
 
         expect(response.body).toEqual({
           accessToken: expect.any(String),
@@ -267,9 +270,31 @@ describe('api-gateway sign-in through a running auth-service', () => {
     );
 
     it(
+      'should keep the HR refresh cookie when the same account signs in to the employee portal',
+      async () => {
+        const hrSession = await login(HR_EMAIL, HR_PASSWORD, 'HR').expect(200);
+        const hrCookie = refreshCookie(hrSession);
+
+        const employeeSession = await login(HR_EMAIL, HR_PASSWORD, 'EMPLOYEE').expect(200);
+        const employeeCookies = employeeSession.headers['set-cookie'];
+        const employeeCookie =
+          typeof employeeCookies === 'string' ? employeeCookies : employeeCookies?.[0];
+
+        expect(employeeCookie).toMatch(/dexa_refresh_token_employee=/);
+        await request(app.getHttpServer())
+          .post(`${REFRESH_URL}?portal=HR`)
+          .set('cookie', hrCookie)
+          .expect(200);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
       'should answer 401 UNAUTHORIZED when no refresh cookie is sent',
       async () => {
-        const response = await refreshWith(undefined).expect(401);
+        const response = await request(app.getHttpServer())
+          .post(`${REFRESH_URL}?portal=HR`)
+          .expect(401);
 
         expect(response.body).toEqual({
           statusCode: 401,
@@ -283,7 +308,7 @@ describe('api-gateway sign-in through a running auth-service', () => {
     it(
       'should answer 401 UNAUTHORIZED when the cookie holds an invalid token',
       async () => {
-        const response = await refreshWith('dexa_refresh_token=not-a-token').expect(401);
+        const response = await refreshWith('dexa_refresh_token_hr=not-a-token').expect(401);
 
         expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
       },
@@ -298,13 +323,14 @@ describe('api-gateway sign-in through a running auth-service', () => {
 
         const response = await request(app.getHttpServer())
           .post(LOGOUT_URL)
+          .query({ portal: 'HR' })
           .set('cookie', firstCookie)
           .expect(204);
 
         const setCookie = (response.headers['set-cookie'] ??
           []) as unknown as ReadonlyArray<string>;
         const cleared = setCookie.join(';');
-        expect(cleared).toMatch(/dexa_refresh_token=;/);
+        expect(cleared).toMatch(/dexa_refresh_token_hr=;/);
         // The refresh token is stateless: logout only drops it from the browser, and the token
         // itself expires with its max age.
       },

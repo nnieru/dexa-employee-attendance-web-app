@@ -10,7 +10,7 @@ import {
   loginSucceeds,
   VALID_PASSWORD,
 } from '../../../test/admin-app-harness.js';
-import { answerEmployeeList, openEmployeeList } from '../../../test/employee-list-test-helpers.js';
+import { answerEmployeeList } from '../../../test/employee-list-test-helpers.js';
 import {
   buildEmployeeListPage,
   DEWI,
@@ -388,20 +388,6 @@ describe('HR update employee', () => {
     expect(await screen.findByText(LOAD_FAILURE_MESSAGE)).toBeInTheDocument();
     isAvailable = true;
     await user.click(screen.getByRole('button', { name: 'Try again' }));
-
-    expect(await screen.findByLabelText('Name')).toHaveValue(DEWI_NAME);
-  });
-
-  it('should open the edit page from the employee row in the list', async () => {
-    answerEmployeeList(() => buildEmployeeListPage({ items: [DEWI], totalItems: 1 }));
-    const { user } = await openEmployeeList('/employees');
-
-    // The row is rendered again when the photo thumbnails arrive, so a link found earlier can be detached. The click
-    // is retried on the current link until the edit page opens.
-    await waitFor(async () => {
-      await user.click(screen.getByRole('link', { name: `Edit ${DEWI_NAME}` }));
-      expect(screen.getByRole('heading', { level: 1, name: 'Edit employee' })).toBeInTheDocument();
-    });
 
     expect(await screen.findByLabelText('Name')).toHaveValue(DEWI_NAME);
   });

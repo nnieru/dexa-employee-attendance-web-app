@@ -60,7 +60,7 @@ export function createHttpClient({
       const isExpiredToken =
         config !== undefined &&
         !refreshedConfigs.has(config) &&
-        config.url !== SESSION_REFRESH_PATH &&
+        !isSessionRefreshRequest(config.url) &&
         isExpiredAccessToken(error);
       if (isExpiredToken && onAccessTokenExpired !== undefined) {
         const isRefreshed = await onAccessTokenExpired().catch(() => false);
@@ -84,4 +84,8 @@ function isExpiredAccessToken(error: unknown): boolean {
   if (!isAxiosError(error) || error.response?.status !== HTTP_STATUS_UNAUTHORIZED) return false;
   const body = errorResponseSchema.safeParse(error.response.data);
   return body.success && body.data.code === EXPIRED_TOKEN_CODE;
+}
+
+function isSessionRefreshRequest(url: string | undefined): boolean {
+  return url?.split('?')[0] === SESSION_REFRESH_PATH;
 }

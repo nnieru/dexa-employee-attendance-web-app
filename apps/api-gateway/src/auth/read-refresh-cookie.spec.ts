@@ -1,30 +1,41 @@
-import { API_PREFIX } from '@dexa/contracts';
+import { API_PREFIX, Portal } from '@dexa/contracts';
 import { REFRESH_TOKEN_COOKIE_PATH } from './refresh-token-cookie.js';
 import { buildRefreshTokenCookieOptions } from './refresh-token-cookie.js';
-import { REFRESH_TOKEN_COOKIE_NAME } from './refresh-token-cookie.js';
+import { getRefreshTokenCookieName } from './refresh-token-cookie.js';
 import { readRefreshTokenCookie } from './read-refresh-cookie.js';
 
 describe('readRefreshTokenCookie', () => {
+  const cookieName = getRefreshTokenCookieName(Portal.HR);
+
   it('should return the token when it is the only cookie', () => {
-    expect(readRefreshTokenCookie(`${REFRESH_TOKEN_COOKIE_NAME}=token-1`)).toBe('token-1');
+    expect(readRefreshTokenCookie(`${cookieName}=token-1`, Portal.HR)).toBe('token-1');
   });
 
   it('should return the token when other cookies surround it', () => {
-    expect(readRefreshTokenCookie('theme=dark; dexa_refresh_token=token-1; consent=yes')).toBe(
-      'token-1',
-    );
+    expect(
+      readRefreshTokenCookie(`theme=dark; ${cookieName}=token-1; consent=yes`, Portal.HR),
+    ).toBe('token-1');
   });
 
   it('should return undefined when the cookie header is missing', () => {
-    expect(readRefreshTokenCookie(undefined)).toBeUndefined();
+    expect(readRefreshTokenCookie(undefined, Portal.HR)).toBeUndefined();
   });
 
   it('should return undefined when the cookie is absent', () => {
-    expect(readRefreshTokenCookie('theme=dark')).toBeUndefined();
+    expect(readRefreshTokenCookie('theme=dark', Portal.HR)).toBeUndefined();
   });
 
   it('should return undefined when the cookie value is empty', () => {
-    expect(readRefreshTokenCookie(`${REFRESH_TOKEN_COOKIE_NAME}=`)).toBeUndefined();
+    expect(readRefreshTokenCookie(`${cookieName}=`, Portal.HR)).toBeUndefined();
+  });
+
+  it('should ignore a refresh cookie belonging to another portal', () => {
+    expect(
+      readRefreshTokenCookie(
+        `${getRefreshTokenCookieName(Portal.EMPLOYEE)}=employee-token`,
+        Portal.HR,
+      ),
+    ).toBeUndefined();
   });
 });
 

@@ -62,6 +62,7 @@ describe('HR employee list', () => {
     expect(within(budiRow).getByText('HR')).toBeInTheDocument();
     expect(within(budiRow).getByText('Inactive')).toHaveClass('dexa-status-label--neutral');
     expect(within(budiRow).getByText('Incomplete')).toHaveClass('dexa-status-label--warning');
+    expect(screen.queryByRole('link', { name: /Edit / })).not.toBeInTheDocument();
   });
 
   it('should send the search term, reset the page to 1, and write both to the URL when the HR user searches from page 3', async () => {

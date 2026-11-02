@@ -80,7 +80,7 @@ export function SessionProvider({ children, config }: SessionProviderProps) {
       if (refreshInFlight === null) {
         refreshInFlight = (async () => {
           try {
-            const response = await postRefresh(client);
+            const response = await postRefresh(client, portal);
             return keepSession(response.accessToken, response.account);
           } catch {
             // A refused refresh ends the session through the HTTP client's own 401 handling, or
@@ -129,9 +129,9 @@ export function SessionProvider({ children, config }: SessionProviderProps) {
   const signOut = useCallback(() => {
     // Best effort: clearing the refresh-token cookie needs the server's Set-Cookie answer, but a
     // failed call must not keep the session open, so the local session always ends regardless.
-    void postLogout(apiClient).catch(() => undefined);
+    void postLogout(apiClient, portal).catch(() => undefined);
     endSession(null);
-  }, [apiClient, endSession]);
+  }, [apiClient, endSession, portal]);
 
   useSessionCheck({
     apiClient,

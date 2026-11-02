@@ -1,9 +1,7 @@
 # Dexa employee attendance
 
 WFH attendance and employee monitoring system: two React web apps (employee portal, HR portal)
-over NestJS microservices, PostgreSQL per service, and RabbitMQ events. Product context lives in
-`docs/` (`PRD.md`, `ARCHITECTURE.md`, `DATABASE.md`, `DESIGN.md`). `DATABASE.md` wins on data
-ownership.
+over NestJS microservices, PostgreSQL per service, and RabbitMQ events.
 
 ## Quick start (one command)
 
@@ -48,6 +46,64 @@ The employee portal also accepts the HR account (PRD AUTH-3).
 
 The web apps reach the gateway same-origin through the nginx `/api/` proxy, so no CORS setup is
 needed.
+
+### Audit database
+
+The audit worker uses its own local PostgreSQL database. The password is generated into `.env` by
+`npm run setup` and must not be committed or copied into documentation.
+
+| Setting | Local value |
+| ------- | ----------- |
+| Host | `127.0.0.1` |
+| Port | `5432` |
+| Database | `audit_db` |
+| User | `audit_app` |
+| Password | The value of `AUDIT_DB_PASSWORD` in `.env` |
+| Audit table | `audit_logs` |
+| Failed-message table | `dlq_messages` |
+
+To connect from the host without putting the password in the command history:
+
+```bash
+grep '^AUDIT_DB_PASSWORD=' .env
+
+set -a
+. ./.env
+set +a
+PGPASSWORD="$AUDIT_DB_PASSWORD" psql \
+  --host 127.0.0.1 \
+  --port 5432 \
+  --username audit_app \
+  --dbname audit_db
+```
+
+Example query:
+
+```sql
+SELECT event_id, event_type, account_id, actor_account_id, changed_fields, occurred_at
+FROM audit_logs
+ORDER BY occurred_at DESC
+LIMIT 50;
+```
+
+### Swagger and Storybook
+
+Run the browser documentation locally after the stack is running:
+
+```bash
+npm run docs
+```
+
+This opens:
+
+| Document | URL |
+| -------- | --- |
+| Swagger UI | http://127.0.0.1:3000/docs |
+| OpenAPI JSON | http://127.0.0.1:3000/docs-json |
+| Storybook | http://127.0.0.1:6006 |
+
+The script temporarily enables Swagger on the gateway and starts Storybook for `@dexa/ui`. Press
+`Ctrl+C` to stop Storybook. The application containers remain running.
 
 ### RabbitMQ management
 
@@ -174,7 +230,7 @@ flowchart TB
 | notification-service | `notification_db` | HR notification inbox rows, read state, SSE subscribers                                                                           |
 | audit-worker         | `audit_db`        | Audit log of every event (who/what/field names), DLQ tracking + archive/replay state                                              |
 
-### Authentication and sessions (D-51, D-59)
+### Authentication and sessions
 
 ```mermaid
 sequenceDiagram

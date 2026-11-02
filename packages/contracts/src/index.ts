@@ -239,6 +239,7 @@ export {
   type TodayAttendanceState,
 } from './attendance/today-attendance.schema.js';
 export { Portal } from './auth/portal.js';
+export { sessionPortalSchema, type SessionPortal } from './auth/session-portal.schema.js';
 export {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
