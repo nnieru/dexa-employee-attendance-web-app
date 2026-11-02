@@ -8,7 +8,6 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { DEV_TEST_ACCOUNTS } from './dev-test-accounts.mjs';
-
 const REPOSITORY_ROOT = fileURLToPath(new URL('..', import.meta.url));
 const ENV_EXAMPLE_PATH = `${REPOSITORY_ROOT}/.env.example`;
 const ENV_PATH = `${REPOSITORY_ROOT}/.env`;
@@ -83,6 +82,12 @@ function buildDevEnv() {
 function generatePasswords() {
   const passwords = new Map();
   for (const variable of PASSWORD_VARIABLES) {
+    // The broker uses the fixed dev credentials (dev-test-accounts), so the management UI matches the
+    // README; every other password stays random.
+    if (variable === 'RABBITMQ_PASSWORD') {
+      passwords.set(variable, DEV_TEST_ACCOUNTS.broker.password);
+      continue;
+    }
     passwords.set(variable, randomBytes(16).toString('hex'));
   }
   return passwords;

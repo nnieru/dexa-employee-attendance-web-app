@@ -18,6 +18,7 @@
     "build": "npm run build:backend && npm run build:frontend",
     "dev": "npm run build:shared && concurrently -k -n gateway,auth,employee,attendance,notification,audit,employee-web,admin-web \"npm run dev -w @dexa/api-gateway\" \"npm run dev -w @dexa/auth-service\" \"npm run dev -w @dexa/employee-service\" \"npm run dev -w @dexa/attendance-service\" \"npm run dev -w @dexa/notification-service\" \"npm run dev -w @dexa/audit-worker\" \"npm run dev -w @dexa/employee-web\" \"npm run dev -w @dexa/admin-web\"",
     "lint": "eslint . && prettier --check .",
+    "docs": "node scripts/dev-docs.mjs",
     "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
     "test": "npm run build:shared && npm run test --workspaces --if-present",
     "test:integration": "npm run build:shared && npm run test:integration --workspaces --if-present",

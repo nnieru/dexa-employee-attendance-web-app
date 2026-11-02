@@ -49,6 +49,26 @@ The employee portal also accepts the HR account (PRD AUTH-3).
 The web apps reach the gateway same-origin through the nginx `/api/` proxy, so no CORS setup is
 needed.
 
+### RabbitMQ management
+
+Open http://127.0.0.1:15672 and sign in with the broker account below. The username also owns and
+declares every queue and exchange the topology code needs; the password is a fixed local-credentials
+value like the test accounts (never use it in a deployed environment).
+
+| Role             | Username | Password       |
+| ---------------- | -------- | -------------- |
+| RabbitMQ account | `dexa`   | `RabbitDev123` |
+
+| Page               | What to look for                                                                                                                                                                                                     |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Queues             | One durable queue per consumer (`audit.<purpose>`, `hr.notifications`), each a quorum queue with a delivery limit and its own dead-letter queue (`*.dlq`). A growing queue means its consumer is stopped or failing. |
+| Message rates      | Steady small publish rates through the `app.events` exchange; silence with a nonzero outbox backlog means look at the relay's warnings in `docker compose logs <service>`.                                           |
+| Dead-letter queues | Rows here mean a message failed `MAX_DELIVERIES` times; audit-covered ones appear in `audit_db.dlq_messages` for replay. Empty is the normal state.                                                                  |
+| Connections        | One connection per running backend service. If a service restarts, its connection drops and comes back on its own.                                                                                                   |
+
+Services connect with the same account — one user, so a queue the broker created stays owned by
+`dexa` and survives container rebuilds.
+
 ### Stop, reset, reseed
 
 ```bash
@@ -76,17 +96,150 @@ npm run seed:dev
 
 ## Layout
 
-| Path                                                                                  | Purpose                                        |
-| ------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `apps/api-gateway`                                                                    | Public REST entry (port 3000)                  |
-| `apps/auth-service`, `employee-service`, `attendance-service`, `notification-service` | Domain services (3001-3004), one database each |
-| `apps/audit-worker`                                                                   | Audit worker host (3005), no consumers yet     |
-| `apps/employee-web`, `apps/admin-web`                                                 | React apps (8080, 8081) sharing `@dexa/ui`     |
-| `libs/common`, `libs/db`, `libs/messaging`                                            | Backend-only shared code                       |
-| `packages/contracts`, `packages/ui`, `packages/api-client`                            | Shared by backend and frontend                 |
-| `scripts/setup-dev.mjs`                                                               | The one-command setup behind `npm run setup`   |
+| Path                                                                                  | Purpose                                                   |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `apps/api-gateway`                                                                    | Public REST entry (port 3000)                             |
+| `apps/auth-service`, `employee-service`, `attendance-service`, `notification-service` | Domain services (3001-3004), one database each            |
+| `apps/audit-worker`                                                                   | Audit worker host (3005): audit log writer + DLQ archiver |
+| `apps/employee-web`, `apps/admin-web`                                                 | React apps (8080, 8081) sharing `@dexa/ui`                |
+| `libs/common`, `libs/db`, `libs/messaging`                                            | Backend-only shared code                                  |
+| `packages/contracts`, `packages/ui`, `packages/api-client`, `packages/session`        | Shared by backend and frontend                            |
+| `scripts/setup-dev.mjs`                                                               | The one-command setup behind `npm run setup`              |
 
 Services never import each other. They share only `libs/*` and `packages/*`.
+
+## Architecture
+
+One REST API behind a gateway; five NestJS services, each owning its own PostgreSQL database; one
+RabbitMQ event exchange. Full detail: `docs/ARCHITECTURE.md`. The diagrams below are Mermaid and
+render directly on GitHub.
+
+### Topology
+
+```mermaid
+flowchart TB
+  subgraph browsers["Browsers"]
+    direction LR
+    EW["employee-web :8080<br/>(employee portal)"]
+    AW["admin-web :8081<br/>(HR portal)"]
+  end
+
+  NGX["nginx (both apps)<br/>static assets + /api/ proxy"]
+  GW["api-gateway :3000<br/>the only verifier of user JWTs"]
+
+  subgraph services["NestJS services — one PostgreSQL database each"]
+    direction TB
+    AUTH["auth-service :3001<br/>accounts · roles · passwords · HR bootstrap"]
+    EMP["employee-service :3002<br/>profiles · masters · photos"]
+    ATT["attendance-service :3003<br/>days · punches · schedules · requests"]
+    NOT["notification-service :3004<br/>HR inbox · live SSE push"]
+  end
+
+  subgraph eventsx["Transactional outbox + broker"]
+    direction TB
+    RELAY["outbox relay<br/>claim · lease · publish"]
+    EX["RabbitMQ topic exchange<br/>app.events"]
+  end
+
+  AUD["audit-worker :3005<br/>audit log writer + DLQ archiver"]
+
+  EW --> NGX
+  AW --> NGX
+  NGX -->|"GET · POST /api/v1/**"| GW
+  GW -->|"60 s internal ES256 token"| AUTH
+  GW --> EMP
+  GW --> ATT
+  GW --> NOT
+  AUTH -.->|"outbox row"| RELAY
+  EMP -.->|"outbox row"| RELAY
+  ATT -.->|"outbox row"| RELAY
+  RELAY --> EX
+  EX -->|"every event"| AUD
+  EX -->|"request + profile events"| NOT
+
+  AUTH -.- AUTHDB[("auth_db")]
+  EMP -.- EMPDB[("employee_db")]
+  ATT -.- ATTDB[("attendance_db")]
+  NOT -.- NOTDB[("notification_db")]
+  AUD -.- AUDDB[("audit_db")]
+```
+
+### What each service owns — `DATABASE.md` is the authority
+
+| Service              | Database          | Owns                                                                                                                              |
+| -------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| auth-service         | `auth_db`         | Accounts, roles, credential verification, token issuance, HR bootstrap (advisory-locked)                                          |
+| employee-service     | `employee_db`     | Employee profiles, positions/statuses, photos, provisioning state, bootstrap HR profile                                           |
+| attendance-service   | `attendance_db`   | Attendance days, punches + classification, work schedules and calendar, overtime/correction requests, HR monitoring and summaries |
+| notification-service | `notification_db` | HR notification inbox rows, read state, SSE subscribers                                                                           |
+| audit-worker         | `audit_db`        | Audit log of every event (who/what/field names), DLQ tracking + archive/replay state                                              |
+
+### Authentication and sessions (D-51, D-59)
+
+```mermaid
+sequenceDiagram
+  participant B as Browser (token in memory only)
+  participant G as api-gateway
+  participant A as auth-service
+  participant S as Downstream service
+
+  Note over B,A: Sign in
+  B->>G: POST /auth/login (email, password, portal)
+  G->>A: internal token + credentials
+  A-->>G: accessToken + refreshToken
+  G-->>B: accessToken in the body + refreshToken as an httpOnly cookie (Path=/api/v1/auth)
+
+  Note over B,A: Hard refresh — the session survives
+  B->>G: route guard awaits POST /auth/refresh (cookie sent automatically)
+  G->>A: internal token + refreshToken
+  A->>A: verify typ=refresh · read the account fresh (is_active)
+  A-->>G: new accessToken + rotated refreshToken
+  G-->>B: new token pair + new cookie
+
+  Note over B,S: Every other API request
+  B->>G: Bearer accessToken
+  G->>A: account still active? (per request, no cache)
+  G->>S: 60 s internal ES256 token naming the user — services never see the user JWT
+  S-->>G: answer
+  G-->>B: answer
+```
+
+- Deactivation takes effect on the next request: `401 ACCOUNT_DISABLED`.
+- One expired-token `401` is retried once after a silent refresh.
+- Logout clears the cookie; the stateless refresh token itself just expires (no revocation table).
+
+### Events (outbox pattern; `libs/messaging`)
+
+```mermaid
+sequenceDiagram
+  participant S as Service (auth/employee/attendance/notification)
+  participant DB as Service database
+  participant R as Outbox relay
+  participant MQ as RabbitMQ app.events
+  participant W as audit-worker / notification-service
+
+  Note over S,DB: 1. The change and its event row commit in one transaction
+  S->>DB: update + insert outbox_events
+  Note over S,R: 2. Relay publishes after commit (short transaction, 60 s lease)
+  R->>DB: claim one due event + lease (60 s)
+  R->>MQ: publish (durable, persistent)
+  R->>DB: mark published (kept 7 days)
+  Note over W: 3. Consumer: validate (zod) · idempotent by event ID · ack only after its own commit
+  MQ->>W: deliver
+  W->>W: write row (field names only) / inbox row (before push)
+  W->>MQ: ack after commit
+  Note over MQ: failed deliveries → DLQ (tracked, replayable)
+```
+
+- Quorum queues with delivery limits; redelivery is safe because consumers are idempotent.
+- The web apps never talk to services directly: only gateway → service and service → service.
+
+### Frontend (`packages/session`, D-56)
+
+- TanStack Query is the only server-state store; the session (in-memory token, portal, roles) is a
+  React Context above the router, whose guards `await` the one session-restore attempt per load.
+- `@dexa/contracts` carries every zod schema; both apps share `@dexa/ui` and `@dexa/session`, so a
+  screen differs only in portal, roles, copy, and routes.
 
 ## Commands
 

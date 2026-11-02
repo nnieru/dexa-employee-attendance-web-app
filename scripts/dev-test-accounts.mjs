@@ -3,6 +3,12 @@
 // reach a deployed environment.
 
 export const DEV_TEST_ACCOUNTS = {
+  broker: {
+    // The RabbitMQ management account that `npm run setup` creates; `dexa` also owns and declares
+    // every queue and exchange the topology code needs.
+    username: 'dexa',
+    password: 'RabbitDev123',
+  },
   hr: {
     email: 'hr.admin@dexa.test',
     password: 'HrAdmin123',

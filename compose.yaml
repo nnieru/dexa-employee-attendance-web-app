@@ -53,6 +53,7 @@ services:
       PORT: '3000'
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Asia/Jakarta}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-}
       AUTH_SERVICE_INTERNAL_URL: http://auth-service:3000
       EMPLOYEE_SERVICE_INTERNAL_URL: http://employee-service:3000
       ATTENDANCE_SERVICE_INTERNAL_URL: http://attendance-service:3000

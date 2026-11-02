@@ -13,12 +13,17 @@ const ownServiceNameSchema = z.literal(ServiceName.API_GATEWAY, {
   error: `must be ${ServiceName.API_GATEWAY}`,
 });
 
+// The browser docs stay off in production unless this variable explicitly turns them on, so a container
+// with NODE_ENV=production can still serve Swagger for a local compose run (SWAGGER exposure).
+const swaggerEnabledSchema = z.union([z.literal('true'), z.literal('false')]).optional();
+
 // The gateway verifies end-user tokens (UserJwtVerifierConfigSchema) and signs the internal tokens it forwards
 // with its own service key (AuthConfigSchema). It alone reads the user token settings (D-51).
 export const ApiGatewayConfigSchema = z.intersection(
   z.intersection(
     BaseConfigSchema.extend({
       SERVICE_NAME: ownServiceNameSchema,
+      SWAGGER_ENABLED: swaggerEnabledSchema,
       AUTH_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
       EMPLOYEE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
       ATTENDANCE_SERVICE_INTERNAL_URL: internalBaseUrlSchema,
