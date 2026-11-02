@@ -10,6 +10,12 @@ export const RETENTION_CHECK_INTERVAL_MS = 60 * 60 * 1_000;
 /** After this many failed attempts the relay logs at error level, so an event that keeps failing is visible. */
 export const STUCK_EVENT_ATTEMPT_THRESHOLD = 10;
 
+/**
+ * How long a claim keeps other relays and later passes away from an event being published: it must exceed
+ * one publish timeout, and a relay crash mid-publish recovers at most this long after it happened.
+ */
+export const CLAIM_LEASE_MILLISECONDS = 60_000;
+
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1_000;
 
 /** Delay before the next attempt after `attemptCount` failed attempts: 1 s, 2 s, 4 s, ... capped at 60 s. */

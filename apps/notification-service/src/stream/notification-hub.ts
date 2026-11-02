@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import type { INotificationPublisher } from '../ingestion/notification-publisher.interface.js';
 import type { InsertedNotification } from '../ingestion/notification-writer.interface.js';
 import type { INotificationHub, NotificationListener } from './notification-hub.interface.js';
@@ -9,9 +9,20 @@ import type { INotificationHub, NotificationListener } from './notification-hub.
  * so a closed stream leaves nothing behind.
  */
 @Injectable()
-export class NotificationHub implements INotificationHub, INotificationPublisher {
+export class NotificationHub
+  implements INotificationHub, INotificationPublisher, OnApplicationBootstrap
+{
   private readonly logger = new Logger(NotificationHub.name);
   private readonly listenersByRecipient = new Map<string, Set<NotificationListener>>();
+
+  // Fails loudly at startup, because a second replica breaks live push silently (the inbox keeps working),
+  // which is exactly the kind of limit operators cannot see from the outside.
+  onApplicationBootstrap(): void {
+    this.logger.warn(
+      'Live notification push works with exactly one notification-service instance. ' +
+        'Run more replicas only when a shared hub (for example Redis pub/sub) is in place.',
+    );
+  }
 
   subscribe(recipientAccountId: string, listener: NotificationListener): () => void {
     const listeners = this.listenersByRecipient.get(recipientAccountId) ?? new Set();
