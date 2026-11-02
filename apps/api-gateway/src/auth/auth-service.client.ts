@@ -7,32 +7,46 @@ import {
 import {
   API_PREFIX,
   ErrorCode,
+  createSessionResponseSchema,
   currentAccountSchema,
-  loginResponseSchema,
   type ChangePasswordRequest,
+  type CreateSessionResponse,
   type CurrentAccount,
   type LoginRequest,
-  type LoginResponse,
 } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import type { IAuthServiceClient } from './auth-service-client.interface.js';
 
-// auth-service answers 401 with this code only when the email or password was refused. Any other 401
-// means the gateway's own token was refused, which stays a dependency failure.
+// auth-service answers 401 with these codes only when the session request itself was refused. Any
+// other 401 means the gateway's own token was refused, which stays a dependency failure.
 const SESSION_REFUSAL_CODES = [ErrorCode.INVALID_CREDENTIALS];
+
+// A refresh is refused when the token is invalid or expired, or when the account it names is
+// deactivated; both reach the browser as the session ending.
+const REFRESH_REFUSAL_CODES = [ErrorCode.UNAUTHORIZED, ErrorCode.ACCOUNT_DISABLED];
 
 @Injectable()
 export class AuthServiceClient implements IAuthServiceClient {
   constructor(@Inject(INTERNAL_HTTP_CLIENT) private readonly httpClient: IInternalHttpClient) {}
 
-  createSession(request: LoginRequest): Promise<LoginResponse> {
+  createSession(request: LoginRequest): Promise<CreateSessionResponse> {
     return this.httpClient.post({
       target: ServiceName.AUTH_SERVICE,
       path: `/${API_PREFIX}/internal/sessions`,
       body: request,
       refusalCodes: SESSION_REFUSAL_CODES,
-      responseSchema: loginResponseSchema,
+      responseSchema: createSessionResponseSchema,
+    });
+  }
+
+  refreshSession(refreshToken: string): Promise<CreateSessionResponse> {
+    return this.httpClient.post({
+      target: ServiceName.AUTH_SERVICE,
+      path: `/${API_PREFIX}/internal/sessions/refresh`,
+      body: { refreshToken },
+      refusalCodes: REFRESH_REFUSAL_CODES,
+      responseSchema: createSessionResponseSchema,
     });
   }
 

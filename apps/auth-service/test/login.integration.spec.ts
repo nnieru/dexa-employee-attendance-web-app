@@ -220,6 +220,7 @@ describe('login and sessions', () => {
 
         expect(response.body).toEqual({
           accessToken: expect.any(String),
+          refreshToken: expect.any(String),
           tokenType: 'Bearer',
           expiresIn: 3600,
           account: { id: expect.any(String), email: EMPLOYEE_EMAIL, role: 'EMPLOYEE' },
@@ -460,6 +461,129 @@ describe('login and sessions', () => {
           code: 'ACCOUNT_DISABLED',
           message: 'This account is no longer active.',
         });
+      },
+      TEST_TIMEOUT_MS,
+    );
+  });
+
+  describe('POST /api/v1/internal/sessions/refresh', () => {
+    const REFRESH_PATH = `${SESSIONS_PATH}/refresh`;
+
+    function postRefresh(refreshToken: string, serviceToken: string = gatewayToken) {
+      return request(app.getHttpServer())
+        .post(REFRESH_PATH)
+        .set('Authorization', `Bearer ${serviceToken}`)
+        .send({ refreshToken });
+    }
+
+    async function signInForRefresh(email: string = EMPLOYEE_EMAIL) {
+      const response = (
+        await postSession({ email, password: EMPLOYEE_PASSWORD, portal: 'EMPLOYEE' }).expect(200)
+      ).body as {
+        readonly refreshToken: string;
+        readonly account: { readonly id: string; readonly role: string };
+      };
+      return response;
+    }
+
+    it(
+      'should answer 200 with a fresh access token, a rotated refresh token, and the account',
+      async () => {
+        const first = await signInForRefresh();
+
+        const response = await postRefresh(first.refreshToken).expect(200);
+
+        expect(response.body).toEqual({
+          accessToken: expect.any(String),
+          refreshToken: expect.any(String),
+          tokenType: 'Bearer',
+          expiresIn: 3600,
+          account: { id: first.account.id, email: EMPLOYEE_EMAIL, role: 'EMPLOYEE' },
+        });
+        expect(response.body.refreshToken).not.toBe(first.refreshToken);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 401 UNAUTHORIZED when the refresh token is invalid',
+      async () => {
+        const response = await postRefresh('not-a-token').expect(401);
+
+        expect(response.body).toEqual({
+          statusCode: 401,
+          code: 'UNAUTHORIZED',
+          message: 'Sign in to continue.',
+        });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 401 UNAUTHORIZED when an access token is presented as a refresh token',
+      async () => {
+        const session = (
+          await postSession({
+            email: EMPLOYEE_EMAIL,
+            password: EMPLOYEE_PASSWORD,
+            portal: 'EMPLOYEE',
+          }).expect(200)
+        ).body as { readonly accessToken: string };
+
+        const response = await postRefresh(session.accessToken).expect(401);
+
+        expect(response.body).toEqual({
+          statusCode: 401,
+          code: 'UNAUTHORIZED',
+          message: 'Sign in to continue.',
+        });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 401 ACCOUNT_DISABLED when the account was deactivated after the refresh token was issued',
+      async () => {
+        const email = `refresh.leaving.${randomUUID()}@dexa.test`;
+        await insertAccount({ email, password: EMPLOYEE_PASSWORD, roleCode: 'EMPLOYEE' });
+        const first = await signInForRefresh(email);
+        await database.db
+          .update(accounts)
+          .set({ isActive: false })
+          .where(eq(accounts.companyEmail, email));
+
+        const response = await postRefresh(first.refreshToken).expect(401);
+
+        expect(response.body).toEqual({
+          statusCode: 401,
+          code: 'ACCOUNT_DISABLED',
+          message: 'Your account has been deactivated.',
+        });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 400 VALIDATION_FAILED when the body has no refresh token',
+      async () => {
+        const response = await request(app.getHttpServer())
+          .post(REFRESH_PATH)
+          .set('Authorization', `Bearer ${gatewayToken}`)
+          .expect(400);
+
+        expect(response.body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 403 when a valid service token belongs to a service other than the gateway',
+      async () => {
+        const first = await signInForRefresh();
+
+        const response = await postRefresh(first.refreshToken, employeeServiceToken).expect(403);
+
+        expect(response.body).toMatchObject({ statusCode: 403, code: 'FORBIDDEN' });
       },
       TEST_TIMEOUT_MS,
     );

@@ -67,10 +67,16 @@ class RecordingPasswordHasher implements IPasswordHasher {
 
 class RecordingTokenSigner implements IUserTokenSigner {
   readonly subjects: UserTokenSubject[] = [];
+  readonly refreshAccountIds: string[] = [];
 
   signAccessToken(subject: UserTokenSubject): Promise<string> {
     this.subjects.push(subject);
     return Promise.resolve(`token:${subject.accountId}:${subject.role}`);
+  }
+
+  signRefreshToken(accountId: string): Promise<string> {
+    this.refreshAccountIds.push(accountId);
+    return Promise.resolve(`refresh:${accountId}`);
   }
 }
 
@@ -98,6 +104,7 @@ describe('LoginService', () => {
 
     expect(session).toEqual({
       accessToken: `token:${ACCOUNT_ID}:${Role.EMPLOYEE}`,
+      refreshToken: `refresh:${ACCOUNT_ID}`,
       tokenType: 'Bearer',
       expiresIn: USER_TOKEN_LIFETIME_SECONDS,
       account: { id: ACCOUNT_ID, email: COMPANY_EMAIL, role: Role.EMPLOYEE },

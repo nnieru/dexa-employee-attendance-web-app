@@ -1,5 +1,5 @@
 import { UnauthorizedError } from '@dexa/common';
-import { ErrorCode, type LoginRequest, type LoginResponse } from '@dexa/contracts';
+import { ErrorCode, type CreateSessionResponse, type LoginRequest } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   ACCOUNT_REPOSITORY,
@@ -29,7 +29,7 @@ export class LoginService implements ILoginService {
     @Inject(USER_TOKEN_SIGNER) private readonly userTokens: IUserTokenSigner,
   ) {}
 
-  async login(request: LoginRequest): Promise<LoginResponse> {
+  async login(request: LoginRequest): Promise<CreateSessionResponse> {
     const account = await this.accounts.findSignInAccountByEmail(request.email);
     // An unknown email still costs one argon2 verification, so the response time does not reveal
     // which emails exist.
@@ -41,9 +41,14 @@ export class LoginService implements ILoginService {
     if (account === undefined || role === undefined || !isPasswordMatching) {
       throw new UnauthorizedError(ErrorCode.INVALID_CREDENTIALS, INVALID_CREDENTIALS_MESSAGE);
     }
-    const accessToken = await this.userTokens.signAccessToken({ accountId: account.id, role });
+    // The access and refresh tokens are signed together, so one login answers with one consistent pair.
+    const [accessToken, refreshToken] = await Promise.all([
+      this.userTokens.signAccessToken({ accountId: account.id, role }),
+      this.userTokens.signRefreshToken(account.id),
+    ]);
     return {
       accessToken,
+      refreshToken,
       tokenType: BEARER_TOKEN_TYPE,
       expiresIn: USER_TOKEN_LIFETIME_SECONDS,
       account: { id: account.id, email: account.companyEmail, role },

@@ -1,4 +1,4 @@
-import type { LoginResponse } from '@dexa/contracts';
+import type { CreateSessionResponse } from '@dexa/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
@@ -17,7 +17,7 @@ export class LocalStrategy extends PassportStrategy(Strategy, LOCAL_STRATEGY_NAM
     super({ usernameField: 'email', passwordField: 'password', passReqToCallback: true });
   }
 
-  validate(request: { readonly body: unknown }): Promise<LoginResponse> {
+  validate(request: { readonly body: unknown }): Promise<CreateSessionResponse> {
     return this.loginService.login(readLoginRequest(request.body));
   }
 }

@@ -14,7 +14,9 @@ const NOTIFICATIONS_NAVIGATION_ID = 'notifications';
 // Pathless layout: every HR page under it needs a signed-in HR session (AUTH-3). The API enforces
 // authorization; this guard only decides which screen the HR user sees.
 export const Route = createFileRoute('/_authenticated')({
-  beforeLoad: ({ context, location }) => {
+  beforeLoad: async ({ context, location }) => {
+    // A hard refresh restores the session from the refresh-token cookie before the route is chosen.
+    await context.restoreSession();
     if (context.isSignedIn()) return;
     throw redirect({ to: '/login', search: { redirect: location.href } });
   },

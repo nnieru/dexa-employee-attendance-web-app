@@ -32,11 +32,18 @@ export {
   type ChangePasswordRequest,
 } from './auth/change-password.schema.js';
 export {
+  createSessionResponseSchema,
   loginRequestSchema,
   loginResponseSchema,
+  type CreateSessionResponse,
   type LoginRequest,
   type LoginResponse,
 } from './auth/login.schema.js';
+export {
+  REFRESH_TOKEN_LIFETIME_SECONDS,
+  refreshSessionRequestSchema,
+  type RefreshSessionRequest,
+} from './auth/refresh-session.schema.js';
 export {
   AccountProvisioningStatus,
   accountProvisioningOperationIdSchema,

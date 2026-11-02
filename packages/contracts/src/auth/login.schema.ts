@@ -22,3 +22,12 @@ export const loginResponseSchema = z.object({
 });
 
 export type LoginResponse = z.infer<typeof loginResponseSchema>;
+
+// The answer auth-service gives the gateway for a login or a session refresh. It extends the public
+// login response with the refresh token, which the gateway moves into an httpOnly cookie before the
+// answer reaches a browser, so the public response shape never carries it.
+export const createSessionResponseSchema = loginResponseSchema.extend({
+  refreshToken: z.string().min(1),
+});
+
+export type CreateSessionResponse = z.infer<typeof createSessionResponseSchema>;

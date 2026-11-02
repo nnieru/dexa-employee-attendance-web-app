@@ -11,6 +11,8 @@ import type { SessionConfig } from '../session-config.js';
 export const TEST_API_BASE_URL = `/${API_PREFIX}`;
 export const LOGIN_URL = `${TEST_API_BASE_URL}/auth/login`;
 export const CURRENT_ACCOUNT_URL = `${TEST_API_BASE_URL}/auth/me`;
+export const REFRESH_URL = `${TEST_API_BASE_URL}/auth/refresh`;
+export const LOGOUT_URL = `${TEST_API_BASE_URL}/auth/logout`;
 
 export const ACCESS_TOKEN = 'access-token-for-tests';
 export const VALID_PASSWORD = 'correct-horse-1';
@@ -71,4 +73,43 @@ export async function signInWith(user: ReturnType<typeof userEvent.setup>, email
   await user.type(screen.getByLabelText('Company email'), email);
   await user.type(screen.getByLabelText('Password'), VALID_PASSWORD);
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
+}
+
+/**
+ * A page shaped like a router guard: an explicit restore action (what beforeLoad awaits) and the
+ * session it produced, plus the logout the signed-in shell offers.
+ */
+function TestRestorePage() {
+  const { session, restoreSession, signOut } = useSession();
+  return (
+    <div>
+      {session.status === 'signed-in' ? <p>Signed in</p> : <p>Signed out</p>}
+      <button type="button" onClick={() => void restoreSession()}>
+        Restore
+      </button>
+      <button type="button" onClick={signOut}>
+        Sign out
+      </button>
+    </div>
+  );
+}
+
+export function renderSessionRestore({
+  portal,
+  allowedRoles,
+  onSessionEnded = () => undefined,
+}: SessionHarnessOptions) {
+  const config: SessionConfig = {
+    portal,
+    allowedRoles,
+    apiBaseUrl: TEST_API_BASE_URL,
+    onSessionEnded,
+  };
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <SessionProvider config={config}>
+        <TestRestorePage />
+      </SessionProvider>
+    </QueryClientProvider>,
+  );
 }

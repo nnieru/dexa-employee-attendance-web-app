@@ -211,4 +211,103 @@ describe('api-gateway sign-in through a running auth-service', () => {
     },
     TEST_TIMEOUT_MS,
   );
+
+  describe('refresh-token cookie and session restore', () => {
+    const REFRESH_URL = '/api/v1/auth/refresh';
+    const LOGOUT_URL = '/api/v1/auth/logout';
+    const REFRESH_COOKIE_PATTERN = /dexa_refresh_token=/;
+
+    function refreshWith(cookieHeader: string | undefined) {
+      const post = request(app.getHttpServer()).post(REFRESH_URL);
+      return cookieHeader === undefined ? post : post.set('cookie', cookieHeader);
+    }
+
+    function refreshCookie(answer: { readonly headers: Record<string, unknown> }): string {
+      const setCookie = (answer.headers['set-cookie'] ?? []) as ReadonlyArray<string>;
+      const cookie = setCookie.find((header) => REFRESH_COOKIE_PATTERN.test(header));
+      if (cookie === undefined) throw new Error('The answer carried no refresh-token cookie.');
+      return cookie;
+    }
+
+    it(
+      'should send the refresh token only as an httpOnly cookie when the sign-in succeeds',
+      async () => {
+        const response = await login(HR_EMAIL, HR_PASSWORD).expect(200);
+
+        expect(response.text).not.toContain('refreshToken');
+        const cookie = refreshCookie(response);
+        expect(cookie).toMatch(/dexa_refresh_token=[^;]+/);
+        expect(cookie).toContain('HttpOnly');
+        expect(cookie).toContain('Path=/api/v1/auth');
+        expect(cookie).toContain('SameSite=Lax');
+        // A plain-HTTP local deployment must still receive the cookie.
+        expect(cookie).not.toContain('Secure');
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should start a new session from the cookie and rotate it when the refresh succeeds',
+      async () => {
+        const signedIn = await login(HR_EMAIL, HR_PASSWORD).expect(200);
+        const firstCookie = refreshCookie(signedIn);
+
+        const response = await refreshWith(firstCookie).expect(200);
+
+        expect(response.body).toEqual({
+          accessToken: expect.any(String),
+          tokenType: 'Bearer',
+          expiresIn: 3600,
+          account: { id: signedIn.body.account.id, email: HR_EMAIL, role: 'HR' },
+        });
+        const secondCookie = refreshCookie(response);
+        expect(secondCookie).not.toBe(firstCookie);
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 401 UNAUTHORIZED when no refresh cookie is sent',
+      async () => {
+        const response = await refreshWith(undefined).expect(401);
+
+        expect(response.body).toEqual({
+          statusCode: 401,
+          code: 'UNAUTHORIZED',
+          message: 'Sign in to continue.',
+        });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 401 UNAUTHORIZED when the cookie holds an invalid token',
+      async () => {
+        const response = await refreshWith('dexa_refresh_token=not-a-token').expect(401);
+
+        expect(response.body).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'should answer 204 and clear the cookie when the user logs out',
+      async () => {
+        const signedIn = await login(HR_EMAIL, HR_PASSWORD).expect(200);
+        const firstCookie = refreshCookie(signedIn);
+
+        const response = await request(app.getHttpServer())
+          .post(LOGOUT_URL)
+          .set('cookie', firstCookie)
+          .expect(204);
+
+        const setCookie = (response.headers['set-cookie'] ?? []) as unknown as ReadonlyArray<string>;
+        const cleared = setCookie.join(';');
+        expect(cleared).toMatch(/dexa_refresh_token=;/);
+        // The refresh token is stateless: logout only drops it from the browser, and the token
+        // itself expires with its max age (ARCHITECTURE §13).
+      },
+      TEST_TIMEOUT_MS,
+    );
+  });
 });

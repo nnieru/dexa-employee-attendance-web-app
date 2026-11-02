@@ -12,6 +12,7 @@ export type UserTokenSubject = {
 /** Signs user access tokens. Only auth-service holds the private key, so no other service can mint one. */
 export interface IUserTokenSigner {
   signAccessToken(subject: UserTokenSubject): Promise<string>;
+  signRefreshToken(accountId: string): Promise<string>;
 }
 
 export const USER_TOKEN_SIGNER = Symbol('IUserTokenSigner');

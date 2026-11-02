@@ -44,7 +44,10 @@ export function AdminApp({ queryClient, router }: AdminAppProps) {
 }
 
 function SessionRouter({ router }: { router: AppRouter }) {
-  const { isSignedIn } = useSession();
-  const routerContext = useMemo(() => ({ isSignedIn }), [isSignedIn]);
+  const { isSignedIn, restoreSession } = useSession();
+  const routerContext = useMemo(
+    () => ({ isSignedIn, restoreSession }),
+    [isSignedIn, restoreSession],
+  );
   return <RouterProvider router={router} context={routerContext} />;
 }

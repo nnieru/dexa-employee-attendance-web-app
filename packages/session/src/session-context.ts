@@ -16,6 +16,11 @@ export type SessionContextValue = {
   session: SessionState;
   /** Reads the in-memory token synchronously, so it is current even before React re-renders. */
   isSignedIn: () => boolean;
+  /**
+   * Runs the one session-restore attempt of this page load, from the refresh-token cookie. Route
+   * guards await it, so a hard refresh becomes a signed-in session before the first route renders.
+   */
+  restoreSession: () => Promise<void>;
   /** Keeps the session only for an allowed role; any other account ends the session without keeping a token. */
   signIn: (accessToken: string, account: CurrentAccount) => void;
   /** The user chose Logout: ends the session without a reason message. */
